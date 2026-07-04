@@ -4,3 +4,29 @@
 .animateur-page{max-width:none;width:100%;padding:8px}.animator-top{display:grid;grid-template-columns:minmax(155px,1.2fr) repeat(4,minmax(105px,1fr)) repeat(3,minmax(82px,.7fr));gap:8px;align-items:stretch;margin-bottom:10px}.animator-top button{padding:10px 8px;border-radius:12px;font-size:15px;white-space:nowrap}.animator-status,.mini-stat{background:var(--panel);border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;min-height:58px}.animator-status strong{font-size:18px}.animator-status span,.mini-stat{color:var(--muted);font-size:13px}.mini-stat strong{color:var(--text);font-size:22px;line-height:1.1}.remote-board{grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}.remote-board .num{min-height:48px;font-size:22px;padding:0;border-radius:10px}.num.last{outline:4px solid #fff;outline-offset:-4px}
 @media(max-width:900px){.animator-top{grid-template-columns:1fr 1fr 1fr 1fr}.animator-status{grid-column:1/5}.remote-board{grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}.remote-board .num{min-height:40px;font-size:18px}.toolbar,.summary{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.animator-top{grid-template-columns:1fr 1fr}.animator-status{grid-column:1/3}.remote-board{grid-template-columns:repeat(5,minmax(0,1fr))}.remote-board .num{min-height:45px;font-size:20px}}
+
+
+/* Corrections affichage public + commissaire */
+body[data-page="public"] .top strong{font-size:32px;letter-spacing:1px}
+body[data-page="public"] .top span{font-size:13px}
+body[data-page="public"] #authorizeMic{font-size:14px;padding:8px 11px;border-radius:10px;min-width:92px}
+body[data-page="public"] .last-display{padding:8px 18px}
+body[data-page="public"] .last-display strong{font-size:205px}
+body[data-page="public"] .last-display p{height:0;margin:0;font-size:0;overflow:hidden}
+.commissaire-page{max-width:none;width:100%;height:100vh;overflow:hidden;padding:8px}
+.commissaire-page header{padding:10px 14px;margin-bottom:8px}
+.commissaire-page header h1{font-size:24px;margin:0}
+.commissaire-grid{display:grid;grid-template-columns:1.1fr 1fr .9fr;gap:8px;align-items:start}
+.commissaire-page .panel{margin:0;padding:10px;border-radius:14px;max-height:calc(100vh - 78px);overflow:auto}
+.commissaire-page h2{font-size:18px;margin:0 0 8px}
+.commissaire-page input{font-size:18px;padding:10px;border-radius:10px}
+.commissaire-page button{font-size:14px;padding:9px 10px;border-radius:10px}
+.commissaire-board{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.commissaire-board .num{min-height:34px;font-size:16px;border-radius:7px;padding:0}
+.commissaire-board .num.last{outline:3px solid #fff;outline-offset:-3px}
+.commissaire-page #cardPreview .card-title{font-size:22px}
+.commissaire-page #cardPreview .card-grid{gap:5px}
+.commissaire-page #cardPreview .card-num{font-size:18px;min-height:34px;border-radius:8px;border-width:2px}
+.commissaire-page #cardPreview .card-msg{font-size:18px;margin-top:8px}
+.commissaire-page .log-row{font-size:14px;padding:6px 0}
+@media(max-width:900px){.commissaire-page{height:auto;overflow:auto}.commissaire-grid{grid-template-columns:1fr}.commissaire-page .panel{max-height:none}.commissaire-board{grid-template-columns:repeat(10,minmax(0,1fr))}}
