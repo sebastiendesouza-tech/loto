@@ -1,14 +1,22 @@
-# LOTO SDS v2.1.0-dev
+# LOTO SDS v2.2.2-dev
 
-Version GitHub Pages + Supabase.
+Application web de loto pour le Comité des Fêtes.
 
-## Test rapide
+## Pages principales
 
-1. Ouvrir `administration.html`.
-2. Saisir le nombre de parties, les lots et le mode de jeu.
-3. Cliquer sur `Enregistrer et lancer le loto`.
-4. Ouvrir `animateur.html` : le lot en cours doit apparaître.
-5. Ouvrir `public.html` : le lot s'affiche si l'option `Afficher les lots côté public` est cochée.
-6. Sur l'animateur, cliquer `Lot suivant` ou `Gagnant` pour avancer dans le déroulé.
+- `index.html` : menu équipe
+- `public.html` : affichage public / PC / vidéoprojecteur / micro
+- `animateur.html` : télécommande animateur
+- `commissaire.html` : contrôle des cartons
+- `joueur.html` : suivi du tirage sur téléphone
+- `administration.html` : préparation des lotos, lots, cartons, paramètres
 
-PIN par défaut : 2580.
+## Nouveautés v2.2.2-dev
+
+- Le bouton `Gagnant` est le seul bouton d'avancement des lots.
+- Le message `VOUS POUVEZ DÉMARQUER !` s'affiche 5 secondes sur le public et les joueurs.
+- Animateur et commissaire peuvent contrôler un carton.
+- Le carton contrôlé s'affiche automatiquement côté public.
+- L'administration enregistre simplement le loto, avec confirmation.
+- Les lotos enregistrés peuvent être sélectionnés pour modification.
+- Mode `Bingo mystère` ajouté.

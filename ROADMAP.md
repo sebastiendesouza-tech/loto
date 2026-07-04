@@ -1,9 +1,12 @@
-# ROADMAP LOTO SDS
+# Roadmap LOTO SDS
 
 ## En cours
-- Tester la liaison Administration -> Animateur -> Public.
+- Stabilisation v2.2.x
+- Contrôle cartons depuis Supabase
+- Gestion des modes de jeu : à la ligne, carton plein, bingo mystère
 
-## Prochaine étape
-- Import des 2 000 cartons dans Supabase.
-- Contrôle réel des cartons depuis la table `loto_cartons`.
-- Reconnaissance vocale.
+## Prochaines étapes
+- Tests complets en conditions réelles
+- Affinage du contrôle Bingo mystère
+- Historique détaillé des gagnants
+- Exports / statistiques
