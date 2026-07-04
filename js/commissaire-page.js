@@ -1,0 +1,7 @@
+Loto.pageHeader();Loto.protectPage();
+const grid=document.getElementById('grid'),last=document.getElementById('last'),input=document.getElementById('cardNumber'),result=document.getElementById('result'),showBtn=document.getElementById('showPublic'),hideBtn=document.getElementById('hidePublic');let lastResult=null;
+function renderResult(r){ if(!r){result.innerHTML='';showBtn.style.display='none';return;} if(!r.found){result.innerHTML=`<p class="bad">Carton ${r.numero} introuvable.</p>`;showBtn.style.display='none';return;} lastResult=r.result; const lines=r.result.lineResults.map((l,i)=>`<p><b>Ligne ${i+1}</b> : ${l.ok?'<span class="ok">OK</span>':'<span class="bad">Manque '+l.missing.join(' - ')+'</span>'}</p>`).join(''); result.innerHTML=`<h2>Carton ${r.result.numero}</h2><p>${r.result.full?'<span class="ok">CARTON PLEIN</span>':'<span class="bad">Non complet</span>'}</p><p><b>Lignes gagnantes :</b> ${r.result.okLines}/3</p>${lines}`; showBtn.style.display='inline-flex';}
+document.getElementById('checkBtn').onclick=async()=>{ if(!input.value) return; renderResult(await Loto.controlCard(input.value)); };
+input.onkeydown=e=>{if(e.key==='Enter')document.getElementById('checkBtn').click();};
+showBtn.onclick=()=>lastResult&&Loto.showPublicCard(lastResult);hideBtn.onclick=()=>Loto.hidePublicCard();
+Loto.onChange(s=>{Loto.pageHeader();Loto.renderNumbers(grid);last.textContent=Loto.lastNumber();});Loto.ensureSession();
