@@ -26,3 +26,7 @@
   .animateur-body .one-line{height:39px;min-height:39px;}
   .animateur-body .one-line button,.animateur-body .one-line .btn{padding:6px 8px;font-size:11px;}
 }
+
+/* v2.0.4-dev : administration lots, bandeau public, simulation, PWA */
+.three-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.partie-edit{margin:10px 0}.partie-edit h3{margin:0 0 8px}.public-lot-banner{flex:1;text-align:center;display:flex;justify-content:center;align-items:center;gap:14px;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.public-lot-banner strong{background:var(--orange);color:#111;border-radius:999px;padding:5px 14px}.compact-lot{min-height:36px;display:flex;align-items:center;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.bingo-pill{background:#6d28d9!important;color:#fff!important}.icon-preview{width:96px;height:96px;border-radius:22px;box-shadow:0 5px 18px rgba(0,0,0,.25)}
+@media(max-width:850px){.three-cols{grid-template-columns:1fr}.public-lot-banner{font-size:13px;gap:6px;order:3;width:100%}.public-lot-banner strong{padding:3px 8px}.animateur-body .compact-lot{height:32px;min-height:32px;font-size:12px;padding:5px 7px}}
