@@ -71,3 +71,26 @@
 .saved-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:8px 0;background:#fff}
 .modal-soft{position:fixed;inset:0;background:rgba(7,20,33,.78);z-index:8000;align-items:center;justify-content:center;padding:18px}.modal-panel{background:#fff;color:var(--text);border-radius:18px;padding:18px;max-width:680px;width:100%;max-height:88vh;overflow:auto}
 @media(max-width:850px){.saved-row{align-items:stretch;flex-direction:column}.saved-row .toolbar{justify-content:flex-start}.public-body .side{display:flex;position:fixed;right:8px;top:64px;width:140px;z-index:20}.public-body .side .card:not(.qrbox){display:none}.public-body .qrbox{padding:8px}.public-body .qrbox h3{font-size:12px;margin:0 0 5px}.public-body .qrbox p{display:none}.public-body .qrbox canvas{max-width:110px!important}}
+
+
+/* v2.1.2-dev : affichage public compact et micro PC */
+.public-body .topbar{height:52px;padding:0 12px;gap:10px;}
+.public-body .brand{font-size:20px;}
+.public-body .version{font-size:12px;}
+.public-lot-banner{justify-content:flex-end;gap:10px;font-size:16px;min-width:0;}
+.public-lot-banner .part-label{font-weight:900;opacity:.95;}
+.public-lot-banner strong{padding:4px 12px;font-size:15px;}
+.mic-status{font-size:12px;opacity:.85;white-space:nowrap;}
+.public-layout{height:calc(100dvh - 52px);}
+.public-main{display:grid;grid-template-rows:34dvh minmax(0,1fr);gap:10px;}
+.public-number{flex:auto;font-size:clamp(100px,28dvh,280px);}
+.public-grid{height:auto;}
+.public-grid .numbers{gap:6px;}
+.public-grid .num{font-size:clamp(15px,3.4vmin,34px);}
+@media(max-width:850px){
+  .public-body .topbar{min-height:52px;height:auto;}
+  .public-layout{height:calc(100dvh - 52px);}
+  .public-main{grid-template-rows:30dvh minmax(0,1fr);}
+  .public-lot-banner{justify-content:flex-start;width:100%;font-size:13px;}
+  .mic-status{display:none;}
+}
