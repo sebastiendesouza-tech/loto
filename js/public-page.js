@@ -29,26 +29,41 @@ function renderCard(card){
   overlay.innerHTML=`<h1 style="font-size:56px;margin:0 0 18px">Carton ${card.numero}</h1><p style="font-size:34px"><b>${req.label||''}</b></p><p style="font-size:34px" class="${card.valid?'ok':'bad'}">${card.valid?'GAIN VALIDE':'NON VALIDE'}</p><p style="font-size:24px">${card.reason||''}</p><table style="border-collapse:collapse;width:100%;text-align:center">${lines}</table>`;
 }
 
+function ordinalLabel(i){
+  return i === 0 ? '1er LOT' : (i + 1) + 'e LOT';
+}
+
+function stepLabelFor(partie, index){
+  if((partie?.gameMode || 'ligne') === 'carton') return 'CARTON PLEIN';
+  if(index === 0) return '1 LIGNE';
+  if(index === 1) return '2 LIGNES';
+  return 'CARTON PLEIN';
+}
+
 function renderLots(s){
   const opts = s.options || {};
   const partie = Loto.currentPartie();
-  const prize = Loto.currentPrize();
   const total = (s.program?.parties || []).length;
   const index = (s.currentPartieIndex || 0) + 1;
+  const currentPrizeIndex = s.currentPrizeIndex || 0;
 
   publicPartHeader.textContent = total ? `Partie ${index}/${total}` : 'Partie simple';
   publicGameTitle.textContent = total ? `Partie n°${index}` : 'Partie simple';
   publicGameMode.textContent = partie ? `Jeu : ${Loto.gameModeLabel(partie)}` : 'Jeu : tirage simple';
 
-  if(!opts.showLots || !partie || !prize){
+  if(!opts.showLots || !partie){
     publicStep.textContent = '';
-    publicLot.textContent = '';
+    publicLot.innerHTML = '';
     return;
   }
 
-  const req = Loto.currentRequirement();
-  publicStep.textContent = (req.label || '').toUpperCase();
-  publicLot.textContent = `LOT : ${prize.label || 'Lot non renseigné'}`;
+  const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false).slice(0,3);
+  publicStep.textContent = '';
+  publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
+    const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
+    const lot = (p.label || 'Lot non renseigné').trim();
+    return `<div class="public-prize-row ${cls}"><span class="public-prize-step">${stepLabelFor(partie,i)}</span><span class="public-prize-lot">${ordinalLabel(i)} : ${lot}</span></div>`;
+  }).join('')}</div>`;
 }
 
 function renderBingo(s){
@@ -67,9 +82,9 @@ function renderQr(){
   // QR fiable sur GitHub Pages : image externe directe, sans afficher l'URL longue.
   const img = document.createElement('img');
   img.alt = 'QR Code joueur';
-  img.width = 220;
-  img.height = 220;
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=' + encodeURIComponent(url);
+  img.width = 120;
+  img.height = 120;
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=8&data=' + encodeURIComponent(url);
   qr.appendChild(img);
 }
 

@@ -2,6 +2,8 @@
   let recognition = null;
   let active = false;
   let firstHeard = null;
+  let lastVoiceNumber = null;
+  let lastVoiceAt = 0;
 
   const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
   const teens = {10:'dix',11:'onze',12:'douze',13:'treize',14:'quatorze',15:'quinze',16:'seize',17:'dix sept',18:'dix huit',19:'dix neuf'};
@@ -74,6 +76,10 @@
   }
 
   async function validateVoiceNumber(n){
+    const now = Date.now();
+    if(lastVoiceNumber === n && now - lastVoiceAt < 1400) return;
+    lastVoiceNumber = n;
+    lastVoiceAt = now;
     firstHeard = null;
     await Loto.setPendingNumber(n);
   }
@@ -83,7 +89,7 @@
     if(!t) return;
     if(t.includes('fermer affichage') || t.includes('fermer carton')) return Loto.hidePublicCard();
     if(t.includes('annuler dernier')) return Loto.undoLast();
-    if(t.includes('erreur')) { firstHeard = null; return Loto.cancelPending(); }
+    if(t.includes('erreur')) { firstHeard = null; lastVoiceNumber = null; return Loto.cancelPending(); }
 
     const nums = extractNumbers(t);
     if(!nums.length) return;
@@ -107,11 +113,13 @@
     recognition = new SR();
     recognition.lang = 'fr-FR';
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.onstart = () => { onStatus && onStatus(true, 'écoute active'); };
     recognition.onresult = e => {
       for(let i=e.resultIndex;i<e.results.length;i++){
-        if(e.results[i].isFinal) handle(e.results[i][0].transcript);
+        const transcript = e.results[i][0].transcript || '';
+        // Traitement des resultats intermediaires : validation plus rapide des numeros repetes.
+        handle(transcript);
       }
     };
     recognition.onend = () => { if(active) { try{ recognition.start(); }catch{} } };
@@ -128,7 +136,7 @@
     try{ recognition.start(); }
     catch(e){ active=false; onStatus && onStatus(false, 'démarrage impossible'); }
   }
-  function stop(onStatus){ active = false; firstHeard = null; try{ recognition && recognition.stop(); }catch{} onStatus && onStatus(false, 'micro arrêté'); }
+  function stop(onStatus){ active = false; firstHeard = null; lastVoiceNumber = null; try{ recognition && recognition.stop(); }catch{} onStatus && onStatus(false, 'micro arrêté'); }
   function toggle(onStatus){ active ? stop(onStatus) : start(onStatus); }
   window.LotoVoice = { start, stop, toggle, isActive:()=>active, parseNumber:(text)=>extractNumbers(text)[0]||null, extractNumbers };
 })();
