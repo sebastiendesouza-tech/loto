@@ -1,25 +1,14 @@
-# LOTO SDS v2.0.0-dev
+# LOTO SDS v2.1.0-dev
 
-Application web GitHub Pages + Supabase pour le Comité des Fêtes.
+Version GitHub Pages + Supabase.
 
-## Installation
+## Test rapide
 
-1. Copier tous les fichiers à la racine du dépôt GitHub `loto`.
-2. Vérifier `config.js`.
-3. Dans Supabase, exécuter `sql/supabase.sql`.
-4. Activer Realtime sur `loto_app_sessions` et `loto_cartons` si nécessaire.
-5. Ouvrir `https://sebastiendesouza-tech.github.io/loto/`.
+1. Ouvrir `administration.html`.
+2. Saisir le nombre de parties, les lots et le mode de jeu.
+3. Cliquer sur `Enregistrer et lancer le loto`.
+4. Ouvrir `animateur.html` : le lot en cours doit apparaître.
+5. Ouvrir `public.html` : le lot s'affiche si l'option `Afficher les lots côté public` est cochée.
+6. Sur l'animateur, cliquer `Lot suivant` ou `Gagnant` pour avancer dans le déroulé.
 
-## Pages
-
-- `index.html` : accueil équipe.
-- `public.html` : affichage public vidéoprojecteur.
-- `animateur.html` : tablette animateur.
-- `commissaire.html` : tablette commissaire.
-- `joueur.html` : page libre pour les joueurs.
-- `impressions.html` : PDF QR Code.
-- `administration.html` : préparation du loto.
-
-## PIN par défaut
-
-`2580`, modifiable dans `config.js`.
+PIN par défaut : 2580.
