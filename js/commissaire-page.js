@@ -8,6 +8,7 @@ const result = document.getElementById('result');
 const showBtn = document.getElementById('showPublic');
 const hideBtn = document.getElementById('hidePublic');
 let lastResult = null;
+let lastCardClosedAt = 0;
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function drawnSet(){ return new Set([...(Loto.state().drawnNumbers || []), ...(Loto.state().pendingNumber ? [Loto.state().pendingNumber] : [])].map(Number)); }
@@ -77,7 +78,10 @@ Loto.onChange((s) => {
   Loto.pageHeader();
   Loto.renderNumbers(grid);
   last.textContent = Loto.lastNumber();
-  if(!s.publicCard){
+  if(s.publicCard){
+    renderResult({found:true,result:s.publicCard});
+  } else if(Number(s.cardClosedAt || 0) && Number(s.cardClosedAt || 0) !== lastCardClosedAt){
+    lastCardClosedAt = Number(s.cardClosedAt || 0);
     renderResult(null);
   }
 });

@@ -9,6 +9,7 @@
     pendingNumber: null,
     history: [],
     publicCard: null,
+    cardClosedAt: 0,
     checkedCards: [],
     currentPartieIndex: 0,
     currentPrizeIndex: 0,
@@ -62,7 +63,7 @@
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, publicCard:null, checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
   function applyMiniBingoFirstNumber(n, patch){
     if(!state.options?.bingoEnabled || state.miniBingoActive) return;
     if((state.options?.miniBingoSource || 'first') !== 'first') return;
@@ -266,7 +267,7 @@
     await save(patch);
   }
   async function startMiniBingo(){
-    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, checkedCards:[], miniBingoReady:false, miniBingoActive:true, toast:{ type:'mini_bingo_start', message:'🎯 Mini-bingo lancé ! Bonne chance à tous.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
+    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], miniBingoReady:false, miniBingoActive:true, toast:{ type:'mini_bingo_start', message:'🎯 Mini-bingo lancé ! Bonne chance à tous.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;
@@ -345,7 +346,7 @@
     return { found:true, result };
   }
   async function showPublicCard(result){ await save({ publicCard: result, history:addLog('show_card','Affichage carton ' + result.numero) }); }
-  async function hidePublicCard(){ await save({ publicCard:null, history:addLog('hide_card','Fermeture carton') }); }
+  async function hidePublicCard(){ await save({ publicCard:null, cardClosedAt:Date.now(), history:addLog('hide_card','Fermeture carton') }); }
   function renderNumbers(container, opts={}){
     if(!container) return;
     const drawn = new Set(state.drawnNumbers || []); const pending = state.pendingNumber;

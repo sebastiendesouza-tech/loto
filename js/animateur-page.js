@@ -1,6 +1,7 @@
 Loto.pageHeader();Loto.protectPage();
 const grid=document.getElementById('grid'),last=document.getElementById('last'),count=document.getElementById('count'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList');
+let lastCardClosedAt = 0;
 function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 function startProgram(program){
@@ -32,5 +33,19 @@ document.getElementById('winner').onclick=()=>Loto.winner();
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
 if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
 function renderLot(s){if(startMiniBingoBtn) startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none'; if(s.miniBingoActive){currentLot.innerHTML='<b>MINI-BINGO</b> · tirage de départage en cours';return;}const p=Loto.currentPartie();const prize=Loto.currentPrize();if(!p||!prize){currentLot.innerHTML='<b>Lot en cours :</b> partie simple sans programme';return;}const req=Loto.currentRequirement();currentLot.innerHTML=`<b>${p.name||'Partie'}</b> · <span>${Loto.gameModeLabel(p)}</span> · <strong>${req.label}</strong> · <b>${prize.label||'Lot non renseigné'}</b>`;}
-Loto.onChange(s=>{Loto.pageHeader();Loto.renderNumbers(grid,{button:true});last.textContent=Loto.lastNumber();count.textContent=(s.drawnNumbers||[]).length;history.innerHTML=(s.drawnNumbers||[]).slice().reverse().map(n=>`<span class="pill">${String(n).padStart(2,'0')}</span>`).join('');renderLot(s);if(!s.publicCard){renderAnimCard(null);}drawLaunchList();});
+Loto.onChange(s=>{
+  Loto.pageHeader();
+  Loto.renderNumbers(grid,{button:true});
+  last.textContent=Loto.lastNumber();
+  count.textContent=(s.drawnNumbers||[]).length;
+  history.innerHTML=(s.drawnNumbers||[]).slice().reverse().map(n=>`<span class="pill">${String(n).padStart(2,'0')}</span>`).join('');
+  renderLot(s);
+  if(s.publicCard){
+    renderAnimCard({found:true,result:s.publicCard});
+  } else if(Number(s.cardClosedAt||0) && Number(s.cardClosedAt||0)!==lastCardClosedAt){
+    lastCardClosedAt=Number(s.cardClosedAt||0);
+    renderAnimCard(null);
+  }
+  drawLaunchList();
+});
 Loto.ensureSession();
