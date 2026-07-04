@@ -14,7 +14,8 @@
     currentPrizeIndex: 0,
     options: { showLots: false, bingoEnabled: false, showBingo: false, prevalidateSeconds: 6 },
     bingoNumbers: [],
-    program: { title: 'Loto', parties: [] },
+    program: { title: 'Loto', date: '', parties: [] },
+    simulation: { enabled:false, seconds:10 },
     updatedAt: new Date().toISOString()
   });
   let state = defaultState();
@@ -64,7 +65,9 @@
     const oldPending = state.pendingNumber;
     if(oldPending && !drawn.includes(oldPending)) drawn.push(oldPending);
     drawn.push(n);
-    await save({ drawnNumbers: drawn, pendingNumber: null, history: addLog('draw', 'Numéro ' + n, { n, mode }) });
+    const patch = { drawnNumbers: drawn, pendingNumber: null, history: addLog('draw', 'Numéro ' + n, { n, mode }) };
+    if(state.options?.bingoEnabled){ const b = nextBingoNumber(n); if(b) patch.bingoNumbers = [...(state.bingoNumbers || []), b]; }
+    await save(patch);
   }
   async function setPendingNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return;
@@ -80,7 +83,9 @@
     const p = state.pendingNumber; if(!p) return;
     const drawn = [...(state.drawnNumbers || [])];
     if(!drawn.includes(p)) drawn.push(p);
-    await save({ drawnNumbers: drawn, pendingNumber: null, history: addLog('validate', 'Validation ' + p, { n:p }) });
+    const patch = { drawnNumbers: drawn, pendingNumber: null, history: addLog('validate', 'Validation ' + p, { n:p }) };
+    if(state.options?.bingoEnabled){ const b = nextBingoNumber(p); if(b) patch.bingoNumbers = [...(state.bingoNumbers || []), b]; }
+    await save(patch);
   }
   async function cancelPending(){ if(state.pendingNumber) await save({ pendingNumber:null, history:addLog('cancel_pending','Erreur vocale') }); }
   async function undoLast(){
@@ -88,8 +93,41 @@
     await save({ drawnNumbers: drawn, pendingNumber:null, history:addLog('undo','Annulation dernier ' + (last || ''), { n:last }) });
   }
   async function newGame(){
-    const initial = defaultState(); initial.sessionCode = code(); initial.history = addLog('new_game','Nouvelle partie');
+    const old = state || {};
+    const initial = defaultState();
+    initial.sessionCode = code();
+    initial.lotoName = old.lotoName || initial.lotoName;
+    initial.options = old.options || initial.options;
+    initial.program = old.program || initial.program;
+    initial.simulation = old.simulation || initial.simulation;
+    initial.history = addLog('new_game','Nouvelle partie');
     await save(initial);
+  }
+  function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
+  function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
+  function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
+  async function nextPrize(){
+    const parties = state.program?.parties || [];
+    if(!parties.length) return;
+    let pi = state.currentPartieIndex || 0;
+    let li = state.currentPrizeIndex || 0;
+    const prizes = visiblePrizes(parties[pi]);
+    if(li < prizes.length - 1) li++;
+    else if(pi < parties.length - 1){ pi++; li = 0; }
+    await save({ currentPartieIndex:pi, currentPrizeIndex:li, history:addLog('next_prize','Lot suivant') });
+  }
+  async function winner(){
+    await save({ history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
+    await nextPrize();
+  }
+  function nextBingoNumber(n){
+    n = Number(n); if(!n || n<1 || n>90) return null;
+    const used = new Set(state.bingoNumbers || []);
+    for(let step=0; step<90; step++){
+      const candidate = ((n - 1 + step) % 90) + 1;
+      if(!used.has(candidate)) return candidate;
+    }
+    return null;
   }
   async function fetchCard(numero){
     if(!supabaseClient) return null;
@@ -138,5 +176,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();
