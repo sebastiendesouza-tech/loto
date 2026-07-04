@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.2.5-final',
+    appVersion: C.APP_VERSION || 'v2.2.6-final',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -253,7 +253,15 @@
     const toast = endOfPartieToast(progress);
     const patch = { ...progress, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
     if(isLastPrize) applyMiniBingoLastNumber(patch);
-    if(toast) patch.toast = toast;
+    if(toast) {
+      patch.toast = toast;
+      // Fin de partie : le message de démarquage est affiché et le tableau est immédiatement remis à zéro
+      // pour préparer la partie suivante ou le Mini-bingo.
+      patch.drawnNumbers = [];
+      patch.pendingNumber = null;
+      patch.publicCard = null;
+      patch.checkedCards = [];
+    }
     if(isLastPrize && isLastPartie && state.options?.bingoEnabled) patch.miniBingoReady = true;
     await save(patch);
   }

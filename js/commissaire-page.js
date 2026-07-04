@@ -32,7 +32,7 @@ function diagnosticHtml(r){
 }
 
 function renderResult(payload){
-  if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; return; }
+  if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; lastResult = null; return; }
   if(!payload.found){
     result.innerHTML = `<p class="bad">Carton ${esc(payload.numero)} non enregistré dans la base.</p><p>Vérifiez le numéro saisi.</p>`;
     showBtn.style.display = 'none';
@@ -73,9 +73,12 @@ input.onkeydown = e => { if(e.key === 'Enter') document.getElementById('checkBtn
 showBtn.onclick = () => lastResult && Loto.showPublicCard(lastResult);
 hideBtn.onclick = () => Loto.hidePublicCard();
 
-Loto.onChange(() => {
+Loto.onChange((s) => {
   Loto.pageHeader();
   Loto.renderNumbers(grid);
   last.textContent = Loto.lastNumber();
+  if(!s.publicCard){
+    renderResult(null);
+  }
 });
 Loto.ensureSession();
