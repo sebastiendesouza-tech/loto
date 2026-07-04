@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v2.1.5-dev
+
+### Corrections
+- Micro PC plus reactif : traitement des resultats intermediaires sans attendre la fin complete de la phrase.
+- Affichage public des 3 lots de la partie avec progression visuelle.
+- Les lots deja gagnes sont estompes.
+- Le lot en cours est mis en evidence.
+- QR Code public reduit, sans URL longue affichee.
+- Effet tableau lumineux : numeros non tires discrets, numeros tires allumes.
+
 ## v2.1.4-dev
 
 ### Corrections
