@@ -59,28 +59,17 @@ function renderBingo(s){
 
 function renderQr(){
   const url = playerUrl();
-  playerLink.textContent = url;
+  playerLink.textContent = 'Scannez pour suivre le tirage';
   if(url === lastQrUrl && qr.childNodes.length) return;
   lastQrUrl = url;
   qr.innerHTML = '';
 
-  try{
-    if(window.QRCode){
-      new QRCode(qr, {
-        text: url,
-        width: 190,
-        height: 190,
-        colorDark: '#071421',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.H : 2
-      });
-      return;
-    }
-  }catch(e){ console.warn(e); }
-
+  // QR fiable sur GitHub Pages : image externe directe, sans afficher l'URL longue.
   const img = document.createElement('img');
   img.alt = 'QR Code joueur';
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+  img.width = 220;
+  img.height = 220;
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=' + encodeURIComponent(url);
   qr.appendChild(img);
 }
 
@@ -97,7 +86,7 @@ Loto.onChange(s=>{
 Loto.ensureSession();
 
 function updateMic(on){
-  micBtn.textContent = on ? 'Micro PC' : 'Micro PC';
+  micBtn.textContent = 'Micro PC';
   micBtn.className = 'public-mic ' + (on ? 'red' : 'green');
   micBtn.title = on ? 'Micro actif' : 'Micro inactif';
 }
