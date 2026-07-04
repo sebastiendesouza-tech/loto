@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.3-dev
+- Stabilisation de l’écran animateur.
+- Grille compacte : 90 numéros visibles.
+- Cases plus petites, sans agrandissement inutile.
+- Plus de déplacement visuel au clic.
+- Interface animateur considérée comme figée après validation.
+
 ## v2.0.2-dev
 - Correction affichage animateur : les 90 numeros tiennent sur tablette.
 - Masquage temporaire de l'historique sur l'ecran animateur pour liberer la place.
