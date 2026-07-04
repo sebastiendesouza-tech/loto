@@ -1,31 +1,18 @@
-# Changelog
+# CHANGELOG - LOTO SDS
+
+## v2.0.4-dev
+- Ajout de l'icône PWA pour tablette et ajout à l'écran d'accueil.
+- Ajout du fichier `manifest.json`.
+- Administration enrichie : nom du loto, date, nombre de parties, lots ligne / deux lignes / carton plein.
+- Options Bingo : activation et affichage public.
+- Mode simulation : tirage automatique toutes les X secondes pour tests et formation.
+- Affichage public : bandeau lot en cours si l'option d'affichage des lots est activée.
+- Animateur : boutons `Gagnant` et `Lot suivant`.
+- Bingo : ajout automatique d'un numéro Bingo à chaque numéro validé si l'option est activée.
 
 ## v2.0.3-dev
-- Stabilisation de l’écran animateur.
-- Grille compacte : 90 numéros visibles.
-- Cases plus petites, sans agrandissement inutile.
-- Plus de déplacement visuel au clic.
-- Interface animateur considérée comme figée après validation.
-
-## v2.0.2-dev
-- Correction affichage animateur : les 90 numeros tiennent sur tablette.
-- Masquage temporaire de l'historique sur l'ecran animateur pour liberer la place.
-
-# CHANGELOG
-
-## v2.0.1-dev
-- Correction de la grille des 90 numéros sur l’écran animateur, notamment sur iPad/tablette.
-- Grille animateur rendue compacte et stable au clic.
-
-# Changelog
+- Stabilisation de la grille animateur compacte.
+- 90 numéros visibles.
 
 ## v2.0.0-dev
-
-- Base GitHub Pages + Supabase.
-- Version visible sur toutes les pages.
-- PIN équipe.
-- Pages : accueil, affichage public, animateur, commissaire, joueur, impressions, administration.
-- Synchronisation via `loto_app_sessions`.
-- Préparation de la table `loto_cartons`.
-- Contrôle commissaire prêt pour Supabase.
-- Impressions PDF : A4, 4 affichettes A5, QR Code seul.
+- Socle GitHub Pages + Supabase.
