@@ -1,21 +1,16 @@
-# Changelog
-
-## v2.1.3-dev
-- Affichage public restructuré : titre à gauche, partie au centre, bouton Micro PC à droite.
-- Zone droite dédiée : partie, mode de jeu, étape, lot et QR Code joueur.
-- QR Code joueur corrigé avec génération locale et secours image.
-- Effet visuel numéros éteints/allumés : numéros non tirés bleu discret, numéros tirés lumineux.
-
 # CHANGELOG
 
-## v2.1.1-dev
-- Administration : nom du loto, date, options et lots regroupés dans un seul onglet.
-- Ajout d'un message clair après enregistrement.
-- Ajout d'une liste des lotos enregistrés.
-- Animateur : bouton **Lancer loto** avec choix dans les lotos enregistrés.
-- Animateur : conservation d'une **Partie simple** sans nom ni lots.
-- Correction de l'affichage du QR Code public sur les écrans plus étroits.
+## v2.1.4-dev
 
-## v2.1.0-dev
-- Administration fonctionnelle reliée à Supabase.
-- Parties, lots, affichage public des lots et progression lot suivant.
+### Corrections
+- Correction du micro PC sur l'affichage public.
+- La reconnaissance vocale traite maintenant correctement une annonce répétée dans une seule phrase : `le 22 le 22`.
+- La reconnaissance vocale traite aussi les annonces répétées en deux résultats séparés.
+- Meilleure reconnaissance des nombres français : vingt-deux, soixante-douze, quatre-vingt-dix, etc.
+- Suppression de l'URL longue sous le QR Code public.
+- QR Code public généré en image pour améliorer l'affichage sur GitHub Pages.
+
+### Rappel de fonctionnement
+- Le micro est géré uniquement sur le PC, depuis la page Affichage public.
+- L'animateur ne pilote pas le micro.
+- Le bouton Micro PC est vert quand le micro est arrêté et rouge quand il écoute.
