@@ -1,4 +1,4 @@
-# LOTO SDS v2.2.7-final
+# LOTO SDS v2.2.8-final
 
 Dernière version fonctionnelle de la V2.
 
