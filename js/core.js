@@ -134,20 +134,24 @@
       lastNumberRequired: state.options?.lastNumberRequired !== false
     };
   }
-  async function nextPrize(){
+  function nextProgress(){
     const parties = state.program?.parties || [];
-    if(!parties.length) return;
+    if(!parties.length) return { currentPartieIndex: state.currentPartieIndex || 0, currentPrizeIndex: state.currentPrizeIndex || 0 };
     let pi = state.currentPartieIndex || 0;
     let li = state.currentPrizeIndex || 0;
     const prizes = visiblePrizes(parties[pi]);
     if(li < prizes.length - 1) li++;
     else if(pi < parties.length - 1){ pi++; li = 0; }
-    await save({ currentPartieIndex:pi, currentPrizeIndex:li, history:addLog('next_prize','Lot suivant') });
+    return { currentPartieIndex: pi, currentPrizeIndex: li };
+  }
+  async function nextPrize(){
+    const progress = nextProgress();
+    await save({ ...progress, history:addLog('next_prize','Lot suivant') });
   }
   async function winner(){
     const toast = { message:'VOUS POUVEZ DÉMARQUER !', at: Date.now(), duration:5000 };
-    await save({ toast, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
-    await nextPrize();
+    const progress = nextProgress();
+    await save({ ...progress, toast, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;

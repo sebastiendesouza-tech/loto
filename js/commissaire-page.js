@@ -34,7 +34,7 @@ function diagnosticHtml(r){
 function renderResult(payload){
   if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; return; }
   if(!payload.found){
-    result.innerHTML = `<p class="bad">Carton ${esc(payload.numero)} introuvable.</p>`;
+    result.innerHTML = `<p class="bad">Carton ${esc(payload.numero)} non enregistré dans la base.</p><p>Vérifiez le numéro saisi.</p>`;
     showBtn.style.display = 'none';
     return;
   }
