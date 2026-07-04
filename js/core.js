@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.0.0-dev',
+    appVersion: C.APP_VERSION || 'v2.0.7-dev',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -12,7 +12,7 @@
     checkedCards: [],
     currentPartieIndex: 0,
     currentPrizeIndex: 0,
-    options: { showLots: false, bingoEnabled: false, showBingo: false, prevalidateSeconds: 6 },
+    options: { showLots: false, bingoEnabled: false, showBingo: false, prevalidateSeconds: 6, lastNumberRequired: true },
     bingoNumbers: [],
     program: { title: 'Loto', date: '', parties: [] },
     simulation: { enabled:false, seconds:10 },
@@ -105,7 +105,30 @@
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
+  function gameModeLabel(partie){ return (partie?.gameMode || 'ligne') === 'carton' ? 'Carton plein' : 'À la ligne'; }
   function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
+  function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
+    const mode = partie?.gameMode || 'ligne';
+    if(mode === 'carton') return 'Carton plein';
+    if(prizeIndex === 0) return '1 ligne';
+    if(prizeIndex === 1) return '2 lignes';
+    return 'Carton plein';
+  }
+  function currentRequirement(){
+    const partie = currentPartie();
+    const prizeIndex = state.currentPrizeIndex || 0;
+    const mode = partie?.gameMode || 'ligne';
+    const full = mode === 'carton' || prizeIndex >= 2;
+    const requiredLines = full ? 3 : (prizeIndex === 0 ? 1 : 2);
+    return {
+      mode,
+      prizeIndex,
+      label: stepLabel(partie, prizeIndex),
+      requiredLines,
+      full,
+      lastNumberRequired: state.options?.lastNumberRequired !== false
+    };
+  }
   async function nextPrize(){
     const parties = state.program?.parties || [];
     if(!parties.length) return;
@@ -136,12 +159,37 @@
     return data;
   }
   function checkCard(card){
-    const drawn = new Set([...(state.drawnNumbers || []), ...(state.pendingNumber ? [state.pendingNumber] : [])]);
+    const allDrawn = [...(state.drawnNumbers || [])];
+    const last = state.pendingNumber || allDrawn.slice(-1)[0] || null;
+    const afterList = [...allDrawn, ...(state.pendingNumber ? [state.pendingNumber] : [])];
+    const after = new Set(afterList.map(Number));
+    const beforeList = last ? afterList.filter((n, idx) => !(Number(n) === Number(last) && idx === afterList.map(Number).lastIndexOf(Number(last)))) : afterList;
+    const before = new Set(beforeList.map(Number));
     const lignes = card?.lignes || [];
-    const lineResults = lignes.map(l => ({ numbers:l, missing:l.filter(n => !drawn.has(Number(n))), ok:l.every(n => drawn.has(Number(n))) }));
+    const req = currentRequirement();
+    const buildLines = (drawnSet) => lignes.map(l => ({
+      numbers:l,
+      missing:l.filter(n => !drawnSet.has(Number(n))),
+      ok:l.every(n => drawnSet.has(Number(n))),
+      hasLast:last ? l.map(Number).includes(Number(last)) : false
+    }));
+    const lineResults = buildLines(after);
+    const beforeLineResults = buildLines(before);
     const okLines = lineResults.filter(l => l.ok).length;
+    const okLinesBefore = beforeLineResults.filter(l => l.ok).length;
     const allMissing = lineResults.flatMap(l => l.missing);
-    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, full: okLines === 3, missing: allMissing };
+    const requirementReached = req.full ? okLines === 3 : okLines >= req.requiredLines;
+    const requirementReachedBeforeLast = req.full ? okLinesBefore === 3 : okLinesBefore >= req.requiredLines;
+    const lastCompletesGain = !last ? false : requirementReached && !requirementReachedBeforeLast;
+    const lastOnWinningLine = lineResults.some(l => l.ok && l.hasLast);
+    const lastOnCard = last ? lignes.flat().map(Number).includes(Number(last)) : false;
+    const lastRuleOk = !req.lastNumberRequired || (req.full ? (lastOnCard && lastCompletesGain) : (lastOnWinningLine && lastCompletesGain));
+    const valid = requirementReached && lastRuleOk;
+    let reason = '';
+    if(!requirementReached) reason = req.full ? 'Carton non complet' : 'Nombre de lignes insuffisant';
+    else if(!lastRuleOk) reason = 'Le dernier numéro ne complète pas le gain';
+    else reason = 'Gain valide';
+    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, valid, reason };
   }
   async function controlCard(numero){
     const card = await fetchCard(numero);
@@ -176,5 +224,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();
