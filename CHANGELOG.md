@@ -1,3 +1,9 @@
+# Changelog
+
+## v2.0.2-dev
+- Correction affichage animateur : les 90 numeros tiennent sur tablette.
+- Masquage temporaire de l'historique sur l'ecran animateur pour liberer la place.
+
 # CHANGELOG
 
 ## v2.0.1-dev
