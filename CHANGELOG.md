@@ -1,12 +1,10 @@
-# LOTO SDS - Changelog
+# Changelog
 
-## v2.1.2-dev
-- Affichage public simplifié : Partie X/Y à gauche du bandeau de lot.
-- Libellé public : 1 LIGNE / 2 LIGNES / CARTON PLEIN puis LOT : nom du lot.
-- Suppression du bouton PDF QR sur l'affichage public.
-- Dernier numéro public réduit pour augmenter la hauteur de la grille.
-- Micro géré sur l'affichage public PC avec état visible.
-- Animateur : suppression du bouton Lot suivant, le bouton Gagnant avance au lot suivant.
+## v2.1.3-dev
+- Affichage public restructuré : titre à gauche, partie au centre, bouton Micro PC à droite.
+- Zone droite dédiée : partie, mode de jeu, étape, lot et QR Code joueur.
+- QR Code joueur corrigé avec génération locale et secours image.
+- Effet visuel numéros éteints/allumés : numéros non tirés bleu discret, numéros tirés lumineux.
 
 # CHANGELOG
 

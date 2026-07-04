@@ -1,5 +1,51 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Affichage public</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css"></head><body class="public-body">
-<header class="topbar"><div><span class="brand" data-title></span><span class="version" data-version></span></div><div id="publicLotBanner" class="public-lot-banner"></div><div class="toolbar"><button id="micBtn" class="small green">Micro PC</button><span id="micStatus" class="mic-status">arrêté</span></div></header>
-<main class="public-layout"><section class="public-main"><div id="last" class="public-number">--</div><div class="public-grid"><div id="grid" class="numbers"></div></div></section><aside class="side"><div class="card"><h3>Historique</h3><div id="history" class="history"></div></div><div class="card qrbox"><h3>Suivre sur téléphone</h3><div id="qr"></div><p id="playerLink" style="font-size:12px;word-break:break-all"></p></div><div class="card" id="lotBox" style="display:none"></div><div class="card" id="bingoBox" style="display:none"></div></aside></main>
-<div id="cardOverlay" style="display:none;position:fixed;inset:5%;z-index:50;background:#fff;color:#111;border-radius:22px;padding:24px;box-shadow:0 0 0 999px rgba(0,0,0,.65)"></div>
-<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script><script src="js/core.js"></script><script src="js/voice.js"></script><script src="js/public-page.js"></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Affichage public</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="public-body public-v213">
+  <header class="public-topbar">
+    <div class="public-brand"><span data-title></span> <span data-version></span></div>
+    <div id="publicPartHeader" class="public-part-header">Partie --/--</div>
+    <button id="micBtn" class="public-mic green">Micro PC</button>
+  </header>
+
+  <main class="public-layout-v213">
+    <section class="public-main-v213">
+      <div id="last" class="public-number-v213">--</div>
+      <div class="public-grid-v213"><div id="grid" class="numbers"></div></div>
+    </section>
+
+    <aside class="public-side-v213">
+      <div class="public-info-card">
+        <div id="publicGameTitle" class="public-game-title">Partie n°--</div>
+        <div id="publicGameMode" class="public-game-mode">Jeu : --</div>
+        <div id="publicStep" class="public-step">--</div>
+        <div id="publicLot" class="public-lot">LOT : --</div>
+      </div>
+
+      <div class="public-qr-card">
+        <div class="qr-title">Suivez le tirage</div>
+        <div id="qr" class="qr-holder"></div>
+        <p id="playerLink" class="qr-link"></p>
+      </div>
+
+      <div class="public-bingo-card" id="bingoBox" style="display:none"></div>
+    </aside>
+  </main>
+
+  <div id="cardOverlay" style="display:none;position:fixed;inset:5%;z-index:50;background:#fff;color:#111;border-radius:22px;padding:24px;box-shadow:0 0 0 999px rgba(0,0,0,.65)"></div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/public-page.js"></script>
+</body>
+</html>
