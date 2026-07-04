@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v2.2.0-dev
+
+### Ajouts
+- Extraction des cartons historiques depuis `scripts.js`.
+- Fichier `data/cartons-standard.json` intégré au projet.
+- Administration > Cartons : import des cartons STANDARD dans Supabase.
+- Administration > Cartons : compteur, suppression de série et test d’un carton.
+- Le commissaire peut contrôler les cartons depuis la table `loto_cartons`.
+
+### Note
+- 1 999 cartons ont été extraits : série 101000 à 102999, avec le numéro 101311 absent dans le fichier source.
+
 ## v2.1.5-dev
 
 ### Corrections
