@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.2.4-dev',
+    appVersion: C.APP_VERSION || 'v2.2.5-final',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -12,8 +12,11 @@
     checkedCards: [],
     currentPartieIndex: 0,
     currentPrizeIndex: 0,
-    options: { showLots: false, bingoEnabled: false, showBingo: false, prevalidateSeconds: 6, lastNumberRequired: true },
+    options: { showLots: false, bingoEnabled: false, showBingo: false, miniBingoSource: 'first', prevalidateSeconds: 6, lastNumberRequired: true },
     bingoNumbers: [],
+    miniBingoTakenParties: [],
+    miniBingoReady: false,
+    miniBingoActive: false,
     program: { id: '', title: '', date: '', parties: [] },
     savedPrograms: [],
     updatedAt: new Date().toISOString()
@@ -59,7 +62,32 @@
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], publicCard:null, checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, publicCard:null, checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function applyMiniBingoFirstNumber(n, patch){
+    if(!state.options?.bingoEnabled || state.miniBingoActive) return;
+    if((state.options?.miniBingoSource || 'first') !== 'first') return;
+    const pi = state.currentPartieIndex || 0;
+    const taken = new Set(state.miniBingoTakenParties || []);
+    if(taken.has(pi)) return;
+    const b = nextBingoNumber(n);
+    if(!b) return;
+    taken.add(pi);
+    patch.bingoNumbers = [...(state.bingoNumbers || []), b];
+    patch.miniBingoTakenParties = [...taken];
+  }
+  function applyMiniBingoLastNumber(patch){
+    if(!state.options?.bingoEnabled || state.miniBingoActive) return;
+    if((state.options?.miniBingoSource || 'first') !== 'last') return;
+    const pi = state.currentPartieIndex || 0;
+    const taken = new Set(state.miniBingoTakenParties || []);
+    if(taken.has(pi)) return;
+    const n = state.pendingNumber || (state.drawnNumbers || []).slice(-1)[0];
+    const b = nextBingoNumber(n);
+    if(!b) return;
+    taken.add(pi);
+    patch.bingoNumbers = [...(state.bingoNumbers || []), b];
+    patch.miniBingoTakenParties = [...taken];
+  }
   async function drawNumber(n, mode='manual'){
     n = Number(n); if(!n || n<1 || n>90) return;
     let drawn = [...(state.drawnNumbers || [])];
@@ -68,7 +96,7 @@
     if(oldPending && !drawn.includes(oldPending)) drawn.push(oldPending);
     drawn.push(n);
     const patch = { drawnNumbers: drawn, pendingNumber: null, history: addLog('draw', 'Numéro ' + n, { n, mode }) };
-    if(state.options?.bingoEnabled){ const b = nextBingoNumber(n); if(b) patch.bingoNumbers = [...(state.bingoNumbers || []), b]; }
+    applyMiniBingoFirstNumber(n, patch);
     await save(patch);
   }
   async function setPendingNumber(n){
@@ -86,7 +114,7 @@
     const drawn = [...(state.drawnNumbers || [])];
     if(!drawn.includes(p)) drawn.push(p);
     const patch = { drawnNumbers: drawn, pendingNumber: null, history: addLog('validate', 'Validation ' + p, { n:p }) };
-    if(state.options?.bingoEnabled){ const b = nextBingoNumber(p); if(b) patch.bingoNumbers = [...(state.bingoNumbers || []), b]; }
+    applyMiniBingoFirstNumber(p, patch);
     await save(patch);
   }
   async function cancelPending(){ if(state.pendingNumber) await save({ pendingNumber:null, history:addLog('cancel_pending','Erreur vocale') }); }
@@ -181,16 +209,16 @@
     '❤️ À très bientôt pour une prochaine édition ! Merci aux joueurs et aux bénévoles.'
   ];
   const bingoIntroMessages = [
-    '🎉 Les parties classiques sont terminées ! Place maintenant au Bingo !',
-    '🎊 Ne rangez pas vos cartons ! Le Bingo commence dans quelques instants.',
-    '⭐ Les lots principaux sont attribués… il est temps de passer au Bingo !',
-    '🍀 Une dernière chance de gagner ! Préparez-vous pour le Bingo.',
-    '🎁 Ce n’est pas fini ! Le Bingo va commencer.',
-    '🏁 Fin des parties classiques. Le Bingo arrive maintenant.',
-    '🎯 Restez bien avec nous : place au Bingo !',
-    '🥳 Encore un moment de jeu : le Bingo démarre bientôt.',
-    '✨ Préparez vos cartes Bingo, on continue !',
-    '🍀 Le loto continue avec le Bingo. Bonne chance à tous !'
+    '🎉 Les parties classiques sont terminées ! Place maintenant au Mini-bingo !',
+    '🎊 Ne rangez pas vos tickets ! Le Mini-bingo commence dans quelques instants.',
+    '⭐ Les lots principaux sont attribués… il est temps de passer au Mini-bingo !',
+    '🍀 Une dernière chance de gagner ! Préparez-vous pour le Mini-bingo.',
+    '🎁 Ce n’est pas fini ! Le Mini-bingo va commencer.',
+    '🏁 Fin des parties classiques. Le Mini-bingo arrive maintenant.',
+    '🎯 Restez bien avec nous : place au Mini-bingo !',
+    '🥳 Encore un moment de jeu : le Mini-bingo démarre bientôt.',
+    '✨ Préparez vos tickets Mini-bingo, on continue !',
+    '🍀 Le loto continue avec le Mini-bingo. Bonne chance à tous !'
   ];
   function randomFrom(list){
     const arr = list && list.length ? list : ['Partie terminée.'];
@@ -209,17 +237,28 @@
     let type = 'partie_end';
     let message = randomFrom(betweenPartMessages);
     if(isLastPartie){
-      if(state.options?.bingoEnabled){ type = 'bingo_intro'; message = randomFrom(bingoIntroMessages); }
+      if(state.options?.bingoEnabled){ type = 'mini_bingo_intro'; message = randomFrom(bingoIntroMessages); }
       else { type = 'loto_end'; message = randomFrom(finalMessages); }
     }
     return { type, message, at: Date.now(), duration: 5000 };
   }
   async function winner(){
+    const parties = state.program?.parties || [];
+    const currentPi = state.currentPartieIndex || 0;
+    const prizes = visiblePrizes(parties[currentPi]);
+    const currentLi = state.currentPrizeIndex || 0;
+    const isLastPrize = !prizes.length || currentLi >= prizes.length - 1;
+    const isLastPartie = currentPi >= parties.length - 1;
     const progress = nextProgress();
     const toast = endOfPartieToast(progress);
     const patch = { ...progress, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
+    if(isLastPrize) applyMiniBingoLastNumber(patch);
     if(toast) patch.toast = toast;
+    if(isLastPrize && isLastPartie && state.options?.bingoEnabled) patch.miniBingoReady = true;
     await save(patch);
+  }
+  async function startMiniBingo(){
+    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, checkedCards:[], miniBingoReady:false, miniBingoActive:true, toast:{ type:'mini_bingo_start', message:'🎯 Mini-bingo lancé ! Bonne chance à tous.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;
@@ -322,5 +361,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'LOTO SDS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();

@@ -68,9 +68,9 @@ function renderLots(s){
   const index = (s.currentPartieIndex || 0) + 1;
   const currentPrizeIndex = s.currentPrizeIndex || 0;
 
-  publicPartHeader.textContent = total ? `Partie ${index}/${total}` : 'Partie simple';
-  publicGameTitle.textContent = total ? `Partie n°${index}` : 'Partie simple';
-  publicGameMode.textContent = partie ? `Jeu : ${Loto.gameModeLabel(partie)}` : 'Jeu : tirage simple';
+  publicPartHeader.textContent = s.miniBingoActive ? 'MINI-BINGO' : (total ? `Partie ${index}/${total}` : 'Partie simple');
+  publicGameTitle.textContent = s.miniBingoActive ? 'Mini-bingo' : (total ? `Partie n°${index}` : 'Partie simple');
+  publicGameMode.textContent = s.miniBingoActive ? 'Jeu : Mini-bingo' : (partie ? `Jeu : ${Loto.gameModeLabel(partie)}` : 'Jeu : tirage simple');
 
   if(!opts.showLots || !partie){
     publicStep.textContent = '';
@@ -91,7 +91,7 @@ function renderLots(s){
 function renderBingo(s){
   if(!s.options?.showBingo || !s.options?.bingoEnabled){ bingoBox.style.display='none'; return; }
   bingoBox.style.display='block';
-  bingoBox.innerHTML=`<h3>Bingo</h3><div class="history">${(s.bingoNumbers||[]).slice(-20).reverse().map(n=>`<span class="pill bingo-pill">${String(n).padStart(2,'0')}</span>`).join('')}</div>`;
+  bingoBox.innerHTML=`<h3>Mini-bingo</h3><div class="history">${(s.bingoNumbers||[]).slice(-20).reverse().map(n=>`<span class="pill bingo-pill">${String(n).padStart(2,'0')}</span>`).join('')}</div>`;
 }
 
 function renderQr(){
