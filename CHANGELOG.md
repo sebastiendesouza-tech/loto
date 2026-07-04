@@ -1,6 +1,17 @@
+# v2.2.7-final
+
+- Correction : la fermeture de l'affichage carton est maintenant synchronisée sur l'affichage public, l'animateur et le commissaire.
+- Les panneaux de contrôle locaux sont vidés quand le carton public est fermé.
+
 # Changelog
 
-## v2.2.5-final
+## v2.2.7-final
+- Correctif : après le message de fin de partie, le tableau de tirage est démarqué automatiquement.
+- Remise à zéro des numéros, de la prévalidation et du carton affiché en fin de partie.
+
+# Changelog
+
+## v2.2.7-final
 - Clôture fonctionnelle de la V2.
 - Renommage du jeu complémentaire : `Bingo` devient `Mini-bingo`.
 - Conservation du mode de partie `Bingo mystère`.
