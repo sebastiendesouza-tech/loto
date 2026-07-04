@@ -1,0 +1,11 @@
+Loto.pageHeader();Loto.protectPage();
+const { jsPDF } = window.jspdf;
+const playerUrl = () => (Loto.C.PLAYER_URL || (location.origin+location.pathname.replace('impressions.html','joueur.html'))) + '?s=' + encodeURIComponent(Loto.code());
+document.getElementById('link').textContent = playerUrl();
+async function qrDataUrl(size=900){ const c=document.createElement('canvas'); await QRCode.toCanvas(c, playerUrl(), {width:size,margin:1}); return c.toDataURL('image/png'); }
+function textBlock(doc,x,y,w){ doc.setFont('helvetica','bold');doc.setFontSize(30);doc.text('LOTO SDS',x+w/2,y,{align:'center'});doc.setFont('helvetica','normal');doc.setFontSize(15);doc.text('Suivez le tirage en direct sur votre téléphone.',x+w/2,y+14,{align:'center'});doc.text('Aucune application à installer.',x+w/2,y+23,{align:'center'});}
+async function a4(){const doc=new jsPDF({unit:'mm',format:'a4'}),qr=await qrDataUrl();textBlock(doc,15,25,180);doc.addImage(qr,'PNG',45,65,120,120);doc.setFontSize(12);doc.text(playerUrl(),105,198,{align:'center',maxWidth:180});doc.setFontSize(9);doc.text((Loto.C.APP_VERSION||''),105,286,{align:'center'});doc.save('loto-sds-qr-a4.pdf');}
+async function a5sheet(){const doc=new jsPDF({unit:'mm',format:'a4'}),qr=await qrDataUrl();const cells=[[0,0],[105,0],[0,148.5],[105,148.5]];cells.forEach(([x,y])=>{doc.rect(x+3,y+3,99,142.5);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('LOTO SDS',x+52.5,y+18,{align:'center'});doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('Suivez le tirage en direct',x+52.5,y+28,{align:'center'});doc.addImage(qr,'PNG',x+22.5,y+37,60,60);doc.setFontSize(7);doc.text(playerUrl(),x+52.5,y+107,{align:'center',maxWidth:88});doc.setFontSize(9);doc.text('Aucune application à installer',x+52.5,y+124,{align:'center'});});doc.save('loto-sds-4-a5.pdf');}
+async function qrOnly(){const doc=new jsPDF({unit:'mm',format:'a4'}),qr=await qrDataUrl();doc.addImage(qr,'PNG',35,35,140,140);doc.setFontSize(12);doc.text(playerUrl(),105,190,{align:'center',maxWidth:180});doc.save('loto-sds-qr-seul.pdf');}
+document.getElementById('pdfA4').onclick=a4;document.getElementById('pdfA5').onclick=a5sheet;document.getElementById('pdfQr').onclick=qrOnly;
+Loto.ensureSession();
