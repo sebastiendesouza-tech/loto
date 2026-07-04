@@ -1,3 +1,13 @@
+# LOTO SDS - Changelog
+
+## v2.1.2-dev
+- Affichage public simplifié : Partie X/Y à gauche du bandeau de lot.
+- Libellé public : 1 LIGNE / 2 LIGNES / CARTON PLEIN puis LOT : nom du lot.
+- Suppression du bouton PDF QR sur l'affichage public.
+- Dernier numéro public réduit pour augmenter la hauteur de la grille.
+- Micro géré sur l'affichage public PC avec état visible.
+- Animateur : suppression du bouton Lot suivant, le bouton Gagnant avance au lot suivant.
+
 # CHANGELOG
 
 ## v2.1.1-dev
