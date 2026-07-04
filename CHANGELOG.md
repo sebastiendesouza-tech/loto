@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2.3-dev
+- Correction de la grille animateur : les 90 numéros sont à nouveau visibles en format compact.
+- Toast « VOUS POUVEZ DÉMARQUER ! » conservé aussi après le dernier lot de la partie.
+- Administration : après Enregistrer, les champs sont vidés pour saisir un nouveau loto.
+- Administration : message clair « Loto enregistré » après sauvegarde.
+- Contrôle carton : message explicite si le carton n'est pas enregistré dans la base.
+
 ## v2.2.2-dev
 - Suppression des boutons inutiles côté animateur : Lot suivant et Valider attente.
 - Bouton Gagnant unique : avance au lot suivant et déclenche le message public.

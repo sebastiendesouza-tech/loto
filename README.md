@@ -1,4 +1,4 @@
-# LOTO SDS v2.2.2-dev
+# LOTO SDS v2.2.3-dev
 
 Application web de loto pour le Comité des Fêtes.
 
@@ -11,7 +11,7 @@ Application web de loto pour le Comité des Fêtes.
 - `joueur.html` : suivi du tirage sur téléphone
 - `administration.html` : préparation des lotos, lots, cartons, paramètres
 
-## Nouveautés v2.2.2-dev
+## Nouveautés v2.2.3-dev
 
 - Le bouton `Gagnant` est le seul bouton d'avancement des lots.
 - Le message `VOUS POUVEZ DÉMARQUER !` s'affiche 5 secondes sur le public et les joueurs.
