@@ -30,3 +30,24 @@ body[data-page="public"] .last-display p{height:0;margin:0;font-size:0;overflow:
 .commissaire-page #cardPreview .card-msg{font-size:18px;margin-top:8px}
 .commissaire-page .log-row{font-size:14px;padding:6px 0}
 @media(max-width:900px){.commissaire-page{height:auto;overflow:auto}.commissaire-grid{grid-template-columns:1fr}.commissaire-page .panel{max-height:none}.commissaire-board{grid-template-columns:repeat(10,minmax(0,1fr))}}
+
+/* Commissaire en deux colonnes */
+.commissaire-grid.two-cols{grid-template-columns:42% 58%;height:calc(100vh - 76px)}
+.commissaire-grid.two-cols .panel{height:100%;max-height:none;overflow:hidden}
+.commissioner-last{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;background:#111722;border-radius:14px;padding:10px 14px;margin-bottom:10px}.commissioner-last span{color:var(--muted);font-weight:800;text-transform:uppercase;font-size:13px}.commissioner-last strong{font-size:48px;line-height:1;color:var(--yellow)}
+.commissaire-grid.two-cols .commissaire-board{grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}.commissaire-grid.two-cols .commissaire-board .num{min-height:38px;font-size:17px}.control-panel{display:flex;flex-direction:column}.control-panel #cardPreview{margin-top:10px;overflow:auto}.action-row{margin-top:8px}
+@media(max-width:900px){.commissaire-grid.two-cols{grid-template-columns:1fr;height:auto}.commissaire-grid.two-cols .panel{height:auto;overflow:visible}.commissioner-last strong{font-size:38px}}
+
+/* Accès joueur depuis l'affichage public */
+.player-access{position:fixed;right:18px;bottom:18px;background:rgba(27,32,43,.96);border:1px solid var(--line);border-radius:18px;padding:12px;text-align:center;max-width:190px;z-index:10}.player-access div{font-weight:900;font-size:15px;margin-bottom:8px}.player-access img{width:128px;height:128px;background:#fff;border-radius:10px;padding:6px}.player-access small{display:block;color:var(--muted);font-size:10px;word-break:break-all;margin-top:6px}
+
+/* Mode joueur */
+.player-page{min-height:100vh;padding:12px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}.player-page header{background:var(--panel);border-radius:18px;padding:14px;text-align:center}.player-page header strong{font-size:30px;letter-spacing:1px}.player-page header span{display:block;color:var(--muted);font-size:13px}.player-last{background:var(--panel);border-radius:22px;padding:14px;text-align:center}.player-last span{display:block;text-transform:uppercase;color:var(--muted);font-weight:900}.player-last strong{font-size:96px;line-height:1;color:var(--yellow)}.player-board{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}.player-board .num{min-height:38px;font-size:18px;border-radius:8px}.player-history{background:var(--panel);border-radius:18px;padding:12px;max-height:28vh;overflow:auto}.player-history h2{margin:0 0 8px;font-size:18px}@media(max-width:560px){.player-board{grid-template-columns:repeat(5,minmax(0,1fr))}.player-board .num{min-height:42px}.player-last strong{font-size:82px}}
+
+
+/* Protection equipe par code PIN */
+.pin-lock{min-height:100vh;display:grid;place-items:center;background:#0b0f17;color:var(--text);padding:20px}.pin-box{width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:28px;text-align:center;box-shadow:0 20px 80px rgba(0,0,0,.35)}.pin-box h1{font-size:42px;margin:0 0 6px}.pin-box p{color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}.pin-box input{width:100%;box-sizing:border-box;text-align:center;font-size:34px;letter-spacing:.25em;margin:12px 0 14px}.pin-box button{width:100%}.pin-error{min-height:24px;margin-top:12px;color:var(--red);font-weight:900}.home #logoutBtn{width:100%}
+
+/* Page joueur telephone */
+@media(max-width:560px){.player-page{padding:8px;gap:8px}.player-page header{padding:10px;border-radius:14px}.player-page header strong{font-size:24px}.player-last{padding:10px;border-radius:16px}.player-last span{font-size:13px}.player-last strong{font-size:78px}.player-board{gap:4px}.player-board .num{min-height:38px;font-size:17px;border-radius:7px}.player-history{max-height:22vh;padding:8px}.player-history .pill{font-size:13px;padding:6px 8px;margin:3px}}
+@media(max-height:720px) and (max-width:560px){.player-history{display:none}.player-page{grid-template-rows:auto auto 1fr}.player-board .num{min-height:34px}}
