@@ -21,12 +21,32 @@ function playerUrl(){
   return base + '?s=' + encodeURIComponent(Loto.code());
 }
 
+function pad(n){ return String(n).padStart(2,'0'); }
+function esc(s){ return String(s ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
+function renderPublicCardGrid(card){
+  const drawn = new Set([...(Loto.state().drawnNumbers || []), ...(Loto.state().pendingNumber ? [Loto.state().pendingNumber] : [])].map(Number));
+  const lastNum = Number(card.lastNumber || 0);
+  return `<div class="public-card-grid">${(card.lignes || []).map((line, i) =>
+    `<div class="public-card-line ${card.lineResults?.[i]?.ok ? 'complete' : ''}">${line.map(n => {
+      const cls = drawn.has(Number(n)) ? 'hit' : 'miss';
+      const lastCls = Number(n) === lastNum ? ' last-hit' : '';
+      return `<span class="public-card-num ${cls}${lastCls}">${pad(n)}</span>`;
+    }).join('')}</div>`
+  ).join('')}</div>`;
+}
 function renderCard(card){
   if(!card){ overlay.style.display='none'; return; }
   overlay.style.display='block';
-  const lines=(card.lignes||[]).map((l,i)=>`<tr><th>Ligne ${i+1}</th>${l.map(n=>`<td style="padding:14px 18px;border:1px solid #ddd;font-size:34px;font-weight:900">${String(n).padStart(2,'0')}</td>`).join('')}</tr>`).join('');
-  const req=card.requirement||{};
-  overlay.innerHTML=`<h1 style="font-size:56px;margin:0 0 18px">Carton ${card.numero}</h1><p style="font-size:34px"><b>${req.label||''}</b></p><p style="font-size:34px" class="${card.valid?'ok':'bad'}">${card.valid?'GAIN VALIDE':'NON VALIDE'}</p><p style="font-size:24px">${card.reason||''}</p><table style="border-collapse:collapse;width:100%;text-align:center">${lines}</table>`;
+  const req = card.requirement || {};
+  const messages = card.messages && card.messages.length ? card.messages : [card.reason].filter(Boolean);
+  overlay.innerHTML = `
+    <div class="public-card-overlay-inner">
+      <h1>Carton ${esc(card.numero)}</h1>
+      <p class="public-card-req">${esc(req.label || '')}</p>
+      <p class="${card.valid ? 'ok' : 'bad'} public-card-status">${card.valid ? 'GAIN VALIDE' : 'NON VALIDE'}</p>
+      ${renderPublicCardGrid(card)}
+      ${messages.length ? `<ul class="public-diagnostic-list">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+    </div>`;
 }
 
 function ordinalLabel(i){
@@ -34,6 +54,7 @@ function ordinalLabel(i){
 }
 
 function stepLabelFor(partie, index){
+  if((partie?.gameMode || 'ligne') === 'bingoMystere') return 'BINGO MYSTÈRE';
   if((partie?.gameMode || 'ligne') === 'carton') return 'CARTON PLEIN';
   if(index === 0) return '1 LIGNE';
   if(index === 1) return '2 LIGNES';
@@ -62,7 +83,8 @@ function renderLots(s){
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
-    return `<div class="public-prize-row ${cls}"><span class="public-prize-step">${stepLabelFor(partie,i)}</span><span class="public-prize-lot">${ordinalLabel(i)} : ${lot}</span></div>`;
+    const lotLabel = (partie?.gameMode || 'ligne') === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
+    return `<div class="public-prize-row ${cls}"><span class="public-prize-step">${stepLabelFor(partie,i)}</span><span class="public-prize-lot">${lotLabel} : ${lot}</span></div>`;
   }).join('')}</div>`;
 }
 
@@ -88,6 +110,15 @@ function renderQr(){
   qr.appendChild(img);
 }
 
+function renderToast(s){
+  let el = document.getElementById('publicToast');
+  if(!el){ el = document.createElement('div'); el.id='publicToast'; el.className='loto-toast public-toast'; document.body.appendChild(el); }
+  const t = s.toast;
+  const active = t && (Date.now() - Number(t.at || 0) < Number(t.duration || 5000));
+  if(active){ el.textContent = t.message || 'VOUS POUVEZ DÉMARQUER !'; el.classList.add('show'); window.clearTimeout(window.__publicToastTimer); window.__publicToastTimer = window.setTimeout(()=>el.classList.remove('show'), Math.max(200, Number(t.duration||5000) - (Date.now() - Number(t.at||0)))); }
+  else el.classList.remove('show');
+}
+
 Loto.onChange(s=>{
   Loto.pageHeader();
   last.textContent = Loto.lastNumber();
@@ -96,6 +127,7 @@ Loto.onChange(s=>{
   renderLots(s);
   renderBingo(s);
   renderQr();
+  renderToast(s);
 });
 
 Loto.ensureSession();

@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.1.1-dev',
+    appVersion: C.APP_VERSION || 'v2.2.2-dev',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -109,10 +109,11 @@
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
-  function gameModeLabel(partie){ return (partie?.gameMode || 'ligne') === 'carton' ? 'Carton plein' : 'À la ligne'; }
+  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystere') return 'Bingo mystère'; return 'À la ligne'; }
   function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
   function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
     const mode = partie?.gameMode || 'ligne';
+    if(mode === 'bingoMystere') return 'Bingo mystère';
     if(mode === 'carton') return 'Carton plein';
     if(prizeIndex === 0) return '1 ligne';
     if(prizeIndex === 1) return '2 lignes';
@@ -122,7 +123,7 @@
     const partie = currentPartie();
     const prizeIndex = state.currentPrizeIndex || 0;
     const mode = partie?.gameMode || 'ligne';
-    const full = mode === 'carton' || prizeIndex >= 2;
+    const full = mode === 'carton' || mode === 'bingoMystere' || prizeIndex >= 2;
     const requiredLines = full ? 3 : (prizeIndex === 0 ? 1 : 2);
     return {
       mode,
@@ -144,7 +145,8 @@
     await save({ currentPartieIndex:pi, currentPrizeIndex:li, history:addLog('next_prize','Lot suivant') });
   }
   async function winner(){
-    await save({ history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
+    const toast = { message:'VOUS POUVEZ DÉMARQUER !', at: Date.now(), duration:5000 };
+    await save({ toast, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
     await nextPrize();
   }
   function nextBingoNumber(n){
@@ -181,19 +183,39 @@
     const beforeLineResults = buildLines(before);
     const okLines = lineResults.filter(l => l.ok).length;
     const okLinesBefore = beforeLineResults.filter(l => l.ok).length;
-    const allMissing = lineResults.flatMap(l => l.missing);
+    const allMissing = [...new Set(lineResults.flatMap(l => l.missing).map(Number))].sort((a,b)=>a-b);
     const requirementReached = req.full ? okLines === 3 : okLines >= req.requiredLines;
     const requirementReachedBeforeLast = req.full ? okLinesBefore === 3 : okLinesBefore >= req.requiredLines;
     const lastCompletesGain = !last ? false : requirementReached && !requirementReachedBeforeLast;
-    const lastOnWinningLine = lineResults.some(l => l.ok && l.hasLast);
+    const completeLines = lineResults.filter(l => l.ok);
+    const lastOnWinningLine = completeLines.some(l => l.hasLast);
     const lastOnCard = last ? lignes.flat().map(Number).includes(Number(last)) : false;
     const lastRuleOk = !req.lastNumberRequired || (req.full ? (lastOnCard && lastCompletesGain) : (lastOnWinningLine && lastCompletesGain));
     const valid = requirementReached && lastRuleOk;
+
+    const messages = [];
+    if(!requirementReached){
+      if(req.full){
+        messages.push('Carton plein incomplet');
+      } else {
+        const missingLines = Math.max(0, req.requiredLines - okLines);
+        messages.push(missingLines === 1 ? 'Ligne incomplète' : `${missingLines} lignes manquantes`);
+      }
+      if(allMissing.length) messages.push(`Manque ${allMissing.length} numéro${allMissing.length > 1 ? 's' : ''} : ${allMissing.join(' - ')}`);
+    }
+    if(requirementReached && req.lastNumberRequired && !lastRuleOk){
+      messages.push('Pas le dernier numéro');
+    }
+    if(!last && req.lastNumberRequired){
+      messages.push('Aucun dernier numéro disponible');
+    }
+
     let reason = '';
-    if(!requirementReached) reason = req.full ? 'Carton non complet' : 'Nombre de lignes insuffisant';
-    else if(!lastRuleOk) reason = 'Le dernier numéro ne complète pas le gain';
-    else reason = 'Gain valide';
-    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, valid, reason };
+    if(valid) reason = 'Gain valide';
+    else if(messages.length) reason = messages[0];
+    else reason = 'Non valide';
+
+    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, valid, reason, messages };
   }
   async function controlCard(numero){
     const card = await fetchCard(numero);
@@ -227,6 +249,6 @@
     const check = () => { if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else overlay.querySelector('#pinErr').textContent = 'PIN incorrect'; };
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
-  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); }
+  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'LOTO SDS'); }
   window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();
