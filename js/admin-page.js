@@ -2,7 +2,7 @@ Loto.pageHeader();
 Loto.protectPage();
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active');});
-const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),simulationEnabled=document.getElementById('simulationEnabled'),simulationSeconds=document.getElementById('simulationSeconds'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList');
+const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList');
 
 const prizeTypes=['Lot 1','Lot 2','Lot 3'];
 function defaultPrize(i,label=''){return {type:prizeTypes[i] || 'Lot',label,enabled:true};}
@@ -55,7 +55,6 @@ async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p
 document.getElementById('generateParties').onclick=()=>{let program=readProgram(); const target=Math.max(1,Number(partieCount.value||1)); while(program.parties.length<target) program.parties.push(defaultPartie(program.parties.length)); program.parties=program.parties.slice(0,target); Loto.save({program});};
 document.getElementById('saveProgram').onclick=()=>saveProgramToList({start:false});
 document.getElementById('saveBingo').onclick=async()=>{await Loto.save({options:{...Loto.state().options,bingoEnabled:bingoEnabled.checked,showBingo:showBingo.checked}}); showSavedMessage('Paramètres Bingo enregistrés.');};
-document.getElementById('saveSimulation').onclick=async()=>{await Loto.save({simulation:{enabled:simulationEnabled.checked,seconds:Number(simulationSeconds.value||10)}}); showSavedMessage('Simulation enregistrée.');};
 
 async function refreshCartonCount(){
   const client=Loto.supabaseClient; const el=document.getElementById('cartonCount'); if(!el) return;
@@ -113,5 +112,5 @@ document.getElementById('deleteStandardCartons')?.addEventListener('click',delet
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
 document.getElementById('testCardBtn').onclick=testCard;
 
-Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; simulationEnabled.checked=!!s.simulation?.enabled; simulationSeconds.value=s.simulation?.seconds||10; drawParties(); drawSavedPrograms();});
+Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);

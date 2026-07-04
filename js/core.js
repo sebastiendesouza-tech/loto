@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.2.2-dev',
+    appVersion: C.APP_VERSION || 'v2.2.4-dev',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -16,7 +16,6 @@
     bingoNumbers: [],
     program: { id: '', title: '', date: '', parties: [] },
     savedPrograms: [],
-    simulation: { enabled:false, seconds:10 },
     updatedAt: new Date().toISOString()
   });
   let state = defaultState();
@@ -103,7 +102,6 @@
     initial.options = old.options || initial.options;
     initial.program = old.program || initial.program;
     initial.savedPrograms = old.savedPrograms || initial.savedPrograms;
-    initial.simulation = old.simulation || initial.simulation;
     initial.history = addLog('new_game','Nouvelle partie');
     await save(initial);
   }
@@ -148,10 +146,80 @@
     const progress = nextProgress();
     await save({ ...progress, history:addLog('next_prize','Lot suivant') });
   }
+  const betweenPartMessages = [
+    '🎉 Partie terminée ! Vous pouvez démarquer vos cartons. Bonne chance pour la prochaine partie !',
+    '🏁 Fin de partie ! Démarquez vos cartons, on repart bientôt.',
+    '🎊 Bravo aux gagnants ! Démarquez vos cartons et préparez la suite.',
+    '🍀 On remet les compteurs à zéro ! Démarquez vos cartons.',
+    '✨ Cette partie est terminée. Démarquez tranquillement vos cartons.',
+    '🎯 Les jeux sont faits ! Démarquez vos cartons, la prochaine partie arrive.',
+    '🎈 Un lot de plus attribué ! Démarquez vos cartons.',
+    '🥳 Prenez quelques secondes pour démarquer, on continue.',
+    '⭐ Encore une belle partie ! Démarquez vos cartons.',
+    '🎁 Les lots continuent ! Démarquez vos cartons et restez prêts.',
+    '😊 Une partie s’achève, une autre arrive. Vous pouvez démarquer.',
+    '🍀 La chance tourne ! Démarquez vos cartons.',
+    '🎊 Merci pour votre bonne humeur ! Démarquez vos cartons.',
+    '🎉 Fin de cette partie ! Un petit démarquage, et on repart.',
+    '🌟 Nouvelle chance dans quelques instants ! Démarquez vos cartons.',
+    '🎯 Partie terminée. Démarquez tranquillement vos cartons.',
+    '🍀 Restez avec nous ! Démarquez vos cartons.',
+    '🎉 Bravo à tous ! Démarquez vos cartons pour la suite.',
+    '🏁 Fin de manche ! Démarquez vos cartons.',
+    '🎁 Prochain lot bientôt en jeu. Démarquez vos cartons.'
+  ];
+  const finalMessages = [
+    '🎉 Notre loto est terminé. Merci à toutes et à tous pour votre présence, et merci à nos bénévoles !',
+    '❤️ Merci d’avoir partagé ce moment avec nous. Merci aux joueurs et à tous les bénévoles.',
+    '👏 Félicitations aux gagnants ! Merci à tous les participants et aux bénévoles.',
+    '🎊 Merci pour votre fidélité et votre bonne humeur. À bientôt pour un prochain loto !',
+    '🍀 Le loto touche à sa fin. Merci aux joueurs et aux bénévoles qui ont rendu cette journée possible.',
+    '🎉 Merci pour votre participation ! Nous espérons que vous avez passé un agréable moment.',
+    '🤝 Un grand merci à nos bénévoles, partenaires et joueurs. Bonne fin de journée à toutes et à tous.',
+    '🌟 Merci pour votre présence tout au long de cette journée. À très bientôt.',
+    '🎁 Merci d’avoir participé à notre loto. Votre présence fait vivre cette belle journée.',
+    '❤️ À très bientôt pour une prochaine édition ! Merci aux joueurs et aux bénévoles.'
+  ];
+  const bingoIntroMessages = [
+    '🎉 Les parties classiques sont terminées ! Place maintenant au Bingo !',
+    '🎊 Ne rangez pas vos cartons ! Le Bingo commence dans quelques instants.',
+    '⭐ Les lots principaux sont attribués… il est temps de passer au Bingo !',
+    '🍀 Une dernière chance de gagner ! Préparez-vous pour le Bingo.',
+    '🎁 Ce n’est pas fini ! Le Bingo va commencer.',
+    '🏁 Fin des parties classiques. Le Bingo arrive maintenant.',
+    '🎯 Restez bien avec nous : place au Bingo !',
+    '🥳 Encore un moment de jeu : le Bingo démarre bientôt.',
+    '✨ Préparez vos cartes Bingo, on continue !',
+    '🍀 Le loto continue avec le Bingo. Bonne chance à tous !'
+  ];
+  function randomFrom(list){
+    const arr = list && list.length ? list : ['Partie terminée.'];
+    const last = state.toast?.message || '';
+    const choices = arr.length > 1 ? arr.filter(x => x !== last) : arr;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+  function endOfPartieToast(progress){
+    const parties = state.program?.parties || [];
+    const currentPi = state.currentPartieIndex || 0;
+    const prizes = visiblePrizes(parties[currentPi]);
+    const currentLi = state.currentPrizeIndex || 0;
+    const isLastPrize = !prizes.length || currentLi >= prizes.length - 1;
+    if(!isLastPrize) return null;
+    const isLastPartie = currentPi >= parties.length - 1;
+    let type = 'partie_end';
+    let message = randomFrom(betweenPartMessages);
+    if(isLastPartie){
+      if(state.options?.bingoEnabled){ type = 'bingo_intro'; message = randomFrom(bingoIntroMessages); }
+      else { type = 'loto_end'; message = randomFrom(finalMessages); }
+    }
+    return { type, message, at: Date.now(), duration: 5000 };
+  }
   async function winner(){
-    const toast = { message:'VOUS POUVEZ DÉMARQUER !', at: Date.now(), duration:5000 };
     const progress = nextProgress();
-    await save({ ...progress, toast, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) });
+    const toast = endOfPartieToast(progress);
+    const patch = { ...progress, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
+    if(toast) patch.toast = toast;
+    await save(patch);
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;
