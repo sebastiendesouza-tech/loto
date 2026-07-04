@@ -170,3 +170,4 @@
   .public-v213 .qr-holder{min-height:96px;}
   .public-v213 .qr-holder canvas,.public-v213 .qr-holder img{max-width:86px!important;width:86px!important;height:86px!important;}
 }
+.result-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;min-height:44px;white-space:normal;line-height:1.6}.card.soft{background:rgba(255,255,255,.045)}
