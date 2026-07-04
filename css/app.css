@@ -205,3 +205,4 @@
   .animateur-body .animateur-control-card input{padding:7px 9px;font-size:13px;max-width:160px;}
   .animateur-body .animateur-control-card button{padding:7px 8px;font-size:12px;}
 }
+.btn.orange,button.orange{background:var(--orange);color:#111}
