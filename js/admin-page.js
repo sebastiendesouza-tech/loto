@@ -16,12 +16,22 @@ const lotoName=document.getElementById('lotoName'),
   partiesList=document.getElementById('partiesList'),
   partieCount=document.getElementById('partieCount'),
   simulationEnabled=document.getElementById('simulationEnabled'),
-  simulationSeconds=document.getElementById('simulationSeconds');
+  simulationSeconds=document.getElementById('simulationSeconds'),
+  saveMsg=document.getElementById('saveMsg'),
+  savedProgramsList=document.getElementById('savedProgramsList');
 
 const prizeTypes=['Lot 1','Lot 2','Lot 3'];
 function defaultPrize(i,label=''){return {type:prizeTypes[i],label,enabled:true};}
 function defaultPartie(i){return {name:'Partie '+(i+1),gameMode:'ligne',prizes:[defaultPrize(0),defaultPrize(1),defaultPrize(2)]};}
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
+function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
+function showSavedMessage(text, good=true){
+  saveMsg.textContent=text;
+  saveMsg.className='notice '+(good?'ok-note':'bad-note');
+  saveMsg.style.display='block';
+  window.clearTimeout(window.__saveMsgTimer);
+  window.__saveMsgTimer=window.setTimeout(()=>saveMsg.style.display='none',3500);
+}
 
 function drawParties(){
   const s=Loto.state();
@@ -35,8 +45,8 @@ function drawParties(){
         <label>Nom<input data-p="${i}" data-f="name" value="${esc(p.name||('Partie '+(i+1)))}"></label>
         <label>Mode de jeu
           <select data-p="${i}" data-f="gameMode">
-            <option value="ligne" ${mode==='ligne'?'selected':''}>À la ligne</option>
-            <option value="carton" ${mode==='carton'?'selected':''}>Au carton plein</option>
+            <option value="ligne" ${mode==='ligne'?'selected':''}>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option>
+            <option value="carton" ${mode==='carton'?'selected':''}>Carton plein : chaque lot se joue au carton plein</option>
           </select>
         </label>
       </div>
@@ -74,14 +84,65 @@ function readProgram(){
       partie.prizes[pi].enabled=true;
     }
   });
-  return {title:lotoName.value||Loto.state().program?.title||'Loto',date:lotoDate.value||'',parties};
+  return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,createdAt:new Date().toISOString()};
+}
+function hasUsefulProgram(program){
+  const hasName=(program.title||'').trim().length>0;
+  const hasLots=(program.parties||[]).some(p=>(p.prizes||[]).some(x=>(x.label||'').trim().length>0));
+  return hasName || hasLots;
+}
+function normalizedProgramForSave(){
+  const p=readProgram();
+  const current=Loto.state().program || {};
+  p.id=current.id || p.id;
+  p.createdAt=current.createdAt || p.createdAt;
+  p.updatedAt=new Date().toISOString();
+  return p;
+}
+async function saveProgramToList({start=false}={}){
+  const s=Loto.state();
+  const program=normalizedProgramForSave();
+  const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked};
+  const saved=[...(s.savedPrograms||[])];
+  const idx=saved.findIndex(x=>x.id===program.id);
+  if(idx>=0) saved[idx]=program; else saved.unshift(program);
+  const patch={lotoName: program.title || 'LOTO SDS', program, savedPrograms:saved.slice(0,80), options};
+  if(start){
+    Object.assign(patch,Loto.freshGamePatch(program));
+    patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];
+  }
+  await Loto.save(patch);
+  showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré.');
+}
+function drawSavedPrograms(){
+  const list=Loto.state().savedPrograms||[];
+  if(!list.length){ savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>'; return; }
+  savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row">
+    <div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s)</span></div>
+    <div class="toolbar"><button data-load="${i}">Charger</button><button class="green" data-start="${i}">Lancer</button><button class="red" data-delete="${i}">Supprimer</button></div>
+  </div>`).join('');
+  savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load)));
+  savedProgramsList.querySelectorAll('[data-start]').forEach(b=>startSavedProgram(Number(b.dataset.start)));
+  savedProgramsList.querySelectorAll('[data-delete]').forEach(b=>deleteSavedProgram(Number(b.dataset.delete)));
+}
+async function loadProgram(i){
+  const p=(Loto.state().savedPrograms||[])[i]; if(!p) return;
+  await Loto.save({program:p,lotoName:p.title||'LOTO SDS'});
+  document.querySelector('[data-tab="loto"]').click();
+  showSavedMessage('Loto chargé pour modification.');
+}
+async function startSavedProgram(i){
+  const p=(Loto.state().savedPrograms||[])[i]; if(!p) return;
+  await Loto.save({lotoName:p.title||'LOTO SDS',program:p,...Loto.freshGamePatch(p),history:[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(p),data:{programId:p.id}}]});
+  showSavedMessage('Loto lancé.');
+}
+async function deleteSavedProgram(i){
+  if(!confirm('Supprimer ce loto enregistré ?')) return;
+  const saved=[...(Loto.state().savedPrograms||[])]; saved.splice(i,1);
+  await Loto.save({savedPrograms:saved});
+  showSavedMessage('Loto supprimé.');
 }
 
-document.getElementById('saveGeneral').onclick=()=>Loto.save({
-  lotoName:lotoName.value||'LOTO SDS',
-  program:{...(Loto.state().program||{}),title:lotoName.value||'Loto',date:lotoDate.value||''},
-  options:{...Loto.state().options,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked}
-});
 
 document.getElementById('generateParties').onclick=()=>{
   let program=readProgram();
@@ -90,34 +151,12 @@ document.getElementById('generateParties').onclick=()=>{
   program.parties=program.parties.slice(0,target);
   Loto.save({program});
 };
+document.getElementById('saveProgram').onclick=()=>saveProgramToList({start:false});
+document.getElementById('startProgram').onclick=()=>saveProgramToList({start:true});
+document.getElementById('blankGame').onclick=async()=>{ if(confirm('Créer une nouvelle partie simple sans programme de lots ?')){ await Loto.newGame(); showSavedMessage('Nouvelle partie simple créée.'); } };
 
-
-async function saveProgramState(resetCurrent=false){
-  const options={...Loto.state().options,showLots:showLots.checked};
-  const patch={program:readProgram(),options};
-  if(resetCurrent){
-    Object.assign(patch,{
-      drawnNumbers:[],
-      pendingNumber:null,
-      bingoNumbers:[],
-      publicCard:null,
-      checkedCards:[],
-      currentPartieIndex:0,
-      currentPrizeIndex:0,
-      history:[{t:new Date().toISOString(),type:'start_program',label:'Lancement du loto',data:null}]
-    });
-  }else{
-    patch.currentPartieIndex=0;
-    patch.currentPrizeIndex=0;
-  }
-  await Loto.save(patch);
-}
-
-document.getElementById('saveProgram').onclick=()=>saveProgramState(false);
-document.getElementById('startProgram').onclick=()=>{ if(confirm('Enregistrer le programme et lancer un nouveau loto ?')) saveProgramState(true); };
-
-document.getElementById('saveBingo').onclick=()=>Loto.save({options:{...Loto.state().options,bingoEnabled:bingoEnabled.checked,showBingo:showBingo.checked}});
-document.getElementById('saveSimulation').onclick=()=>Loto.save({simulation:{enabled:simulationEnabled.checked,seconds:Number(simulationSeconds.value||10)}});
+document.getElementById('saveBingo').onclick=async()=>{await Loto.save({options:{...Loto.state().options,bingoEnabled:bingoEnabled.checked,showBingo:showBingo.checked}}); showSavedMessage('Paramètres Bingo enregistrés.');};
+document.getElementById('saveSimulation').onclick=async()=>{await Loto.save({simulation:{enabled:simulationEnabled.checked,seconds:Number(simulationSeconds.value||10)}}); showSavedMessage('Simulation enregistrée.');};
 document.getElementById('testCardBtn').onclick=async()=>{
   const n=document.getElementById('testCard').value;
   const c=await Loto.fetchCard?.(n);
@@ -126,7 +165,7 @@ document.getElementById('testCardBtn').onclick=async()=>{
 
 Loto.onChange(s=>{
   Loto.pageHeader();
-  lotoName.value=s.lotoName||'LOTO SDS';
+  lotoName.value=s.program?.title||'';
   lotoDate.value=s.program?.date||'';
   prevalidate.value=s.options?.prevalidateSeconds||6;
   lastNumberRequired.checked=s.options?.lastNumberRequired!==false;
@@ -136,5 +175,6 @@ Loto.onChange(s=>{
   simulationEnabled.checked=!!s.simulation?.enabled;
   simulationSeconds.value=s.simulation?.seconds||10;
   drawParties();
+  drawSavedPrograms();
 });
 Loto.ensureSession();

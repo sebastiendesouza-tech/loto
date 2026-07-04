@@ -33,14 +33,24 @@
   }
   function supported(){ return window.SpeechRecognition || window.webkitSpeechRecognition; }
   function start(onStatus){
-    const SR = supported(); if(!SR) { onStatus && onStatus(false, 'Reconnaissance vocale non disponible'); return; }
-    if(active) return;
-    recognition = new SR(); recognition.lang = 'fr-FR'; recognition.continuous = true; recognition.interimResults = false;
+    const SR = supported();
+    if(!SR) { onStatus && onStatus(false, 'Reconnaissance vocale non disponible sur ce navigateur'); return; }
+    if(active) { onStatus && onStatus(true, 'écoute active'); return; }
+    recognition = new SR();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onstart = () => { onStatus && onStatus(true, 'écoute active'); };
     recognition.onresult = e => { for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal) handle(e.results[i][0].transcript); } };
     recognition.onend = () => { if(active) { try{ recognition.start(); }catch{} } };
-    recognition.onerror = () => {};
-    active = true; try{ recognition.start(); }catch{}
-    onStatus && onStatus(true);
+    recognition.onerror = (e) => {
+      const msg = e && e.error ? e.error : 'erreur micro';
+      if(msg === 'not-allowed' || msg === 'service-not-allowed'){ active = false; onStatus && onStatus(false, 'micro refusé'); }
+      else onStatus && onStatus(active, msg);
+    };
+    active = true;
+    try{ recognition.start(); }
+    catch(e){ active=false; onStatus && onStatus(false, 'démarrage impossible'); }
   }
   function stop(onStatus){ active = false; firstHeard = null; try{ recognition && recognition.stop(); }catch{} onStatus && onStatus(false); }
   function toggle(onStatus){ active ? stop(onStatus) : start(onStatus); }

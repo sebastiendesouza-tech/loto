@@ -2,7 +2,7 @@
   const C = window.LOTO_CONFIG || {};
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
-    appVersion: C.APP_VERSION || 'v2.0.7-dev',
+    appVersion: C.APP_VERSION || 'v2.1.1-dev',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
     lotoName: C.APP_NAME || 'LOTO SDS',
     drawnNumbers: [],
@@ -14,7 +14,8 @@
     currentPrizeIndex: 0,
     options: { showLots: false, bingoEnabled: false, showBingo: false, prevalidateSeconds: 6, lastNumberRequired: true },
     bingoNumbers: [],
-    program: { title: 'Loto', date: '', parties: [] },
+    program: { id: '', title: '', date: '', parties: [] },
+    savedPrograms: [],
     simulation: { enabled:false, seconds:10 },
     updatedAt: new Date().toISOString()
   });
@@ -58,6 +59,8 @@
     if(error) console.error(error);
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
+  function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], publicCard:null, checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
   async function drawNumber(n, mode='manual'){
     n = Number(n); if(!n || n<1 || n>90) return;
     let drawn = [...(state.drawnNumbers || [])];
@@ -99,6 +102,7 @@
     initial.lotoName = old.lotoName || initial.lotoName;
     initial.options = old.options || initial.options;
     initial.program = old.program || initial.program;
+    initial.savedPrograms = old.savedPrograms || initial.savedPrograms;
     initial.simulation = old.simulation || initial.simulation;
     initial.history = addLog('new_game','Nouvelle partie');
     await save(initial);
@@ -224,5 +228,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();
