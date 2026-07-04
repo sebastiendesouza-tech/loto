@@ -1,22 +1,27 @@
-# LOTO SDS v2.2.4-dev
+# LOTO SDS v2.2.5-final
 
-Application web de loto pour le Comité des Fêtes.
+Dernière version fonctionnelle de la V2.
 
-## Pages principales
+## Écrans
+- Affichage public
+- Animateur
+- Commissaire
+- Joueur
+- Administration
+- Impressions
 
-- `index.html` : menu équipe
-- `public.html` : affichage public / PC / vidéoprojecteur / micro
-- `animateur.html` : télécommande animateur
-- `commissaire.html` : contrôle des cartons
-- `joueur.html` : suivi du tirage sur téléphone
-- `administration.html` : préparation des lotos, lots, cartons, paramètres
+## Fonctionnalités principales
+- Tirage manuel et vocal.
+- Synchronisation Supabase.
+- Gestion des lotos enregistrés.
+- Gestion des parties, lots et modes de jeu.
+- Modes de jeu : à la ligne, carton plein, Bingo mystère.
+- Mini-bingo complémentaire : option 1er ou dernier numéro du tirage classique.
+- Import et contrôle des cartons depuis Supabase.
+- QR Code joueur.
+- Messages de fin de partie et de fin de loto.
 
-## Nouveautés v2.2.4-dev
-
-- Le bouton `Gagnant` est le seul bouton d'avancement des lots.
-- Le message `VOUS POUVEZ DÉMARQUER !` s'affiche 5 secondes sur le public et les joueurs.
-- Animateur et commissaire peuvent contrôler un carton.
-- Le carton contrôlé s'affiche automatiquement côté public.
-- L'administration enregistre simplement le loto, avec confirmation.
-- Les lotos enregistrés peuvent être sélectionnés pour modification.
-- Mode `Bingo mystère` ajouté.
+## Suite
+La V2 est clôturée sauf corrections de bugs.
+La V3 portera sur la création et l’impression des cartons.
+La V4 portera sur la vente/scanne des cartons et l’anti-fraude.

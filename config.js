@@ -1,6 +1,6 @@
 window.LOTO_CONFIG = {
   APP_NAME: "LOTO SDS",
-  APP_VERSION: 'v2.2.4-dev',
+  APP_VERSION: 'v2.2.5-final',
   TEAM_PIN: "2580",
   DEFAULT_SESSION_CODE: "SESSION_ACTIVE",
   SUPABASE_URL: "https://vexpdodlhnoorsoektmn.supabase.co",

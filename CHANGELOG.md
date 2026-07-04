@@ -1,28 +1,20 @@
 # Changelog
 
+## v2.2.5-final
+- Clôture fonctionnelle de la V2.
+- Renommage du jeu complémentaire : `Bingo` devient `Mini-bingo`.
+- Conservation du mode de partie `Bingo mystère`.
+- Ajout du paramètre Mini-bingo : utiliser le 1er ou le dernier numéro du tirage classique.
+- Ajout du bouton animateur `Lancer Mini-bingo` quand le Mini-bingo est activé après les parties classiques.
+- Affichage public : `MINI-BINGO` remplace `Partie X/Y` pendant le Mini-bingo.
+- Suppression définitive de la simulation dans l’administration.
+- Base V2 prête pour corrections de bugs uniquement.
+
 ## v2.2.4-dev
-- Démarquage uniquement à la fin d’une partie, après le dernier lot.
-- Messages de fin de partie aléatoires.
-- Messages de fin de loto aléatoires avec remerciement public et bénévoles.
-- Si le Bingo est activé, la dernière partie annonce le passage au Bingo au lieu d’un message de clôture.
-- Suppression de la partie Simulation dans l’administration.
+- Messages aléatoires de fin de partie et de fin de loto.
+- Message spécifique si le jeu complémentaire est activé.
 
-## v2.2.3-dev
-- Correction de la grille animateur : les 90 numéros sont à nouveau visibles en format compact.
-- Toast « VOUS POUVEZ DÉMARQUER ! » conservé aussi après le dernier lot de la partie.
-- Administration : après Enregistrer, les champs sont vidés pour saisir un nouveau loto.
-- Administration : message clair « Loto enregistré » après sauvegarde.
-- Contrôle carton : message explicite si le carton n'est pas enregistré dans la base.
-
-## v2.2.2-dev
-- Suppression des boutons inutiles côté animateur : Lot suivant et Valider attente.
-- Bouton Gagnant unique : avance au lot suivant et déclenche le message public.
-- Toast 5 secondes : « VOUS POUVEZ DÉMARQUER ! » sur affichage public et page joueur.
-- L'en-tête animateur affiche le nom du loto au lieu de Session active.
-- Contrôle carton accessible côté animateur et commissaire.
-- Après contrôle d'un carton, affichage automatique du carton sur l'écran public.
-- Administration simplifiée : bouton Enregistrer unique, message de confirmation, liste des lotos modifiables.
-- Ajout du mode Bingo mystère : une partie = un seul lot, contrôle en carton plein mystère.
-
-## v2.2.1-dev
-- Contrôle détaillé des cartons avec pseudo-carton, numéros sortis et diagnostic.
+## v2.2.0 à v2.2.3
+- Import des cartons dans Supabase.
+- Contrôle détaillé des cartons.
+- Message si un carton n’est pas enregistré.
