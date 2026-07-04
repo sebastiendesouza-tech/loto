@@ -24,3 +24,17 @@
 @media(max-width:520px){
   .animateur-numbers{grid-template-columns:repeat(9,minmax(0,1fr));}
 }
+
+/* Correctif v2.0.2-dev : affichage complet des 90 numeros sur tablette */
+.animateur-body .numbers-card{overflow:visible;}
+.animateur-body .history-card{display:none;}
+.animateur-body .animateur-numbers{grid-template-columns:repeat(15,minmax(0,1fr));gap:4px;}
+.animateur-body .animateur-numbers .num{aspect-ratio:1.15/1;font-size:clamp(13px,2.6vw,24px);border-radius:7px;min-height:0;}
+@media(max-width:850px){
+  .animateur-body .animateur-numbers{grid-template-columns:repeat(15,minmax(0,1fr));gap:3px;}
+  .animateur-body .animateur-numbers .num{font-size:clamp(12px,3.4vw,22px);border-radius:6px;}
+}
+@media(max-width:520px){
+  .animateur-body .animateur-numbers{grid-template-columns:repeat(10,minmax(0,1fr));}
+  .animateur-body .animateur-numbers .num{font-size:clamp(12px,6vw,22px);}
+}
