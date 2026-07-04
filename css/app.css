@@ -141,3 +141,32 @@
   .public-v213 .qr-holder{min-height:116px;}
   .public-v213 .qr-holder canvas,.public-v213 .qr-holder img{max-width:112px!important;}
 }
+
+/* v2.1.5-dev : affichage public lots progressifs et micro plus rapide */
+.public-v213 .public-side-v213{grid-template-rows:auto auto minmax(0,1fr);}
+.public-v213 .public-info-card{padding:14px;}
+.public-v213 .public-game-title{font-size:24px;margin-bottom:5px;}
+.public-v213 .public-game-mode{font-size:15px;margin-bottom:12px;}
+.public-v213 .public-step{display:none;}
+.public-v213 .public-lot{font-size:18px;line-height:1.15;}
+.public-v213 .public-prize-list{display:flex;flex-direction:column;gap:8px;}
+.public-v213 .public-prize-row{border:1px solid #29466b;border-radius:12px;padding:10px;background:#102946;transition:opacity .2s ease,filter .2s ease,box-shadow .2s ease,transform .2s ease;}
+.public-v213 .public-prize-row.won{opacity:.34;filter:grayscale(.7);}
+.public-v213 .public-prize-row.active{background:#12365f;border-color:#f2a900;box-shadow:0 0 18px rgba(242,169,0,.32);transform:scale(1.01);}
+.public-v213 .public-prize-step{display:block;color:#f2a900;font-size:22px;font-weight:1000;line-height:1.05;}
+.public-v213 .public-prize-lot{display:block;color:#fff;font-size:17px;font-weight:900;margin-top:5px;}
+.public-v213 .public-prize-row.won .public-prize-step,.public-v213 .public-prize-row.won .public-prize-lot{color:#93a9c5;}
+.public-v213 .public-qr-card{padding:12px;}
+.public-v213 .qr-title{font-size:15px;margin-bottom:8px;}
+.public-v213 .qr-holder{min-height:136px;}
+.public-v213 .qr-holder canvas,.public-v213 .qr-holder img{max-width:120px!important;width:120px!important;height:120px!important;padding:6px;border-radius:10px;}
+.public-v213 .qr-link{display:none;}
+.public-v213 .public-grid-v213 .num{background:#0b213b;border-color:#102e51;color:#173b63;text-shadow:none;}
+.public-v213 .public-grid-v213 .num.drawn{background:#f2a900;color:#071421;border-color:#ffd166;box-shadow:0 0 20px rgba(242,169,0,.72),0 0 36px rgba(242,169,0,.22),inset 0 0 0 2px rgba(255,255,255,.3);}
+@media(max-width:850px){
+  .public-v213 .public-prize-row{padding:7px;}
+  .public-v213 .public-prize-step{font-size:16px;}
+  .public-v213 .public-prize-lot{font-size:13px;}
+  .public-v213 .qr-holder{min-height:96px;}
+  .public-v213 .qr-holder canvas,.public-v213 .qr-holder img{max-width:86px!important;width:86px!important;height:86px!important;}
+}
