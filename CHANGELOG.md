@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2.4-dev
+- Démarquage uniquement à la fin d’une partie, après le dernier lot.
+- Messages de fin de partie aléatoires.
+- Messages de fin de loto aléatoires avec remerciement public et bénévoles.
+- Si le Bingo est activé, la dernière partie annonce le passage au Bingo au lieu d’un message de clôture.
+- Suppression de la partie Simulation dans l’administration.
+
 ## v2.2.3-dev
 - Correction de la grille animateur : les 90 numéros sont à nouveau visibles en format compact.
 - Toast « VOUS POUVEZ DÉMARQUER ! » conservé aussi après le dernier lot de la partie.
