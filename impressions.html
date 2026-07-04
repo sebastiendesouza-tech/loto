@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impressions PDF - LOTO SDS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="impressions">
+  <main class="tablet impressions-page" id="impressionsApp" style="display:none">
+    <header>
+      <div>
+        <h1>LOTO SDS</h1>
+        <span id="status">Impressions PDF</span>
+      </div>
+      <a id="backHome" class="btn-link" href="index.html">Accueil</a>
+    </header>
+
+    <section class="panel print-intro">
+      <h2>QR Code joueur</h2>
+      <p>Ces PDF permettent aux joueurs de scanner un QR Code papier pour suivre les numéros sortis sur leur téléphone.</p>
+      <div class="print-preview">
+        <canvas id="qrCanvas" width="360" height="360"></canvas>
+        <div>
+          <strong>Adresse joueur</strong>
+          <p id="playerUrlPrint"></p>
+          <small>Le lien ouvre uniquement la page joueur. Les rôles équipe restent protégés par PIN.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="print-actions">
+      <button id="pdfA4Btn" type="button">Télécharger affiche A4</button>
+      <button id="pdfA5Btn" type="button">Télécharger 4 affichettes A5</button>
+      <button id="pdfQrBtn" type="button" class="secondary">Télécharger QR Code seul</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const CODE = (qs.get('s') || localStorage.getItem('lotoCode') || 'DEMO').toUpperCase();
+    localStorage.setItem('lotoCode', CODE);
+    const cfg = window.LOTO_CONFIG || {};
+    const pin = String(cfg.TEAM_PIN || '2580');
+
+    function showApp(){
+      document.getElementById('impressionsApp').style.display = 'block';
+      const back = document.getElementById('backHome');
+      back.href = 'index.html';
+      initPrints();
+    }
+
+    function askPin(){
+      if(localStorage.getItem('lotoTeamPinOk') === pin){ showApp(); return; }
+      document.body.innerHTML = '<div class="pin-lock"><div class="pin-box"><h1>LOTO SDS</h1><p>Acces equipe</p><input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Code PIN"><button id="pinBtn">Entrer</button><div id="pinError" class="pin-error"></div></div></div>';
+      const input = document.getElementById('pinInput');
+      const btn = document.getElementById('pinBtn');
+      const err = document.getElementById('pinError');
+      const submit = () => {
+        if(input.value.trim() === pin){ localStorage.setItem('lotoTeamPinOk', pin); location.reload(); }
+        else { err.textContent = 'Code PIN incorrect'; input.value = ''; input.focus(); }
+      };
+      btn.onclick = submit;
+      input.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+      input.focus();
+    }
+
+    function playerUrl(){
+      const u = new URL('joueur.html', location.href);
+      u.searchParams.set('s', CODE);
+      return u.href;
+    }
+
+    function getQrDataUrl(size = 900){
+      const canvas = document.createElement('canvas');
+      new QRious({ element: canvas, value: playerUrl(), size, level: 'H', background: 'white', foreground: 'black' });
+      return canvas.toDataURL('image/png');
+    }
+
+    function textCentered(pdf, text, y, size, weight='normal'){
+      pdf.setFont('helvetica', weight);
+      pdf.setFontSize(size);
+      pdf.text(text, 105, y, { align: 'center' });
+    }
+
+    function addWrappedCentered(pdf, text, x, y, width, size, lineHeight){
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(size);
+      const lines = pdf.splitTextToSize(text, width);
+      lines.forEach((line, idx) => pdf.text(line, x + width / 2, y + idx * lineHeight, { align: 'center' }));
+      return y + lines.length * lineHeight;
+    }
+
+    function drawSinglePoster(pdf){
+      const url = playerUrl();
+      const qr = getQrDataUrl(1200);
+      pdf.setFillColor(255,255,255);
+      pdf.rect(0,0,210,297,'F');
+      pdf.setTextColor(15,23,42);
+      textCentered(pdf, 'LOTO SDS', 28, 30, 'bold');
+      textCentered(pdf, 'Suivez le tirage en direct', 45, 19, 'bold');
+      pdf.addImage(qr, 'PNG', 45, 60, 120, 120);
+      pdf.setTextColor(15,23,42);
+      addWrappedCentered(pdf, 'Scannez ce QR Code avec votre telephone. Aucune application a installer.', 28, 198, 154, 16, 9);
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(13);
+      pdf.text(url, 105, 235, { align: 'center', maxWidth: 176 });
+      pdf.setDrawColor(30,41,59);
+      pdf.setLineWidth(0.6);
+      pdf.roundedRect(12, 12, 186, 270, 6, 6);
+    }
+
+    function drawA5Card(pdf, x, y, w, h){
+      const url = playerUrl();
+      const qr = getQrDataUrl(800);
+      pdf.setDrawColor(30,41,59);
+      pdf.setLineWidth(0.35);
+      pdf.rect(x, y, w, h);
+      pdf.setTextColor(15,23,42);
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(19);
+      pdf.text('LOTO SDS', x + w/2, y + 14, { align: 'center' });
+      pdf.setFontSize(11);
+      pdf.text('Suivez le tirage en direct', x + w/2, y + 24, { align: 'center' });
+      const qrSize = 54;
+      pdf.addImage(qr, 'PNG', x + (w - qrSize)/2, y + 31, qrSize, qrSize);
+      pdf.setFont('helvetica','normal');
+      pdf.setFontSize(8.5);
+      const lines = pdf.splitTextToSize('Scannez ce QR Code. Aucune application a installer.', w - 14);
+      pdf.text(lines, x + w/2, y + 94, { align: 'center' });
+      pdf.setFontSize(6.6);
+      pdf.text(url, x + w/2, y + h - 9, { align: 'center', maxWidth: w - 12 });
+    }
+
+    function downloadA4(){
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      drawSinglePoster(pdf);
+      pdf.save('loto-sds-qr-a4.pdf');
+    }
+
+    function downloadA5Sheet(){
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.setFillColor(255,255,255);
+      pdf.rect(0,0,210,297,'F');
+      drawA5Card(pdf, 0, 0, 105, 148.5);
+      drawA5Card(pdf, 105, 0, 105, 148.5);
+      drawA5Card(pdf, 0, 148.5, 105, 148.5);
+      drawA5Card(pdf, 105, 148.5, 105, 148.5);
+      pdf.setDrawColor(160,160,160);
+      pdf.setLineDashPattern([2,2], 0);
+      pdf.line(105, 0, 105, 297);
+      pdf.line(0, 148.5, 210, 148.5);
+      pdf.save('loto-sds-qr-4-a5.pdf');
+    }
+
+    function downloadQrOnly(){
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const qr = getQrDataUrl(1400);
+      pdf.setFillColor(255,255,255);
+      pdf.rect(0,0,210,297,'F');
+      textCentered(pdf, 'LOTO SDS', 28, 26, 'bold');
+      pdf.addImage(qr, 'PNG', 35, 50, 140, 140);
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(12);
+      pdf.text(playerUrl(), 105, 215, { align: 'center', maxWidth: 180 });
+      pdf.save('loto-sds-qr-seul.pdf');
+    }
+
+    function initPrints(){
+      document.getElementById('status').textContent = 'Session ' + CODE + ' - Impressions PDF';
+      document.getElementById('playerUrlPrint').textContent = playerUrl();
+      new QRious({ element: document.getElementById('qrCanvas'), value: playerUrl(), size: 360, level: 'H', background: 'white', foreground: 'black' });
+      document.getElementById('pdfA4Btn').onclick = downloadA4;
+      document.getElementById('pdfA5Btn').onclick = downloadA5Sheet;
+      document.getElementById('pdfQrBtn').onclick = downloadQrOnly;
+    }
+
+    askPin();
+  </script>
+</body>
+</html>

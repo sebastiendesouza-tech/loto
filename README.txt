@@ -21,6 +21,8 @@ Mettre tous les fichiers de ce dossier à la racine du dépôt GitHub loto :
 - public.html
 - animateur.html
 - commissaire.html
+- impressions.html
+- joueur.html
 - config.js
 - css/
 - js/
@@ -45,6 +47,11 @@ Sur la tablette commissaire :
 - même adresse
 - même code session
 - choisir Commissaire
+
+Pour imprimer les QR Codes joueurs :
+- choisir Impressions PDF
+- télécharger Affiche A4, 4 affichettes A5 ou QR Code seul
+- les QR Codes ouvrent directement joueur.html pour la session en cours
 
 4) REGLE VOCALE
 - Le numéro doit être dit deux fois.
