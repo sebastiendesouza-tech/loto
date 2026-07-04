@@ -1,3 +1,9 @@
+# CHANGELOG
+
+## v2.0.1-dev
+- Correction de la grille des 90 numéros sur l’écran animateur, notamment sur iPad/tablette.
+- Grille animateur rendue compacte et stable au clic.
+
 # Changelog
 
 ## v2.0.0-dev
