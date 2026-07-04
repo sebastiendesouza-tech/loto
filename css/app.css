@@ -189,3 +189,19 @@
 .loto-toast.show{display:block;animation:toastPop .22s ease-out both}.public-toast{font-size:clamp(34px,5vw,76px)}.player-toast{font-size:clamp(24px,9vw,44px);top:12%;width:min(92vw,760px)}
 @keyframes toastPop{from{opacity:0;transform:translateX(-50%) scale(.86)}to{opacity:1;transform:translateX(-50%) scale(1)}}
 @media(max-width:850px){.loto-toast{top:10%;padding:16px 20px;border-radius:18px}.public-toast{font-size:32px}}
+
+
+/* v2.2.3-dev : correctifs ciblés animateur, administration, contrôle */
+.animateur-body .numbers-card{flex:0 0 auto;overflow:visible;display:block;}
+.animateur-body .animateur-numbers{grid-template-columns:repeat(18,minmax(0,1fr));grid-auto-rows:32px;gap:3px;align-items:stretch;}
+.animateur-body .animateur-numbers .num{aspect-ratio:auto;height:32px;min-height:0;font-size:clamp(12px,1.7vw,18px);border-radius:6px;}
+.animateur-body .animateur-control-card{flex:0 0 auto;}
+.animateur-body .result-box.compact-result{max-height:28dvh;overflow:auto;}
+@media(max-width:900px){
+  .animateur-body .animateur-numbers{grid-template-columns:repeat(15,minmax(0,1fr));grid-auto-rows:27px;gap:3px;}
+  .animateur-body .animateur-numbers .num{height:27px;font-size:13px;border-radius:5px;}
+  .animateur-body .animateur-control-card h3{display:none;}
+  .animateur-body .animateur-control-card .toolbar{gap:5px;}
+  .animateur-body .animateur-control-card input{padding:7px 9px;font-size:13px;max-width:160px;}
+  .animateur-body .animateur-control-card button{padding:7px 8px;font-size:12px;}
+}
