@@ -1,0 +1,14 @@
+{
+  "name": "LOTO SDS",
+  "short_name": "LOTO SDS",
+  "description": "Affichage 2.0 de loto avec voix, multi-écrans et suivi joueur.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071421",
+  "theme_color": "#0f3a6d",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
