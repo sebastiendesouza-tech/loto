@@ -262,12 +262,12 @@
 @media print{@page{margin:0}body{background:#fff}.topbar,.admin-tabs,.no-print,button,a.btn,.toolbar,#cartonStatus,#cartonCount,#testCardResult{display:none!important}.wrap,.card{box-shadow:none!important;border:none!important;background:#fff!important;padding:0!important;margin:0!important;max-width:none!important}.tab{display:none!important}.tab.active{display:block!important}.print-sheets{display:block}.sheet-a4,.sheet-a3{box-shadow:none;border:none;border-radius:0;page-break-after:always;margin:0}.sheet-a4{width:210mm;height:297mm}.sheet-a3{width:297mm;height:420mm}.loto-card-print{break-inside:avoid}}
 
 /* v3.0.2 - carton de reference Loto by SdS */
-:root{--loto-card-w:193mm;--loto-card-h:86mm;--loto-cell:20mm;}
+:root{--loto-card-w:193mm;--loto-card-h:89mm;--loto-cell:20mm;--loto-cell-h:21mm;}
 .sheet-a4,.sheet-a3{background:#fff;color:#111;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,.18);border-radius:10px;justify-items:center;align-items:start;}
 .sheet-a4{width:210mm;min-height:297mm;padding:10mm 8mm;display:grid;grid-template-columns:var(--loto-card-w);gap:6mm;align-content:start;}
 .sheet-a4.individual-2{grid-template-rows:repeat(2,var(--loto-card-h));align-content:center;gap:18mm;}
-.sheet-a4.individual-3{grid-template-rows:repeat(3,var(--loto-card-h));gap:5mm;}
-.sheet-a3{width:420mm;min-height:297mm;padding:12mm;display:grid;grid-template-columns:repeat(2,var(--loto-card-w));grid-template-rows:repeat(3,var(--loto-card-h));gap:7mm 10mm;align-content:center;justify-content:center;}
+.sheet-a4.individual-3{grid-template-rows:repeat(3,var(--loto-card-h));align-content:space-between;gap:0;}
+.sheet-a3{width:420mm;min-height:297mm;padding:0 8mm;display:grid;grid-template-columns:repeat(2,var(--loto-card-w));grid-template-rows:repeat(3,var(--loto-card-h));gap:0 10mm;align-content:space-between;justify-content:center;}
 .loto-card-print{width:var(--loto-card-w);height:var(--loto-card-h);box-sizing:border-box;border:1.2mm solid #111;border-radius:4mm;padding:1.1mm;background:#fff;break-inside:avoid;overflow:hidden;}
 .loto-card-inner{height:100%;box-sizing:border-box;border:.35mm solid #111;border-radius:2.8mm;padding:1.6mm 2mm;background:#fff;display:flex;flex-direction:column;}
 .loto-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm;margin:0 0 1.5mm 0;min-height:16mm;}
@@ -276,8 +276,8 @@
 .qr-box{width:14mm!important;height:14mm!important;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .qr-box canvas,.qr-box img{width:14mm!important;height:14mm!important;image-rendering:pixelated;}
 .qr-fallback{font-size:1.7mm;line-height:2mm;border:.2mm solid #999;padding:.6mm;text-align:center;max-width:14mm;word-break:break-all;}
-.carton-grid{width:180mm!important;height:60mm!important;border-collapse:collapse;table-layout:fixed;border:.7mm solid #111;margin:0 auto;}
-.carton-grid td{width:20mm!important;height:20mm!important;position:relative;border:.32mm solid #111;text-align:center;vertical-align:middle;background:#fff;padding:0;font-weight:900;box-sizing:border-box;}
+.carton-grid{width:180mm!important;height:63mm!important;border-collapse:collapse;table-layout:fixed;border:.7mm solid #111;margin:0 auto;}
+.carton-grid td{width:20mm!important;height:21mm!important;position:relative;border:.32mm solid #111;text-align:center;vertical-align:middle;background:#fff;padding:0;font-weight:900;box-sizing:border-box;}
 .carton-grid .big-num{display:block;font-size:12mm;line-height:13.5mm;font-weight:1000;color:#000;margin-top:.2mm;}
 .carton-grid .mini-num{position:absolute;left:0;right:0;bottom:.8mm;font-size:2.8mm;line-height:3mm;font-weight:700;color:#555;}
 .carton-grid td.empty{background:#fff!important;}
@@ -293,17 +293,17 @@
   body.print-mode-sheets{@page{size:A3 landscape;margin:0}}
   .print-sheets{display:block!important;width:auto!important;margin:0!important;padding:0!important;gap:0!important}
   .sheet-a4{width:210mm!important;height:297mm!important;min-height:297mm!important;padding:10mm 8mm!important;display:grid!important;grid-template-columns:193mm!important;justify-content:center!important;justify-items:center!important;align-items:start!important;box-sizing:border-box!important;overflow:hidden!important}
-  .sheet-a4.individual-2{grid-template-rows:repeat(2,86mm)!important;align-content:center!important;gap:18mm!important}
-  .sheet-a4.individual-3{grid-template-rows:repeat(3,86mm)!important;align-content:start!important;gap:5mm!important}
-  .sheet-a3{width:420mm!important;height:297mm!important;min-height:297mm!important;padding:12mm!important;display:grid!important;grid-template-columns:repeat(2,193mm)!important;grid-template-rows:repeat(3,86mm)!important;gap:7mm 10mm!important;align-content:center!important;justify-content:center!important;justify-items:center!important;box-sizing:border-box!important;overflow:hidden!important;page:sheetA3!important}
-  .loto-card-print{width:193mm!important;height:86mm!important;min-height:86mm!important;max-height:86mm!important;box-sizing:border-box!important;border:1.2mm solid #111!important;border-radius:4mm!important;padding:1.1mm!important;background:#fff!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  .sheet-a4.individual-2{grid-template-rows:repeat(2,89mm)!important;align-content:center!important;gap:18mm!important}
+  .sheet-a4.individual-3{grid-template-rows:repeat(3,89mm)!important;align-content:space-between!important;gap:0!important}
+  .sheet-a3{width:420mm!important;height:297mm!important;min-height:297mm!important;padding:12mm!important;display:grid!important;grid-template-columns:repeat(2,193mm)!important;grid-template-rows:repeat(3,89mm)!important;gap:0 10mm!important;align-content:space-between!important;justify-content:center!important;justify-items:center!important;box-sizing:border-box!important;overflow:hidden!important;page:sheetA3!important}
+  .loto-card-print{width:193mm!important;height:89mm!important;min-height:89mm!important;max-height:89mm!important;box-sizing:border-box!important;border:1.2mm solid #111!important;border-radius:4mm!important;padding:1.1mm!important;background:#fff!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
   .loto-card-inner{height:100%!important;box-sizing:border-box!important;border:.35mm solid #111!important;border-radius:2.8mm!important;padding:1.6mm 2mm!important;display:flex!important;flex-direction:column!important;background:#fff!important}
   .loto-card-head{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:3mm!important;margin:0 0 1.5mm 0!important;min-height:16mm!important}
   .carton-number-line{font-size:4.2mm!important;line-height:5mm!important;font-weight:900!important;letter-spacing:.15mm!important;text-align:left!important;margin:0!important;color:#111!important}
   .loto-card-meta{font-size:2.7mm!important;line-height:3.2mm!important;color:#444!important;font-weight:600!important;margin-top:.5mm!important}
   .qr-box,.qr-box canvas,.qr-box img{width:14mm!important;height:14mm!important;max-width:14mm!important;max-height:14mm!important}
-  .carton-grid{width:180mm!important;height:60mm!important;border-collapse:collapse!important;table-layout:fixed!important;border:.7mm solid #111!important;margin:0 auto!important}
-  .carton-grid td{width:20mm!important;height:20mm!important;min-height:20mm!important;max-height:20mm!important;position:relative!important;border:.32mm solid #111!important;text-align:center!important;vertical-align:middle!important;background:#fff!important;padding:0!important;font-weight:900!important;box-sizing:border-box!important}
+  .carton-grid{width:180mm!important;height:63mm!important;border-collapse:collapse!important;table-layout:fixed!important;border:.7mm solid #111!important;margin:0 auto!important}
+  .carton-grid td{width:20mm!important;height:21mm!important;min-height:20mm!important;max-height:20mm!important;position:relative!important;border:.32mm solid #111!important;text-align:center!important;vertical-align:middle!important;background:#fff!important;padding:0!important;font-weight:900!important;box-sizing:border-box!important}
   .carton-grid .big-num{display:block!important;font-size:12mm!important;line-height:13.5mm!important;font-weight:1000!important;color:#000!important;margin-top:.2mm!important}
   .carton-grid .mini-num{position:absolute!important;left:0!important;right:0!important;bottom:.8mm!important;font-size:2.8mm!important;line-height:3mm!important;font-weight:700!important;color:#555!important}
   .carton-grid td.empty{background:#fff!important}
@@ -326,4 +326,35 @@
   body.printing-cartons #generatedCardsPreview{position:absolute!important;left:0!important;top:0!important;margin:0!important;padding:0!important;width:auto!important;background:#fff!important;}
   body.printing-cartons .sheet-a4,
   body.printing-cartons .sheet-a3{visibility:visible!important;}
+}
+
+
+/* v3.0.8 - 3 cartons A4 : haut / centre / bas + cases 21 mm */
+:root{--loto-card-h:89mm;--loto-cell-h:21mm;}
+.sheet-a4.individual-3{padding:0 8mm!important;align-content:space-between!important;gap:0!important;grid-template-rows:repeat(3,var(--loto-card-h))!important;}
+.sheet-a3{padding:0 8mm!important;align-content:space-between!important;gap:0 10mm!important;grid-template-rows:repeat(3,var(--loto-card-h))!important;}
+.loto-card-print{height:var(--loto-card-h)!important;}
+.carton-grid{height:63mm!important;}
+.carton-grid td{height:21mm!important;}
+@media print{
+  .sheet-a4.individual-3{padding:0 8mm!important;align-content:space-between!important;gap:0!important;}
+  .sheet-a3{padding:0 8mm!important;align-content:space-between!important;gap:0 10mm!important;}
+}
+
+/* v3.0.9 - calibration impression + essai cases 22 x 22 mm */
+:root{--loto-card-w:207mm;--loto-card-h:94mm;--loto-cell:22mm;--loto-cell-h:22mm;}
+.sheet-a4.individual-3{width:210mm!important;min-height:297mm!important;padding:0!important;grid-template-columns:var(--loto-card-w)!important;grid-template-rows:repeat(3,var(--loto-card-h))!important;justify-content:center!important;justify-items:center!important;align-content:space-between!important;gap:0!important;}
+.sheet-a3{width:420mm!important;min-height:297mm!important;padding:0!important;grid-template-columns:repeat(2,var(--loto-card-w))!important;grid-template-rows:repeat(3,var(--loto-card-h))!important;justify-content:space-between!important;justify-items:center!important;align-content:space-between!important;gap:0!important;}
+.loto-card-print{width:var(--loto-card-w)!important;height:var(--loto-card-h)!important;}
+.carton-grid{width:198mm!important;height:66mm!important;}
+.carton-grid td{width:22mm!important;height:22mm!important;}
+.carton-grid .big-num{font-size:13mm!important;line-height:14.5mm!important;}
+.carton-grid .mini-num{font-size:3mm!important;line-height:3.2mm!important;bottom:.9mm!important;}
+.carton-grid td.empty span{width:12mm!important;height:6.5mm!important;}
+@media print{
+  .sheet-a4.individual-3{width:210mm!important;height:297mm!important;padding:0!important;grid-template-columns:207mm!important;grid-template-rows:repeat(3,94mm)!important;align-content:space-between!important;justify-content:center!important;}
+  .sheet-a3{width:420mm!important;height:297mm!important;padding:0!important;grid-template-columns:repeat(2,207mm)!important;grid-template-rows:repeat(3,94mm)!important;align-content:space-between!important;justify-content:space-between!important;}
+  .loto-card-print{width:207mm!important;height:94mm!important;}
+  .carton-grid{width:198mm!important;height:66mm!important;}
+  .carton-grid td{width:22mm!important;height:22mm!important;min-height:22mm!important;max-height:22mm!important;}
 }
