@@ -1,6 +1,6 @@
 window.LOTO_CONFIG = {
   APP_NAME: "Loto by SdS",
-  APP_VERSION: 'v2.2.12-v2.2-v3-cartons',
+  APP_VERSION: 'v3.0.0-production-cartons-scanner',
   TEAM_PIN: "2580",
   DEFAULT_SESSION_CODE: "SESSION_ACTIVE",
   SUPABASE_URL: "https://vexpdodlhnoorsoektmn.supabase.co",
