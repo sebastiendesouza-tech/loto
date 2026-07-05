@@ -1,3 +1,10 @@
+
+## v3.0.4 - Scanner iPhone
+- Ajout d’un mode compatible iPhone/Safari pour le scanner QR.
+- Ajout de diagnostics visibles : HTTPS, caméra, BarcodeDetector, navigateur.
+- Affichage des erreurs caméra au lieu d’un bouton silencieux.
+- Conservation du mode scan continu avec anti double lecture.
+
 # Changelog
 
 ## v3.0.2 - Carton de référence
