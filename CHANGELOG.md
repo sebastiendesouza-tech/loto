@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.0.6 - PDF cartons propre + scanner iPhone
+
+- Version affichée mise à jour en v3.0.6.
+- Impression des cartons via une fenêtre dédiée pour éviter toute phrase Administration dans le PDF.
+- Cartons individuels : 3 par page A4 sélectionné par défaut.
+- Pages PDF avec 0 marge haut/bas et espacement réparti entre cartons.
+- Scanner iPhone renforcé : sélection caméra arrière via liste des caméras et messages de diagnostic.
+
+
 ## v3.0.5 - Correctif impression cartons + scanner iPhone
 - Impression des cartons : seul l'aperçu des cartons est imprimé, sans titres ni textes d'administration.
 - Scanner : séparation du conteneur iPhone/html5-qrcode et de la vidéo native pour éviter l'écran noir sous Safari iOS.
