@@ -291,7 +291,13 @@ async function scanQrFrame(){
 document.getElementById('genCardType')?.addEventListener('change',updateCardGeneratorUi);
 document.getElementById('generateCards')?.addEventListener('click',generateCardsUnified);
 document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
-document.getElementById('printGeneratedCards')?.addEventListener('click',()=>{ if(!generatedCards.length) generateCardsUnified(); document.body.classList.toggle('print-mode-sheets', generatedMode==='sheets'); setTimeout(()=>window.print(),300); });
+document.getElementById('printGeneratedCards')?.addEventListener('click',()=>{
+  if(!generatedCards.length) generateCardsUnified();
+  document.body.classList.add('printing-cartons');
+  document.body.classList.toggle('print-mode-sheets', generatedMode==='sheets');
+  setTimeout(()=>window.print(),300);
+});
+window.addEventListener('afterprint',()=>{ document.body.classList.remove('printing-cartons','print-mode-sheets'); });
 updateCardGeneratorUi();
 
 /* Compatibilité avec l'ancien écran si présent */
@@ -299,5 +305,5 @@ document.getElementById('generateIndividualCards')?.addEventListener('click',gen
 document.getElementById('generateSheetCards')?.addEventListener('click',generateSheetCards);
 document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click',saveGeneratedCards);
 document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',saveGeneratedCards);
-document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); document.body.classList.remove('print-mode-sheets'); setTimeout(()=>window.print(),300); });
-document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); document.body.classList.add('print-mode-sheets'); setTimeout(()=>window.print(),300); });
+document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); document.body.classList.add('printing-cartons'); document.body.classList.remove('print-mode-sheets'); setTimeout(()=>window.print(),300); });
+document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); document.body.classList.add('printing-cartons'); document.body.classList.add('print-mode-sheets'); setTimeout(()=>window.print(),300); });

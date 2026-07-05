@@ -107,6 +107,9 @@ async function startQrScanner(){
         video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } },
         audio:false
       });
+      const region = document.getElementById('qrScannerRegion');
+      if(region) region.style.display = 'none';
+      video.style.display = 'block';
       video.srcObject = scannerStream;
       video.setAttribute('playsinline', '');
       video.muted = true;
@@ -125,7 +128,11 @@ async function startQrScanner(){
   if(window.Html5Qrcode){
     try{
       scannerMode = 'html5-qrcode';
-      const regionId = 'qrScannerVideo';
+      const regionId = 'qrScannerRegion';
+      const nativeVideo = document.getElementById('qrScannerVideo');
+      if(nativeVideo) nativeVideo.style.display = 'none';
+      const region = document.getElementById(regionId);
+      if(region) region.style.display = 'block';
       html5Scanner = new Html5Qrcode(regionId, { verbose:false });
       await html5Scanner.start(
         { facingMode:'environment' },
@@ -174,7 +181,9 @@ function stopQrScanner(showMessage=true){
   }
 
   const video = document.getElementById('qrScannerVideo');
-  if(video && scannerMode !== 'html5-qrcode') video.srcObject = null;
+  if(video){ video.srcObject = null; video.style.display = 'block'; }
+  const region = document.getElementById('qrScannerRegion');
+  if(region) region.style.display = 'none';
 
   scannerMode = '';
   if(showMessage) setStatus('Caméra arrêtée.', 'muted');
