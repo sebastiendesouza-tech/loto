@@ -7,6 +7,7 @@ const input = document.getElementById('cardNumber');
 const result = document.getElementById('result');
 const showBtn = document.getElementById('showPublic');
 const hideBtn = document.getElementById('hidePublic');
+const currentLot = document.getElementById('currentLot');
 let lastResult = null;
 let lastCardClosedAt = 0;
 
@@ -30,6 +31,17 @@ function diagnosticHtml(r){
   const details = r.messages && r.messages.length ? r.messages : [r.reason].filter(Boolean);
   if(!details.length) return '';
   return `<ul class="diagnostic-list">${details.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
+}
+
+
+function renderLot(s){
+  if(!currentLot) return;
+  if(s.miniBingoActive){ currentLot.innerHTML = '<b>MINI-BINGO</b> · tirage de départage en cours'; return; }
+  const p = Loto.currentPartie();
+  const prize = Loto.currentPrize();
+  if(!p || !prize){ currentLot.innerHTML = '<b>Lot en cours :</b> partie simple sans programme'; return; }
+  const req = Loto.currentRequirement();
+  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(Loto.gameModeLabel(p))}</span><br><strong>${esc(req.label || '')}</strong><br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
 }
 
 function renderResult(payload){
@@ -78,6 +90,7 @@ Loto.onChange((s) => {
   Loto.pageHeader();
   Loto.renderNumbers(grid);
   last.textContent = Loto.lastNumber();
+  renderLot(s);
   if(s.publicCard){
     renderResult({found:true,result:s.publicCard});
   } else if(Number(s.cardClosedAt || 0) && Number(s.cardClosedAt || 0) !== lastCardClosedAt){
