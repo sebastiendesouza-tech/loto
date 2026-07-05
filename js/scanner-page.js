@@ -103,6 +103,43 @@ async function getBackCameraId(){
   }
 }
 
+async function startJsQrScanner(){
+  if(!window.jsQR) throw new Error('jsQR non charge');
+  scannerMode = 'jsqr';
+  const video = document.getElementById('qrScannerVideo');
+  const region = document.getElementById('qrScannerRegion');
+  if(region){ region.style.display = 'none'; region.innerHTML = ''; }
+  video.style.display = 'block';
+  video.setAttribute('playsinline','');
+  video.setAttribute('webkit-playsinline','');
+  video.setAttribute('autoplay','');
+  video.muted = true;
+  const deviceId = await getBackCameraId();
+  const videoConstraint = deviceId
+    ? { deviceId:{ exact:deviceId }, width:{ ideal:1280 }, height:{ ideal:720 } }
+    : { facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } };
+  scannerStream = await navigator.mediaDevices.getUserMedia({ video:videoConstraint, audio:false });
+  video.srcObject = scannerStream;
+  await video.play();
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently:true });
+  setStatus('Scan en cours. Mode jsQR iPhone/Android. ' + scannerDiagnostics(), 'muted');
+  scannerTimer = setInterval(() => {
+    if(!video || video.readyState < 2) return;
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    if(!w || !h) return;
+    canvas.width = w;
+    canvas.height = h;
+    try{
+      ctx.drawImage(video, 0, 0, w, h);
+      const img = ctx.getImageData(0, 0, w, h);
+      const code = window.jsQR(img.data, w, h, { inversionAttempts:'dontInvert' });
+      if(code && code.data) handleCode(code.data);
+    }catch(e){}
+  }, 140);
+}
+
 async function startNativePreviewAndBarcode(){
   const video = document.getElementById('qrScannerVideo');
   scannerMode = 'native';
@@ -183,6 +220,16 @@ async function startQrScanner(){
     setStatus('Erreur autorisation caméra : ' + readableCameraError(e) + ' · ' + scannerDiagnostics(), 'red');
     beep(false);
     return;
+  }
+
+  if(window.jsQR){
+    try{
+      await startJsQrScanner();
+      return;
+    }catch(e){
+      stopQrScanner(false);
+      setStatus('Mode jsQR indisponible, tentative du mode natif...', 'muted');
+    }
   }
 
   if('BarcodeDetector' in window){
