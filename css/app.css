@@ -378,3 +378,13 @@
 .scanner-big{font-size:22px!important;padding:12px!important;}
 @media(max-width:850px){.scanner-layout{grid-template-columns:1fr!important}.scanner-camera{max-width:360px!important}.scanner-panel{padding:10px!important}}
 @media print{@page{size:A4 portrait;margin:0}.loto-card-print{width:207mm!important;height:97mm!important}.carton-grid{width:198mm!important;height:69mm!important}.carton-grid td{height:23mm!important}}
+
+
+/* v3.1.2 - scan test : bip + contour vert, temps conserve */
+.scanner-camera{outline:3px solid transparent!important;transition:outline-color .08s ease, box-shadow .08s ease!important;}
+.scanner-camera.scan-ok{outline-color:#12b76a!important;box-shadow:0 0 0 6px rgba(18,183,106,.25),0 0 24px rgba(18,183,106,.55)!important;}
+.scanner-camera.scan-ok::after{border-color:#12b76a!important;box-shadow:0 0 0 999px rgba(18,183,106,.10)!important;}
+.scan-test-panel .scanner-big{font-size:14px!important;padding:8px!important;color:#6b7280!important;background:#f6f8fb!important;word-break:break-all!important;}
+.scan-time{font-size:22px!important;font-weight:900!important;margin:6px 0 10px!important;}
+.scan-count{font-size:15px!important;margin:0 0 10px!important;}
+.scanner-history{display:none!important;}
