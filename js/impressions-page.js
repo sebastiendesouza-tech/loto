@@ -1,86 +1,53 @@
+Loto.pageHeader();
+Loto.protectPage();
+Loto.ensureSession();
 
-Loto.pageHeader();Loto.protectPage();
 const playerUrl = () => (Loto.C.PLAYER_URL || (location.origin + location.pathname.replace('impressions.html','joueur.html'))) + '?s=' + encodeURIComponent(Loto.code());
+const qrUrl = (size=800) => 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&margin=20&data=' + encodeURIComponent(playerUrl());
 const linkEl = document.getElementById('link');
 if(linkEl) linkEl.textContent = 'QR Code vers la page joueur';
-function qrReady(){
-  if(!window.QRCode){ alert('Générateur QR Code non chargé. Vérifie la connexion puis recharge la page.'); return false; }
-  return true;
-}
-async function qrDataUrl(size=1000){
-  const c=document.createElement('canvas');
-  await QRCode.toCanvas(c, playerUrl(), {width:size,margin:1,errorCorrectionLevel:'M'});
-  return c.toDataURL('image/png');
-}
-async function qrJpegUrl(size=1200){
-  const c=document.createElement('canvas');
-  await QRCode.toCanvas(c, playerUrl(), {width:size,margin:1,errorCorrectionLevel:'M'});
-  const out=document.createElement('canvas'); out.width=c.width; out.height=c.height;
-  const ctx=out.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,out.width,out.height); ctx.drawImage(c,0,0);
-  return out.toDataURL('image/jpeg',0.95);
-}
-function pdfEscape(s){return String(s||'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');}
-function makePdf(actions, fileName){
-  const pageW=595.28,pageH=841.89;
-  let objects=[];
-  function add(obj){objects.push(obj); return objects.length;}
-  const fontId=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  const images=[];
-  let stream='';
-  function text(txt,x,y,size=14,align='left',bold=false){
-    const safe=pdfEscape(String(txt).normalize('NFD').replace(/[\u0300-\u036f]/g,''));
-    const approx=safe.length*size*0.45;
-    if(align==='center') x-=approx/2;
-    stream += `BT /F1 ${size} Tf ${x.toFixed(2)} ${(pageH-y).toFixed(2)} Td (${safe}) Tj ET\n`;
+
+function openPrintPage(kind){
+  const qr = qrUrl(900);
+  const title = 'LOTO SDS';
+  const version = Loto.C.APP_VERSION || '';
+  const css = `
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#111;background:white} .no-print{margin:16px;text-align:center} .btn{font-size:18px;padding:12px 18px;border:0;border-radius:10px;background:#0b5ed7;color:#fff;cursor:pointer} .hint{font-size:13px;color:#555;margin-top:8px}
+    @media print{.no-print{display:none!important} body{margin:0} @page{size:A4 portrait;margin:0}}
+    .page{width:210mm;height:297mm;padding:18mm;display:flex;align-items:center;justify-content:center;background:#fff;page-break-after:always}
+    .poster{width:100%;height:100%;border:2px solid #111;border-radius:8mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12mm}
+    .poster h1{font-size:34pt;margin:0 0 8mm}.poster h2{font-size:18pt;margin:0 0 12mm;font-weight:500}.poster img{width:125mm;height:125mm;object-fit:contain}.poster p{font-size:16pt;margin:10mm 0 0}.poster .small{font-size:10pt;margin-top:auto;color:#555}
+    .sheet{width:210mm;height:297mm;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;background:#fff}
+    .card-a5{border:1px dashed #333;margin:5mm;padding:7mm;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}.card-a5 h1{font-size:20pt;margin:0 0 4mm}.card-a5 p{font-size:11pt;margin:2mm 0}.card-a5 img{width:72mm;height:72mm;object-fit:contain}.card-a5 .small{font-size:8pt;margin-top:4mm;color:#555}
+    .qr-only{width:210mm;height:297mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.qr-only img{width:150mm;height:150mm}.qr-only h1{font-size:24pt}
+  `;
+  let body='';
+  if(kind==='a4'){
+    body = `<section class="page"><div class="poster"><h1>${title}</h1><h2>Suivez le tirage en direct sur votre téléphone</h2><img src="${qr}"><p>Scannez ce QR Code</p><p style="font-size:13pt">Aucune application à installer</p><div class="small">${version}</div></div></section>`;
+  } else if(kind==='a5'){
+    const card = `<div class="card-a5"><h1>${title}</h1><p>Suivez le tirage en direct</p><img src="${qr}"><p><b>Scannez le QR Code</b></p><p>Aucune application à installer</p><div class="small">${version}</div></div>`;
+    body = `<section class="sheet">${card}${card}${card}${card}</section>`;
+  } else {
+    body = `<section class="qr-only"><img src="${qr}"><h1>LOTO SDS</h1><p>Suivre le tirage en direct</p><p style="font-size:10pt;color:#555">${version}</p></section>`;
   }
-  function rect(x,y,w,h){stream += `${x.toFixed(2)} ${(pageH-y-h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S\n`;}
-  async function image(dataUrl,x,y,w,h){
-    const bin=atob(dataUrl.split(',')[1]);
-    const idName='Im'+(images.length+1);
-    const imgId=add(`<< /Type /XObject /Subtype /Image /Width 1200 /Height 1200 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bin.length} >>\nstream\n${bin}\nendstream`);
-    images.push([idName,imgId]);
-    stream += `q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(pageH-y-h).toFixed(2)} cm /${idName} Do Q\n`;
-  }
-  return (async()=>{
-    await actions({text,rect,image,pageW,pageH});
-    const xobjects=images.map(([n,id])=>`/${n} ${id} 0 R`).join(' ');
-    const contentId=add(`<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
-    const pageId=add(`<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 ${fontId} 0 R >> /XObject << ${xobjects} >> >> /Contents ${contentId} 0 R >>`);
-    const pagesId=add(`<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
-    objects[pageId-1]=objects[pageId-1].replace('/Parent 0 0 R',`/Parent ${pagesId} 0 R`);
-    const catalogId=add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
-    let pdf='%PDF-1.4\n'; const offsets=[0];
-    objects.forEach((obj,i)=>{offsets.push(pdf.length); pdf += `${i+1} 0 obj\n${obj}\nendobj\n`;});
-    const xref=pdf.length; pdf += `xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
-    for(let i=1;i<offsets.length;i++) pdf += String(offsets[i]).padStart(10,'0')+' 00000 n \n';
-    pdf += `trailer << /Size ${objects.length+1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
-    const bytes=new Uint8Array(pdf.length); for(let i=0;i<pdf.length;i++) bytes[i]=pdf.charCodeAt(i)&255;
-    const blob=new Blob([bytes],{type:'application/pdf'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
-  })();
+  const w = window.open('', '_blank');
+  if(!w){ alert('La fenêtre d’impression a été bloquée. Autorise les fenêtres pop-up pour ce site.'); return; }
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Impression QR Code</title><style>${css}</style></head><body><div class="no-print"><button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button><div class="hint">Dans la fenêtre d’impression, choisir “Enregistrer au format PDF” si besoin.</div></div>${body}<script>window.onload=()=>setTimeout(()=>window.print(),700);<\/script></body></html>`);
+  w.document.close();
 }
-async function a4(){
-  if(!qrReady()) return; const qr=await qrJpegUrl();
-  await makePdf(async({text,image})=>{text('LOTO SDS',297,90,34,'center');text('Suivez le tirage en direct sur votre telephone',297,125,16,'center');text('Aucune application a installer',297,148,14,'center');await image(qr,130,210,335,335);text('Scannez le QR Code',297,585,16,'center');text(Loto.C.APP_VERSION||'',297,810,9,'center');},'loto-sds-qr-a4.pdf');
+
+function downloadPng(){
+  const a=document.createElement('a');
+  a.href=qrUrl(1000);
+  a.target='_blank';
+  a.download='loto-sds-qr-code.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
-async function a5sheet(){
-  if(!qrReady()) return; const qr=await qrJpegUrl();
-  await makePdf(async({text,rect,image})=>{
-    const cells=[[0,0],[297.64,0],[0,420.95],[297.64,420.95]];
-    for(const [x,y] of cells){rect(x+9,y+9,279,402);text('LOTO SDS',x+148.8,y+50,22,'center');text('Suivez le tirage en direct',x+148.8,y+78,12,'center');await image(qr,x+79,y+110,140,140);text('Scannez le QR Code',x+148.8,y+275,11,'center');text('Aucune application a installer',x+148.8,y+310,10,'center');}
-  },'loto-sds-4-a5.pdf');
-}
-async function qrOnly(){
-  if(!qrReady()) return; const qr=await qrJpegUrl();
-  await makePdf(async({text,image})=>{await image(qr,100,110,395,395);text('LOTO SDS - Suivre le tirage',297,560,18,'center');},'loto-sds-qr-seul.pdf');
-}
-async function downloadPng(){
-  if(!qrReady()) return;
-  const url=await qrDataUrl(1000);
-  const a=document.createElement('a');a.href=url;a.download='loto-sds-qr-code.png';document.body.appendChild(a);a.click();a.remove();
-}
-document.getElementById('pdfA4').onclick=a4;
-document.getElementById('pdfA5').onclick=a5sheet;
-document.getElementById('pdfQr').onclick=qrOnly;
+
+document.getElementById('pdfA4').onclick=()=>openPrintPage('a4');
+document.getElementById('pdfA5').onclick=()=>openPrintPage('a5');
+document.getElementById('pdfQr').onclick=()=>openPrintPage('qr');
 const pngBtn=document.getElementById('pngQr'); if(pngBtn) pngBtn.onclick=downloadPng;
-Loto.ensureSession();
