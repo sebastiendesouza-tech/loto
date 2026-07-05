@@ -134,10 +134,34 @@
   async function replaceNumber(oldNumber, newNumber, source='manual'){
     oldNumber = Number(oldNumber); newNumber = Number(newNumber);
     if(!oldNumber || !newNumber || oldNumber<1 || oldNumber>90 || newNumber<1 || newNumber>90) return false;
-    let drawn = [...(state.drawnNumbers || [])].filter(x => Number(x) !== oldNumber && Number(x) !== newNumber);
-    drawn.push(newNumber);
-    const patch = { drawnNumbers: drawn, pendingNumber: Number(state.pendingNumber) === oldNumber ? null : state.pendingNumber, history:addLog('replace_number','Correction ' + oldNumber + ' → ' + newNumber, { oldNumber, newNumber, source }) };
-    applyMiniBingoFirstNumber(newNumber, patch);
+
+    const originalDrawn = [...(state.drawnNumbers || [])].map(Number);
+    const oldIndex = originalDrawn.findIndex(x => x === oldNumber);
+    const newAlreadyDrawn = originalDrawn.includes(newNumber);
+    let drawn = [];
+
+    if(oldIndex >= 0){
+      originalDrawn.forEach((x, idx) => {
+        if(x === newNumber) return;
+        if(idx === oldIndex) drawn.push(newNumber);
+        else if(x !== oldNumber) drawn.push(x);
+      });
+    } else {
+      drawn = originalDrawn.filter(x => x !== newNumber);
+      drawn.push(newNumber);
+    }
+
+    let pendingNumber = state.pendingNumber;
+    if(Number(pendingNumber) === oldNumber) pendingNumber = newAlreadyDrawn ? null : newNumber;
+    else if(Number(pendingNumber) === newNumber) pendingNumber = null;
+
+    const message = 'Correction : numéro ' + oldNumber + ' remplacé par ' + newNumber;
+    const patch = {
+      drawnNumbers: drawn,
+      pendingNumber,
+      toast: { type:'correction_number', message, at:Date.now(), duration:4500 },
+      history:addLog('replace_number','Correction ' + oldNumber + ' → ' + newNumber, { oldNumber, newNumber, source })
+    };
     await save(patch);
     return true;
   }

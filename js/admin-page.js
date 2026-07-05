@@ -115,23 +115,31 @@ document.getElementById('testCardBtn').onclick=testCard;
 Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);
 
-// V2.2.12 / V3 - création de cartons en planches de 6
+
+// V3.0.0 - création de cartons, planches A3 et test scanner QR
 let generatedCards = [];
+let generatedMode = 'individual';
+let generatedPerPage = 2;
+let scannerStream = null;
+let scannerTimer = null;
+let scannerDetector = null;
+let scannerLastValue = '';
+let scannerLastAt = 0;
+let scannerStartedAt = 0;
+let scannerReadCount = 0;
+
 function genStatus(text, good=true){ const el=document.getElementById('generatedCardsStatus'); if(!el) return; el.textContent=text; el.className='notice '+(good?'ok-note':'bad-note'); el.style.display='block'; }
 function rangeForColumn(col){ if(col===0) return [1,9]; if(col===8) return [80,90]; return [col*10, col*10+9]; }
-function pickRandom(arr){ return arr.splice(Math.floor(Math.random()*arr.length),1)[0]; }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildCardGrid(){
   const grid=Array.from({length:3},()=>Array(9).fill(null));
   const rowCounts=[0,0,0]; const colCounts=Array(9).fill(0);
-  const cells=[];
   for(let col=0;col<9;col++){
     const possible=shuffle([0,1,2].filter(r=>rowCounts[r]<5));
     const row=possible[0]; grid[row][col]=0; rowCounts[row]++; colCounts[col]++;
   }
   while(rowCounts.some(c=>c<5)){
-    const rows=shuffle([0,1,2].filter(r=>rowCounts[r]<5));
-    const r=rows[0];
+    const r=shuffle([0,1,2].filter(r=>rowCounts[r]<5))[0];
     const cols=shuffle([...Array(9).keys()].filter(c=>grid[r][c]===null && colCounts[c]<3));
     const c=cols[0]; if(c===undefined) break;
     grid[r][c]=0; rowCounts[r]++; colCounts[c]++;
@@ -147,47 +155,115 @@ function buildCardGrid(){
   return grid;
 }
 function gridToLignes(grid){ return grid.map(row=>row.filter(n=>Number.isInteger(n))); }
+function cartonCode(numero){ return 'C'+String(numero).padStart(6,'0'); }
+function sheetCode(sheetNumber){ return 'P'+String(sheetNumber).padStart(5,'0'); }
 function renderPrintableCard(card){
   const qrId='qr_'+String(card.numero).replace(/\W/g,'_')+'_'+Math.random().toString(36).slice(2,6);
-  return `<div class="loto-card-print"><div class="loto-card-head"><div><div class="loto-card-title">Loto by SdS</div><div class="loto-card-meta">Planche ${card.sheetNumber} · Position ${card.sheetPosition}</div></div><div><div id="${qrId}" class="qr-box" data-qr="${esc(card.qrPayload)}"><span class="qr-fallback">${esc(card.qrPayload)}</span></div><div class="carton-number-line">N° ${card.numero}</div></div></div><table class="carton-grid"><tbody>${card.grid.map(row=>`<tr>${row.map(n=>n?`<td>${String(n).padStart(2,'0')}</td>`:'<td class="empty"></td>').join('')}</tr>`).join('')}</tbody></table></div>`;
+  const rows=card.grid.map(row=>`<tr>${row.map(n=>n?`<td><span class="big-num">${String(n)}</span><span class="mini-num">${String(n)}</span></td>`:'<td class="empty"><span></span></td>').join('')}</tr>`).join('');
+  return `<div class="loto-card-print"><div class="loto-card-inner"><div class="loto-card-head"><div><div class="carton-number-line">${esc(card.code)}</div><div class="loto-card-meta">${card.sheetCode ? esc(card.sheetCode)+' · carton '+card.sheetPosition : 'Carton individuel'}</div></div><div><div id="${qrId}" class="qr-box" data-qr="${esc(card.qrPayload)}"><span class="qr-fallback">${esc(card.qrPayload)}</span></div></div></div><table class="carton-grid"><tbody>${rows}</tbody></table><div class="loto-card-foot">Loto by SdS</div></div></div>`;
 }
 function renderGeneratedCards(){
   const out=document.getElementById('generatedCardsPreview'); if(!out) return;
   if(!generatedCards.length){ out.innerHTML=''; return; }
-  const sheets=[];
-  for(let i=0;i<generatedCards.length;i+=6){ sheets.push(generatedCards.slice(i,i+6)); }
-  out.innerHTML=sheets.map(sheet=>`<div class="sheet-a4">${sheet.map(renderPrintableCard).join('')}</div>`).join('');
+  const pages=[];
+  const per=generatedMode==='sheets' ? 6 : generatedPerPage;
+  for(let i=0;i<generatedCards.length;i+=per){ pages.push(generatedCards.slice(i,i+per)); }
+  const cls=generatedMode==='sheets' ? 'sheet-a3' : ('sheet-a4 individual-'+per);
+  out.innerHTML=pages.map(page=>`<div class="${cls}">${page.map(renderPrintableCard).join('')}</div>`).join('');
   out.querySelectorAll('[data-qr]').forEach(el=>{
     const payload=el.dataset.qr;
     el.innerHTML='';
-    if(window.QRCode){ new QRCode(el,{text:payload,width:54,height:54,correctLevel:QRCode.CorrectLevel.M}); }
+    if(window.QRCode){ new QRCode(el,{text:payload,width:38,height:38,correctLevel:QRCode.CorrectLevel.L}); }
     else el.innerHTML='<span class="qr-fallback">'+esc(payload)+'</span>';
   });
 }
-function generateCards(){
-  const start=Number(document.getElementById('genStartNumber')?.value||200001);
-  const sheetCount=Math.max(1,Number(document.getElementById('genSheetCount')?.value||1));
-  const serie=(document.getElementById('genSerie')?.value||'CREATION').trim()||'CREATION';
-  generatedCards=[];
-  for(let sheet=1;sheet<=sheetCount;sheet++){
-    for(let pos=1;pos<=6;pos++){
-      const numero=start+generatedCards.length;
-      const grid=buildCardGrid();
-      generatedCards.push({numero,serie,grid,lignes:gridToLignes(grid),sheetNumber:sheet,sheetPosition:pos,qrPayload:'LBS:'+numero});
-    }
+function buildGeneratedCards({start,count,serie,mode,perPage=2}){
+  generatedCards=[]; generatedMode=mode; generatedPerPage=perPage;
+  for(let i=0;i<count;i++){
+    const numero=start+i;
+    const grid=buildCardGrid();
+    const sheetIndex=mode==='sheets' ? Math.floor(i/6)+1 : null;
+    const pos=mode==='sheets' ? (i%6)+1 : null;
+    const sc=sheetIndex ? sheetCode(sheetIndex) : null;
+    generatedCards.push({numero,code:cartonCode(numero),serie,grid,lignes:gridToLignes(grid),sheetNumber:sheetIndex,sheetCode:sc,sheetPosition:pos,qrPayload:cartonCode(numero),status:'disponible',origin:'Loto by SdS'});
   }
   renderGeneratedCards();
-  genStatus(`${generatedCards.length} carton(s) généré(s).`,true);
+  genStatus(`${generatedCards.length} carton(s) généré(s). QR court : ${generatedCards[0]?.qrPayload || ''}`,true);
+}
+function generateIndividualCards(){
+  const start=Number(document.getElementById('genIndStartNumber')?.value||200001);
+  const count=Math.max(1,Number(document.getElementById('genIndCount')?.value||1));
+  const perPage=Math.max(1,Math.min(3,Number(document.getElementById('genIndPerPage')?.value||2)));
+  const serie=(document.getElementById('genIndSerie')?.value||'INDIVIDUEL').trim()||'INDIVIDUEL';
+  buildGeneratedCards({start,count,serie,mode:'individual',perPage});
+}
+function generateSheetCards(){
+  const start=Number(document.getElementById('genSheetStartNumber')?.value||300001);
+  const sheetCount=Math.max(1,Number(document.getElementById('genSheetCount')?.value||1));
+  const serie=(document.getElementById('genSheetSerie')?.value||'PLANCHE_A3').trim()||'PLANCHE_A3';
+  buildGeneratedCards({start,count:sheetCount*6,serie,mode:'sheets',perPage:6});
 }
 async function saveGeneratedCards(){
   if(!generatedCards.length){ genStatus('Aucun carton généré.',false); return; }
   const client=Loto.supabaseClient; if(!client){ genStatus('Supabase non configuré.',false); return; }
-  const rows=generatedCards.map(c=>({numero:c.numero,serie:c.serie,lignes:c.lignes,actif:true}));
+  const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true}));
+  const basicRows=generatedCards.map(c=>({numero:c.numero,serie:c.serie,lignes:c.lignes,actif:true}));
   try{
-    for(let i=0;i<rows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(rows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
-    genStatus(`${rows.length} carton(s) enregistré(s) dans Supabase.`,true); refreshCartonCount();
-  }catch(e){ genStatus('Erreur enregistrement : '+(e.message||e),false); }
+    for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(fullRows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
+    genStatus(`${fullRows.length} carton(s) enregistré(s) dans Supabase avec métadonnées V3.`,true); refreshCartonCount();
+  }catch(e){
+    try{
+      for(let i=0;i<basicRows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(basicRows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
+      genStatus(`${basicRows.length} carton(s) enregistré(s). Base ancienne détectée : applique le SQL V3 pour stocker planche, QR et statut.`,true); refreshCartonCount();
+    }catch(e2){ genStatus('Erreur enregistrement : '+(e2.message||e2),false); }
+  }
 }
-document.getElementById('generateCards')?.addEventListener('click',generateCards);
-document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
-document.getElementById('printGeneratedCards')?.addEventListener('click',()=>{ if(!generatedCards.length) generateCards(); setTimeout(()=>window.print(),300); });
+function beep(ok=true){
+  try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop(); ctx.close();}, ok?90:180); }catch(e){}
+}
+async function startQrScanner(){
+  const status=document.getElementById('scannerStatus'); const video=document.getElementById('qrScannerVideo');
+  if(!('BarcodeDetector' in window)){ if(status) status.textContent='BarcodeDetector non disponible sur ce navigateur. Tester sur Chrome/Android ou Safari récent.'; return; }
+  try{
+    scannerDetector = new BarcodeDetector({formats:['qr_code','code_128','ean_13','ean_8','code_39']});
+    scannerStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    video.srcObject=scannerStream; await video.play();
+    scannerReadCount=0; scannerStartedAt=performance.now(); scannerLastValue=''; scannerLastAt=0;
+    document.getElementById('scannerReadCount').textContent='0';
+    if(status) status.textContent='Scan en cours.';
+    scannerTimer=setInterval(scanQrFrame,120);
+  }catch(e){ if(status) status.textContent='Erreur caméra : '+(e.message||e); }
+}
+function stopQrScanner(){
+  if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null;
+  if(scannerStream){ scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null; }
+  const video=document.getElementById('qrScannerVideo'); if(video) video.srcObject=null;
+  const status=document.getElementById('scannerStatus'); if(status) status.textContent='Caméra arrêtée.';
+}
+async function scanQrFrame(){
+  const video=document.getElementById('qrScannerVideo'); if(!scannerDetector || !video || video.readyState<2) return;
+  try{
+    const codes=await scannerDetector.detect(video); if(!codes.length) return;
+    const value=(codes[0].rawValue||'').trim(); if(!value) return;
+    const now=performance.now();
+    const continuous=document.getElementById('scannerContinuous')?.checked!==false;
+    if(value===scannerLastValue && now-scannerLastAt<1200) return;
+    scannerLastValue=value; scannerLastAt=now; scannerReadCount++;
+    document.getElementById('scannerLastCode').textContent=value;
+    document.getElementById('scannerReadTime').textContent=Math.round(now-scannerStartedAt)+' ms';
+    document.getElementById('scannerReadCount').textContent=String(scannerReadCount);
+    const hist=document.getElementById('scannerHistory'); if(hist) hist.innerHTML=`<div>${new Date().toLocaleTimeString()} · ${esc(value)}</div>`+hist.innerHTML;
+    beep(true);
+    scannerStartedAt=performance.now();
+    if(!continuous) stopQrScanner();
+  }catch(e){}
+}
+
+document.getElementById('generateIndividualCards')?.addEventListener('click',generateIndividualCards);
+document.getElementById('generateSheetCards')?.addEventListener('click',generateSheetCards);
+document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click',saveGeneratedCards);
+document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',saveGeneratedCards);
+document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); setTimeout(()=>window.print(),300); });
+document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); setTimeout(()=>window.print(),300); });
+document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
+document.getElementById('stopQrScanner')?.addEventListener('click',stopQrScanner);
