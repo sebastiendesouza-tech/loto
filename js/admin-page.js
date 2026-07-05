@@ -207,7 +207,7 @@ function generateCardsUnified(){
   const start=Number(document.getElementById('genStartNumber')?.value||200001);
   const requested=Math.max(1,Number(document.getElementById('genCardCount')?.value||1));
   const type=document.getElementById('genCardType')?.value||'individual';
-  const perPage=Math.max(2,Math.min(3,Number(document.getElementById('genPerPage')?.value||2)));
+  const perPage=Math.max(2,Math.min(3,Number(document.getElementById('genPerPage')?.value||3)));
   const serie=(document.getElementById('genSerie')?.value||'STANDARD').trim()||'STANDARD';
   const associationId=cleanAssociationId(document.getElementById('genAssociationId')?.value||'1');
   if(type==='sheets'){
@@ -291,12 +291,43 @@ async function scanQrFrame(){
 document.getElementById('genCardType')?.addEventListener('change',updateCardGeneratorUi);
 document.getElementById('generateCards')?.addEventListener('click',generateCardsUnified);
 document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
-document.getElementById('printGeneratedCards')?.addEventListener('click',()=>{
+function openGeneratedCardsPrintWindow(){
   if(!generatedCards.length) generateCardsUnified();
-  document.body.classList.add('printing-cartons');
-  document.body.classList.toggle('print-mode-sheets', generatedMode==='sheets');
-  setTimeout(()=>window.print(),300);
-});
+  const preview=document.getElementById('generatedCardsPreview');
+  if(!preview || !preview.innerHTML.trim()){ genStatus('Aucun carton à imprimer.', false); return; }
+  const isSheets = generatedMode === 'sheets';
+  const w = window.open('', '_blank');
+  if(!w){ genStatus('Fenêtre PDF bloquée par le navigateur. Autorise les pop-up pour cette page.', false); return; }
+  const css = `
+    @page{ size:${isSheets ? 'A3 landscape' : 'A4 portrait'}; margin:0; }
+    html,body{ margin:0; padding:0; background:#fff; color:#111; font-family:Arial,Helvetica,sans-serif; }
+    :root{--loto-card-w:193mm;--loto-card-h:86mm;--loto-cell:20mm;}
+    .print-sheets{ display:block; margin:0; padding:0; background:#fff; }
+    .sheet-a4,.sheet-a3{ background:#fff; color:#111; box-sizing:border-box; box-shadow:none; border-radius:0; page-break-after:always; break-after:page; justify-items:center; align-items:start; overflow:hidden; margin:0; }
+    .sheet-a4{ width:210mm; height:297mm; padding:0 8mm; display:grid; grid-template-columns:var(--loto-card-w); justify-content:center; }
+    .sheet-a4.individual-2{ grid-template-rows:repeat(2,var(--loto-card-h)); align-content:center; gap:18mm; }
+    .sheet-a4.individual-3{ grid-template-rows:repeat(3,var(--loto-card-h)); align-content:start; gap:19.5mm; }
+    .sheet-a3{ width:420mm; height:297mm; padding:0 12mm; display:grid; grid-template-columns:repeat(2,var(--loto-card-w)); grid-template-rows:repeat(3,var(--loto-card-h)); gap:19.5mm 10mm; align-content:start; justify-content:center; }
+    .loto-card-print{ width:var(--loto-card-w); height:var(--loto-card-h); box-sizing:border-box; border:1.2mm solid #111; border-radius:4mm; padding:1.1mm; background:#fff; break-inside:avoid; overflow:hidden; }
+    .loto-card-inner{ height:100%; box-sizing:border-box; border:.35mm solid #111; border-radius:2.8mm; padding:1.6mm 2mm; background:#fff; display:flex; flex-direction:column; }
+    .loto-card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:3mm; margin:0 0 1.5mm 0; min-height:16mm; }
+    .carton-number-line{ text-align:left; font-size:4.2mm; line-height:5mm; font-weight:900; letter-spacing:.15mm; margin:0; color:#111; }
+    .loto-card-meta{ font-size:2.7mm; line-height:3.2mm; color:#444; font-weight:600; margin-top:.5mm; }
+    .qr-box,.qr-box canvas,.qr-box img{ width:14mm!important; height:14mm!important; max-width:14mm!important; max-height:14mm!important; }
+    .carton-grid{ width:180mm!important; height:60mm!important; border-collapse:collapse!important; table-layout:fixed!important; border:.7mm solid #111!important; margin:0 auto!important; }
+    .carton-grid td{ width:20mm!important; height:20mm!important; position:relative!important; border:.32mm solid #111!important; text-align:center!important; vertical-align:middle!important; background:#fff!important; padding:0!important; font-weight:900!important; box-sizing:border-box!important; }
+    .carton-grid .big-num{ display:block!important; font-size:12mm!important; line-height:13.5mm!important; font-weight:1000!important; color:#000!important; margin-top:.2mm!important; }
+    .carton-grid .mini-num{ position:absolute!important; left:0!important; right:0!important; bottom:.8mm!important; font-size:2.8mm!important; line-height:3mm!important; font-weight:700!important; color:#555!important; }
+    .carton-grid td.empty{ background:#fff!important; }
+    .carton-grid td.empty span{ display:block!important; width:11mm!important; height:6mm!important; margin:auto!important; border-radius:.9mm!important; background:#d7d7d7!important; }
+    .loto-card-foot{ text-align:center; font-size:2.3mm; line-height:3mm; margin-top:auto; color:#333; font-weight:700; letter-spacing:.15mm; }
+  `;
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Cartons Loto by SdS</title><style>${css}</style></head><body>${preview.outerHTML}<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>`);
+  w.document.close();
+}
+
+document.getElementById('printGeneratedCards')?.addEventListener('click', openGeneratedCardsPrintWindow);
 window.addEventListener('afterprint',()=>{ document.body.classList.remove('printing-cartons','print-mode-sheets'); });
 updateCardGeneratorUi();
 
