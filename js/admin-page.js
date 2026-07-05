@@ -301,7 +301,7 @@ function getQrImageForCard(card){
   return null;
 }
 function drawPdfCard(doc, card, x, y){
-  const cardW=207, cardH=94, cellW=22, cellH=22;
+  const cardW=207, cardH=97, cellW=22, cellH=23;
   doc.setDrawColor(0); doc.setTextColor(0); doc.setFillColor(255,255,255);
   doc.setLineWidth(1.2); doc.roundedRect(x,y,cardW,cardH,4,4,'S');
   doc.setLineWidth(0.35); doc.roundedRect(x+1.1,y+1.1,cardW-2.2,cardH-2.2,2.8,2.8,'S');
@@ -314,8 +314,8 @@ function drawPdfCard(doc, card, x, y){
   else { doc.setFontSize(5); doc.text(card.qrPayload,x+172,y+12); }
   const gx=x+4.5, gy=y+21;
   doc.setDrawColor(0); doc.setTextColor(0); doc.setLineWidth(0.25);
-  doc.rect(gx,gy,198,66,'S');
-  for(let c=1;c<9;c++) doc.line(gx+c*cellW, gy, gx+c*cellW, gy+66);
+  doc.rect(gx,gy,198,69,'S');
+  for(let c=1;c<9;c++) doc.line(gx+c*cellW, gy, gx+c*cellW, gy+69);
   for(let r=1;r<3;r++) doc.line(gx, gy+r*cellH, gx+198, gy+r*cellH);
   for(let r=0;r<3;r++){
     for(let c=0;c<9;c++){
@@ -323,16 +323,16 @@ function drawPdfCard(doc, card, x, y){
       const cx=gx+c*cellW, cy=gy+r*cellH;
       if(n){
         doc.setFont('helvetica','bold'); doc.setFontSize(36); doc.setTextColor(0);
-        doc.text(String(n), cx+cellW/2, cy+14.4, {align:'center'});
+        doc.text(String(n), cx+cellW/2, cy+15.4, {align:'center'});
         doc.setFontSize(8.5); doc.setTextColor(85);
-        doc.text(String(n), cx+cellW/2, cy+20.0, {align:'center'});
+        doc.text(String(n), cx+cellW/2, cy+21.1, {align:'center'});
       }else{
-        doc.setFillColor(215,215,215); doc.roundedRect(cx+5, cy+7.7, 12, 6.5, .9, .9, 'F');
+        doc.setFillColor(215,215,215); doc.roundedRect(cx+5, cy+8.4, 12, 6.5, .9, .9, 'F');
       }
     }
   }
   doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(50);
-  doc.text('Loto by SdS', x+cardW/2, y+91, {align:'center'});
+  doc.text('Loto by SdS', x+cardW/2, y+94, {align:'center'});
 }
 function downloadCalibrationPdf(){
   const jspdf = window.jspdf || window.jsPDF;
@@ -356,7 +356,7 @@ function downloadCalibrationPdf(){
   sizes.forEach((sz,idx)=>{ const x=20+idx*42; doc.setLineWidth(0.3); doc.rect(x,y,sz,sz); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text(sz+' x '+sz+' mm', x+sz/2, y+sz+7, {align:'center'}); });
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.text('Note les mesures obtenues sur papier. Exemple : la regle 100 mm mesure 96 mm = reduction 96%.', 20, 230, {maxWidth:170});
-  doc.save('loto_by_sds_calibration_v3_0_9.pdf');
+  doc.save('loto_by_sds_calibration_v3_1_0.pdf');
   genStatus('PDF calibration téléchargé.', true);
 }
 
@@ -372,8 +372,8 @@ function openGeneratedCardsPrintWindow(){
   const pageW = isSheets ? 420 : 210;
   const pageH = isSheets ? 297 : 297;
   const positions = isSheets
-    ? [[0,0],[213,0],[0,101.5],[213,101.5],[0,203],[213,203]]
-    : [[1.5,0],[1.5,101.5],[1.5,203]];
+    ? [[0,0],[213,0],[0,100],[213,100],[0,200],[213,200]]
+    : [[1.5,0],[1.5,100],[1.5,200]];
   generatedCards.forEach((card,i)=>{
     if(i>0 && i%per===0) doc.addPage(isSheets?'a3':'a4', isSheets?'landscape':'portrait');
     const [x,y]=positions[i%per];

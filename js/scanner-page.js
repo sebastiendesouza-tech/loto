@@ -49,7 +49,7 @@ function handleCode(value){
   const now = performance.now();
   const continuous = document.getElementById('scannerContinuous')?.checked !== false;
 
-  if(value === scannerLastValue && now - scannerLastAt < 1200) return;
+  if(value === scannerLastValue && now - scannerLastAt < 900) return;
 
   scannerLastValue = value;
   scannerLastAt = now;
@@ -116,28 +116,45 @@ async function startJsQrScanner(){
   video.muted = true;
   const deviceId = await getBackCameraId();
   const videoConstraint = deviceId
-    ? { deviceId:{ exact:deviceId }, width:{ ideal:1280 }, height:{ ideal:720 } }
-    : { facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } };
+    ? { deviceId:{ exact:deviceId }, width:{ ideal:640 }, height:{ ideal:480 } }
+    : { facingMode:{ ideal:'environment' }, width:{ ideal:640 }, height:{ ideal:480 } };
   scannerStream = await navigator.mediaDevices.getUserMedia({ video:videoConstraint, audio:false });
   video.srcObject = scannerStream;
   await video.play();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently:true });
-  setStatus('Scan en cours. Mode jsQR iPhone/Android. ' + scannerDiagnostics(), 'muted');
+  let frame = 0;
+  setStatus('Scan rapide en cours. Place le QR Code dans le cadre blanc. ' + scannerDiagnostics(), 'muted');
   scannerTimer = setInterval(() => {
     if(!video || video.readyState < 2) return;
-    const w = video.videoWidth || 640;
-    const h = video.videoHeight || 480;
-    if(!w || !h) return;
-    canvas.width = w;
-    canvas.height = h;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    if(!vw || !vh) return;
+    frame++;
     try{
-      ctx.drawImage(video, 0, 0, w, h);
-      const img = ctx.getImageData(0, 0, w, h);
-      const code = window.jsQR(img.data, w, h, { inversionAttempts:'dontInvert' });
+      // Lecture prioritaire au centre pour accélérer le scan continu.
+      const roiSize = Math.floor(Math.min(vw, vh) * 0.62);
+      const sx = Math.max(0, Math.floor((vw - roiSize) / 2));
+      const sy = Math.max(0, Math.floor((vh - roiSize) / 2));
+      canvas.width = roiSize;
+      canvas.height = roiSize;
+      ctx.drawImage(video, sx, sy, roiSize, roiSize, 0, 0, roiSize, roiSize);
+      let img = ctx.getImageData(0, 0, roiSize, roiSize);
+      let code = window.jsQR(img.data, roiSize, roiSize, { inversionAttempts:'dontInvert' });
+
+      // Une fois sur six, on vérifie toute l'image si le QR n'est pas parfaitement centré.
+      if(!code && frame % 6 === 0){
+        const scaleW = Math.min(vw, 720);
+        const scaleH = Math.round(scaleW * vh / vw);
+        canvas.width = scaleW;
+        canvas.height = scaleH;
+        ctx.drawImage(video, 0, 0, scaleW, scaleH);
+        img = ctx.getImageData(0, 0, scaleW, scaleH);
+        code = window.jsQR(img.data, scaleW, scaleH, { inversionAttempts:'dontInvert' });
+      }
       if(code && code.data) handleCode(code.data);
     }catch(e){}
-  }, 140);
+  }, 75);
 }
 
 async function startNativePreviewAndBarcode(){
@@ -146,8 +163,8 @@ async function startNativePreviewAndBarcode(){
   scannerDetector = new BarcodeDetector({ formats:['qr_code','code_128','ean_13','ean_8','code_39'] });
   const deviceId = await getBackCameraId();
   const videoConstraint = deviceId
-    ? { deviceId:{ exact:deviceId }, width:{ ideal:1280 }, height:{ ideal:720 } }
-    : { facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } };
+    ? { deviceId:{ exact:deviceId }, width:{ ideal:640 }, height:{ ideal:480 } }
+    : { facingMode:{ ideal:'environment' }, width:{ ideal:640 }, height:{ ideal:480 } };
   scannerStream = await navigator.mediaDevices.getUserMedia({ video:videoConstraint, audio:false });
   const region = document.getElementById('qrScannerRegion');
   if(region) region.style.display = 'none';
@@ -158,7 +175,7 @@ async function startNativePreviewAndBarcode(){
   video.srcObject = scannerStream;
   await video.play();
   setStatus('Scan en cours. Mode natif. ' + scannerDiagnostics(), 'muted');
-  scannerTimer = setInterval(scanQrFrame, 120);
+  scannerTimer = setInterval(scanQrFrame, 80);
 }
 
 async function startHtml5Scanner(){
@@ -173,7 +190,7 @@ async function startHtml5Scanner(){
   const cameraConfig = deviceId ? { deviceId:{ exact:deviceId } } : { facingMode:'environment' };
   await html5Scanner.start(
     cameraConfig,
-    { fps:10, qrbox:{ width:220, height:220 }, aspectRatio:1.333 },
+    { fps:18, qrbox:{ width:190, height:190 }, aspectRatio:1.333 },
     decodedText => handleCode(decodedText),
     () => {}
   );
