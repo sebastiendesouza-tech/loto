@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.0.9 - Calibration impression + scanner jsQR
+
+- Ajout du PDF de calibration : règle horizontale 100 mm, règle verticale 100 mm et carrés 20/21/22/23 mm.
+- Test du carton avec cases 22 x 22 mm.
+- Cartons individuels A4 conservés à 3 par feuille, avec le troisième tout en bas pour limiter les découpes.
+- Planche A3 conservée à 6 cartons.
+- Scanner : nouveau mode jsQR prioritaire pour améliorer la lecture sur iPhone/Safari.
+- Version affichée mise à jour en v3.0.9.
+
+## v3.0.8 - Cartons A4 optimises
+
+- Cartons individuels : 3 par A4 fixes.
+- Premier carton colle en haut, troisieme colle en bas pour limiter les decoupes.
+- Hauteur des cases portee a 21 mm pour eviter que les jetons de 17 mm se touchent.
+- PDF ajuste sur le meme format de reference.
+
+## v3.0.7 - Téléchargement PDF cartons
+
+- Téléchargement direct des cartons en vrai fichier PDF.
+- Suppression de l'option 2 ou 3 cartons par page : les cartons individuels sont fixés à 3 par A4.
+- Planche conservée à 6 cartons sur A3.
+- Version affichée mise à jour en v3.0.7.
+
 ## v3.0.6 - PDF cartons propre + scanner iPhone
 
 - Version affichée mise à jour en v3.0.6.

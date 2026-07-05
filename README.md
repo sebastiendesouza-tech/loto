@@ -2,14 +2,17 @@
 
 Application web PWA pour l'animation d'un loto associatif.
 
-Version : v2.2.12.
+Version : v3.0.9.
 
 ## Nouveautés principales
 
 - Corrections de tirage côté animateur et commissaire.
 - Commandes vocales de correction.
 - Création de cartons depuis l'administration.
-- Planche imprimable de 6 cartons avec QR Code.
+- Cartons individuels : 3 par A4.
+- Planches : 6 cartons par A3.
+- PDF de calibration impression.
+- Scanner QR en mode continu.
 
 ## Supabase
 
@@ -21,7 +24,7 @@ Les cartons créés sont enregistrés avec :
 - `lignes`
 - `actif`
 
-Le QR Code imprimé contient l'identifiant rapide du carton : `LBS:<numero>`.
+Le QR Code imprimé contient uniquement le code métier du carton, par exemple `SDS-00001-00000001`.
 
 
 ## V3 - Cartons et scanner
