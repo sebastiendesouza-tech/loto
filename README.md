@@ -2,7 +2,7 @@
 
 Application web PWA pour l'animation d'un loto associatif.
 
-Version : v3.1.0.
+Version : v3.1.2.
 
 ## Nouveautés principales
 

@@ -1,3 +1,14 @@
+## v3.1.2 - temps de décodage scanner
+- Le temps affiché ne compte plus le temps de placement du QR Code.
+- Il correspond au temps de décodage/analyse de l’image qui contient le QR Code.
+
+## v3.1.2 - scan bip et contour vert
+- Scanner : ajout d'un contour vert bref à chaque lecture réussie.
+- Scanner : bip conservé et déclenché immédiatement à la reconnaissance.
+- Scanner : interface de test simplifiée, temps de lecture conservé.
+- Scanner : zone analysée légèrement réduite pour améliorer la vitesse.
+- Version affichée mise à jour.
+
 ## v3.1.0 - scanner rapide et cartons hauts
 
 - Scanner compact : fenêtre vidéo réduite.
