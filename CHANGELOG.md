@@ -1,3 +1,10 @@
+# Changelog
+
+## v3.0.5 - Correctif impression cartons + scanner iPhone
+- Impression des cartons : seul l'aperçu des cartons est imprimé, sans titres ni textes d'administration.
+- Scanner : séparation du conteneur iPhone/html5-qrcode et de la vidéo native pour éviter l'écran noir sous Safari iOS.
+- Numéro de version mis à jour dans l'application.
+
 
 ## v3.0.4 - Scanner iPhone
 - Ajout d’un mode compatible iPhone/Safari pour le scanner QR.
@@ -5,7 +12,6 @@
 - Affichage des erreurs caméra au lieu d’un bouton silencieux.
 - Conservation du mode scan continu avec anti double lecture.
 
-# Changelog
 
 ## v3.0.2 - Carton de référence
 - Format du carton fixé autour de cases 20 x 20 mm pour jetons de 17 mm.
