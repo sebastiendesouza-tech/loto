@@ -89,6 +89,9 @@
     if(!t) return;
     if(t.includes('fermer affichage') || t.includes('fermer carton')) return Loto.hidePublicCard();
     if(t.includes('annuler dernier')) return Loto.undoLast();
+    if(t.includes('annule le dernier')) return Loto.undoLast();
+    if(t.includes('annule numero') || t.includes('annuler numero') || t.includes('annule le numero') || t.includes('annuler le numero')){ const ns=extractNumbers(t); if(ns.length) return Loto.cancelNumber(ns[0], 'voice'); }
+    if(t.includes('remplace') || t.includes('remplacer')){ const ns=extractNumbers(t); if(ns.length>=2) return Loto.replaceNumber(ns[0], ns[1], 'voice'); }
     if(t.includes('erreur')) { firstHeard = null; lastVoiceNumber = null; return Loto.cancelPending(); }
 
     const nums = extractNumbers(t);

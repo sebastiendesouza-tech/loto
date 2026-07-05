@@ -4,7 +4,7 @@
   const defaultState = () => ({
     appVersion: C.APP_VERSION || 'v2.2.6-final',
     sessionCode: C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE',
-    lotoName: C.APP_NAME || 'LOTO SDS',
+    lotoName: C.APP_NAME || 'Loto by SdS',
     drawnNumbers: [],
     pendingNumber: null,
     history: [],
@@ -26,7 +26,7 @@
   let listeners = [];
   let channel = null;
   const code = () => new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';
-  const title = () => `${state.lotoName || C.APP_NAME || 'LOTO SDS'} ${C.APP_VERSION || ''}`.trim();
+  const title = () => `${state.lotoName || C.APP_NAME || 'Loto by SdS'} ${C.APP_VERSION || ''}`.trim();
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
   function onChange(fn){ listeners.push(fn); fn(state); return () => listeners = listeners.filter(x => x !== fn); }
@@ -122,6 +122,24 @@
   async function undoLast(){
     const drawn = [...(state.drawnNumbers || [])]; const last = drawn.pop();
     await save({ drawnNumbers: drawn, pendingNumber:null, history:addLog('undo','Annulation dernier ' + (last || ''), { n:last }) });
+  }
+  async function cancelNumber(n, source='manual'){
+    n = Number(n);
+    if(!n || n<1 || n>90) return false;
+    const drawn = [...(state.drawnNumbers || [])].filter(x => Number(x) !== n);
+    const patch = { drawnNumbers: drawn, pendingNumber: Number(state.pendingNumber) === n ? null : state.pendingNumber, history:addLog('cancel_number','Annulation numéro ' + n, { n, source }) };
+    await save(patch);
+    return true;
+  }
+  async function replaceNumber(oldNumber, newNumber, source='manual'){
+    oldNumber = Number(oldNumber); newNumber = Number(newNumber);
+    if(!oldNumber || !newNumber || oldNumber<1 || oldNumber>90 || newNumber<1 || newNumber>90) return false;
+    let drawn = [...(state.drawnNumbers || [])].filter(x => Number(x) !== oldNumber && Number(x) !== newNumber);
+    drawn.push(newNumber);
+    const patch = { drawnNumbers: drawn, pendingNumber: Number(state.pendingNumber) === oldNumber ? null : state.pendingNumber, history:addLog('replace_number','Correction ' + oldNumber + ' → ' + newNumber, { oldNumber, newNumber, source }) };
+    applyMiniBingoFirstNumber(newNumber, patch);
+    await save(patch);
+    return true;
   }
   async function newGame(){
     const old = state || {};
@@ -355,7 +373,7 @@
       const b = document.createElement(opts.button ? 'button':'div');
       b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (opts.button?' clickable':'');
       b.textContent = String(i).padStart(2,'0');
-      if(opts.button) b.onclick = () => drawNumber(i, 'click');
+      if(opts.button) b.onclick = () => { const drawnNow = new Set(state.drawnNumbers || []); if(drawnNow.has(i)){ if(confirm('Annuler le numéro '+i+' ?')) cancelNumber(i, 'grid_click'); } else drawNumber(i, 'click'); };
       container.appendChild(b);
     }
   }
@@ -369,6 +387,6 @@
     const check = () => { if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else overlay.querySelector('#pinErr').textContent = 'PIN incorrect'; };
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
-  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'LOTO SDS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'LOTO SDS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
 })();

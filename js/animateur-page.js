@@ -6,7 +6,7 @@ function programTitle(program){return (program?.title||'').trim() || 'Loto sans 
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 function startProgram(program){
   if(!program) return;
-  Loto.save({lotoName:program.title||'LOTO SDS',program,...Loto.freshGamePatch(program),history:[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}]});
+  Loto.save({lotoName:program.title||'Loto by SdS',program,...Loto.freshGamePatch(program),history:[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}]});
   launchModal.style.display='none';
 }
 function drawLaunchList(){
@@ -19,7 +19,13 @@ document.getElementById('launchLoto').onclick=()=>{drawLaunchList();launchModal.
 document.getElementById('closeLaunch').onclick=()=>launchModal.style.display='none';
 document.getElementById('modalBlankGame').onclick=()=>{ if(confirm('Créer une nouvelle partie simple ?')){ Loto.newGame(); launchModal.style.display='none'; } };
 document.getElementById('newGame').onclick=()=>{ if(confirm('Créer une nouvelle partie simple ?')) Loto.newGame(); };
-document.getElementById('undo').onclick=()=>Loto.undoLast();
+document.getElementById('undo').onclick=()=>{ if(confirm('Annuler le dernier numéro ?')) Loto.undoLast(); };
+function numberValue(id){return Number(document.getElementById(id)?.value||0);}
+const animCancelBtn=document.getElementById('animCancelBtn');
+if(animCancelBtn) animCancelBtn.onclick=async()=>{const n=numberValue('animCancelNumber'); if(!n) return; if(confirm('Annuler le numéro '+n+' ?')){await Loto.cancelNumber(n,'animateur'); document.getElementById('animCancelNumber').value='';}};
+const animReplaceBtn=document.getElementById('animReplaceBtn');
+if(animReplaceBtn) animReplaceBtn.onclick=async()=>{const oldN=numberValue('animOldNumber'), newN=numberValue('animNewNumber'); if(!oldN||!newN) return; if(confirm('Remplacer '+oldN+' par '+newN+' ?')){await Loto.replaceNumber(oldN,newN,'animateur'); document.getElementById('animOldNumber').value=''; document.getElementById('animNewNumber').value='';}};
+
 const cancelPendingBtn=document.getElementById('cancelPending'); if(cancelPendingBtn) cancelPendingBtn.onclick=()=>Loto.cancelPending();
 document.getElementById('animHidePublic').onclick=()=>Loto.hidePublicCard();
 function pad(n){return String(n).padStart(2,'0');}
