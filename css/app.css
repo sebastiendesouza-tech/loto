@@ -311,3 +311,19 @@
   .loto-card-foot{text-align:center!important;font-size:2.3mm!important;line-height:3mm!important;margin-top:auto!important;color:#333!important;font-weight:700!important;letter-spacing:.15mm!important}
 }
 @page sheetA3{size:A3 landscape;margin:0}
+
+
+/* v3.0.5 - impression uniquement des cartons + scanner iPhone visible */
+.scanner-camera{width:100%;background:#071421;border-radius:14px;min-height:260px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.scanner-camera video{width:100%;min-height:260px;background:#071421;display:block;}
+.qr-scanner-region{width:100%;min-height:260px;display:none;background:#071421;}
+.qr-scanner-region video{width:100%!important;min-height:260px!important;object-fit:cover!important;background:#071421!important;display:block!important;}
+.qr-scanner-region canvas{display:none!important;}
+@media print{
+  body.printing-cartons *{visibility:hidden!important;}
+  body.printing-cartons #generatedCardsPreview,
+  body.printing-cartons #generatedCardsPreview *{visibility:visible!important;}
+  body.printing-cartons #generatedCardsPreview{position:absolute!important;left:0!important;top:0!important;margin:0!important;padding:0!important;width:auto!important;background:#fff!important;}
+  body.printing-cartons .sheet-a4,
+  body.printing-cartons .sheet-a3{visibility:visible!important;}
+}
