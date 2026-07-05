@@ -1,31 +1,24 @@
-# LOTO SDS v2.2.11-final
+# Loto by SdS
 
-Dernière version fonctionnelle de la V2.
+Application web PWA pour l'animation d'un loto associatif.
 
-## Écrans
-- Affichage public
-- Animateur
-- Commissaire
-- Joueur
-- Administration
-- Impressions
+Version : v2.2.12.
 
-## Fonctionnalités principales
-- Tirage manuel et vocal.
-- Synchronisation Supabase.
-- Gestion des lotos enregistrés.
-- Gestion des parties, lots et modes de jeu.
-- Modes de jeu : à la ligne, carton plein, Bingo mystère.
-- Mini-bingo complémentaire : option 1er ou dernier numéro du tirage classique.
-- Import et contrôle des cartons depuis Supabase.
-- QR Code joueur.
-- Messages de fin de partie et de fin de loto.
+## Nouveautés principales
 
-## Suite
-La V2 est clôturée sauf corrections de bugs.
-La V3 portera sur la création et l’impression des cartons.
-La V4 portera sur la vente/scanne des cartons et l’anti-fraude.
+- Corrections de tirage côté animateur et commissaire.
+- Commandes vocales de correction.
+- Création de cartons depuis l'administration.
+- Planche imprimable de 6 cartons avec QR Code.
 
+## Supabase
 
-## v2.2.11-final
-Interface animateur responsive : la mise en page s'adapte automatiquement entre PC, tablette et téléphone. Aucun bouton Tablette/Téléphone n'est nécessaire.
+La table `loto_cartons` existante est utilisée pour les cartons générés.
+Les cartons créés sont enregistrés avec :
+
+- `numero`
+- `serie`
+- `lignes`
+- `actif`
+
+Le QR Code imprimé contient l'identifiant rapide du carton : `LBS:<numero>`.

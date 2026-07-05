@@ -1,12 +1,17 @@
-## v2.2.11-final
-- Correction robuste des impressions QR Code : remplacement du générateur PDF interne par une page A4 imprimable avec option “Enregistrer en PDF”.
-- Suppression de la dépendance QRCode côté impression.
+# Changelog
 
-# CHANGELOG
+## v2.2.12 - Loto by SdS / corrections / préparation cartons
 
-## v2.2.11-final
-- Correctif PDF : génération PDF locale sans jsPDF/CDN.
-- Correction QR Code PNG/PDF.
-- Suppression du bouton Erreur sur l'écran animateur.
-- Affichage explicite `LOT : ...` côté animateur.
-- Ajout de l'information du lot en cours côté commissaire.
+- Renommage de l'application : **Loto by SdS**.
+- Ajout des corrections de tirage côté animateur et commissaire :
+  - annuler le dernier numéro ;
+  - annuler un numéro déjà sorti ;
+  - remplacer un mauvais numéro par le bon.
+- Ajout des commandes vocales de correction :
+  - "annule le dernier numéro" ;
+  - "annule le numéro ..." ;
+  - "remplace ... par ...".
+- Préparation V3 : création de cartons depuis l'administration.
+- Impression de planches A4 de 6 cartons.
+- QR Code par carton, prévu pour le futur scan continu.
+- Enregistrement des cartons générés dans Supabase.

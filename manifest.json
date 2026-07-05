@@ -1,6 +1,6 @@
 {
-  "name": "LOTO SDS",
-  "short_name": "LOTO SDS",
+  "name": "Loto by SdS",
+  "short_name": "Loto by SdS",
   "description": "Affichage 2.0 de loto avec voix, multi-écrans et suivi joueur.",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,4 +1,4 @@
-# Roadmap LOTO SDS
+# Roadmap Loto by SdS
 
 ## V2 - Clôturée
 - Affichage public

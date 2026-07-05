@@ -1,12 +1,12 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animateur</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css"></head><body class="animateur-body">
-<header class="topbar"><div><span class="brand" data-title></span><span class="version" data-version></span></div><div class="session"><span data-loto-name>LOTO SDS</span></div></header>
+<header class="topbar"><div><span class="brand" data-title></span><span class="version" data-version></span></div><div class="session"><span data-loto-name>Loto by SdS</span></div></header>
 <main class="wrap animateur-wrap-v229">
   <div class="card one-line animateur-commandbar">
     <button id="launchLoto" class="green">Lancer loto</button>
     <button id="newGame" class="secondary">Partie simple</button>
     <button id="winner" class="green">Gagnant</button>
     <button id="startMiniBingo" class="orange" style="display:none">Lancer Mini-bingo</button>
-    <button id="undo" class="secondary">Annuler dernier</button>
+    <button id="undo" class="secondary">Annuler dernier</button><input id="animCancelNumber" type="number" min="1" max="90" placeholder="Annuler n°" class="small-number"><button id="animCancelBtn" class="secondary">Annuler</button><input id="animOldNumber" type="number" min="1" max="90" placeholder="Mauvais" class="small-number"><input id="animNewNumber" type="number" min="1" max="90" placeholder="Bon" class="small-number"><button id="animReplaceBtn">Corriger</button>
     <span>Sortis : <b id="count">0</b></span>
     <a class="btn light" href="index.html">Menu</a>
   </div>
