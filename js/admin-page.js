@@ -155,8 +155,12 @@ function buildCardGrid(){
   return grid;
 }
 function gridToLignes(grid){ return grid.map(row=>row.filter(n=>Number.isInteger(n))); }
-function cartonCode(numero){ return 'C'+String(numero).padStart(6,'0'); }
-function sheetCode(sheetNumber){ return 'P'+String(sheetNumber).padStart(5,'0'); }
+function cleanAssociationId(value){
+  const raw=String(value||'1').replace(/\D/g,'');
+  return String(Number(raw||1)).padStart(5,'0');
+}
+function cartonCode(numero, associationId){ return 'SDS-'+cleanAssociationId(associationId)+'-'+String(numero).padStart(8,'0'); }
+function sheetCode(sheetNumber, associationId){ return 'SDSP-'+cleanAssociationId(associationId)+'-'+String(sheetNumber).padStart(6,'0'); }
 function renderPrintableCard(card){
   const qrId='qr_'+String(card.numero).replace(/\W/g,'_')+'_'+Math.random().toString(36).slice(2,6);
   const rows=card.grid.map(row=>`<tr>${row.map(n=>n?`<td><span class="big-num">${String(n)}</span><span class="mini-num">${String(n)}</span></td>`:'<td class="empty"><span></span></td>').join('')}</tr>`).join('');
@@ -173,40 +177,65 @@ function renderGeneratedCards(){
   out.querySelectorAll('[data-qr]').forEach(el=>{
     const payload=el.dataset.qr;
     el.innerHTML='';
-    if(window.QRCode){ new QRCode(el,{text:payload,width:38,height:38,correctLevel:QRCode.CorrectLevel.L}); }
+    if(window.QRCode){ new QRCode(el,{text:payload,width:52,height:52,correctLevel:QRCode.CorrectLevel.L}); }
     else el.innerHTML='<span class="qr-fallback">'+esc(payload)+'</span>';
   });
 }
-function buildGeneratedCards({start,count,serie,mode,perPage=2}){
+function buildGeneratedCards({start,count,serie,mode,perPage=2,associationId='00001'}){
   generatedCards=[]; generatedMode=mode; generatedPerPage=perPage;
   for(let i=0;i<count;i++){
     const numero=start+i;
     const grid=buildCardGrid();
     const sheetIndex=mode==='sheets' ? Math.floor(i/6)+1 : null;
     const pos=mode==='sheets' ? (i%6)+1 : null;
-    const sc=sheetIndex ? sheetCode(sheetIndex) : null;
-    generatedCards.push({numero,code:cartonCode(numero),serie,grid,lignes:gridToLignes(grid),sheetNumber:sheetIndex,sheetCode:sc,sheetPosition:pos,qrPayload:cartonCode(numero),status:'disponible',origin:'Loto by SdS'});
+    const code=cartonCode(numero, associationId);
+    const sc=sheetIndex ? sheetCode(sheetIndex, associationId) : null;
+    generatedCards.push({numero,code,associationId:cleanAssociationId(associationId),serie,grid,lignes:gridToLignes(grid),sheetNumber:sheetIndex,sheetCode:sc,sheetPosition:pos,qrPayload:code,status:'disponible',origin:'Loto by SdS'});
   }
   renderGeneratedCards();
   genStatus(`${generatedCards.length} carton(s) généré(s). QR court : ${generatedCards[0]?.qrPayload || ''}`,true);
 }
+
+function updateCardGeneratorUi(){
+  const type=document.getElementById('genCardType')?.value||'individual';
+  const wrap=document.getElementById('genPerPageWrap');
+  if(wrap) wrap.style.display = type==='individual' ? '' : 'none';
+  const help=document.getElementById('genHelp');
+  if(help) help.textContent = type==='individual' ? 'Individuel : PDF A4 avec 2 ou 3 cartons par feuille. Le nombre exact demandé est généré.' : 'Planche : PDF A3 avec 6 cartons par feuille. Si le nombre n’est pas multiple de 6, il est complété pour terminer la dernière planche.';
+}
+function generateCardsUnified(){
+  const start=Number(document.getElementById('genStartNumber')?.value||200001);
+  const requested=Math.max(1,Number(document.getElementById('genCardCount')?.value||1));
+  const type=document.getElementById('genCardType')?.value||'individual';
+  const perPage=Math.max(2,Math.min(3,Number(document.getElementById('genPerPage')?.value||2)));
+  const serie=(document.getElementById('genSerie')?.value||'STANDARD').trim()||'STANDARD';
+  const associationId=cleanAssociationId(document.getElementById('genAssociationId')?.value||'1');
+  if(type==='sheets'){
+    const count=Math.ceil(requested/6)*6;
+    buildGeneratedCards({start,count,serie,mode:'sheets',perPage:6,associationId});
+    if(count!==requested) genStatus(`${requested} carton(s) demandé(s). ${count} carton(s) généré(s) pour compléter ${count/6} planche(s) A3.`,true);
+  }else{
+    buildGeneratedCards({start,count:requested,serie,mode:'individual',perPage,associationId});
+  }
+}
+
 function generateIndividualCards(){
   const start=Number(document.getElementById('genIndStartNumber')?.value||200001);
   const count=Math.max(1,Number(document.getElementById('genIndCount')?.value||1));
   const perPage=Math.max(1,Math.min(3,Number(document.getElementById('genIndPerPage')?.value||2)));
   const serie=(document.getElementById('genIndSerie')?.value||'INDIVIDUEL').trim()||'INDIVIDUEL';
-  buildGeneratedCards({start,count,serie,mode:'individual',perPage});
+  buildGeneratedCards({start,count,serie,mode:'individual',perPage,associationId:'00001'});
 }
 function generateSheetCards(){
   const start=Number(document.getElementById('genSheetStartNumber')?.value||300001);
   const sheetCount=Math.max(1,Number(document.getElementById('genSheetCount')?.value||1));
   const serie=(document.getElementById('genSheetSerie')?.value||'PLANCHE_A3').trim()||'PLANCHE_A3';
-  buildGeneratedCards({start,count:sheetCount*6,serie,mode:'sheets',perPage:6});
+  buildGeneratedCards({start,count:sheetCount*6,serie,mode:'sheets',perPage:6,associationId:'00001'});
 }
 async function saveGeneratedCards(){
   if(!generatedCards.length){ genStatus('Aucun carton généré.',false); return; }
   const client=Loto.supabaseClient; if(!client){ genStatus('Supabase non configuré.',false); return; }
-  const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true}));
+  const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true}));
   const basicRows=generatedCards.map(c=>({numero:c.numero,serie:c.serie,lignes:c.lignes,actif:true}));
   try{
     for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(fullRows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
@@ -259,11 +288,16 @@ async function scanQrFrame(){
   }catch(e){}
 }
 
+document.getElementById('genCardType')?.addEventListener('change',updateCardGeneratorUi);
+document.getElementById('generateCards')?.addEventListener('click',generateCardsUnified);
+document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
+document.getElementById('printGeneratedCards')?.addEventListener('click',()=>{ if(!generatedCards.length) generateCardsUnified(); setTimeout(()=>window.print(),300); });
+updateCardGeneratorUi();
+
+/* Compatibilité avec l'ancien écran si présent */
 document.getElementById('generateIndividualCards')?.addEventListener('click',generateIndividualCards);
 document.getElementById('generateSheetCards')?.addEventListener('click',generateSheetCards);
 document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click',saveGeneratedCards);
 document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',saveGeneratedCards);
 document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); setTimeout(()=>window.print(),300); });
 document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); setTimeout(()=>window.print(),300); });
-document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
-document.getElementById('stopQrScanner')?.addEventListener('click',stopQrScanner);
