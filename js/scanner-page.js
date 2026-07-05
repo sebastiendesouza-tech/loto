@@ -9,6 +9,7 @@ let scannerLastValue = '';
 let scannerLastAt = 0;
 let scannerReadCount = 0;
 let scannerStartedAt = 0;
+let scannerLastAnalyzeMs = 0;
 let scannerMode = '';
 
 function esc(s){
@@ -28,6 +29,16 @@ function scannerDiagnostics(){
   return `HTTPS: ${isHttps ? 'oui' : 'non'} · Caméra API: ${navigator.mediaDevices?.getUserMedia ? 'oui' : 'non'} · BarcodeDetector: ${'BarcodeDetector' in window ? 'oui' : 'non'} · Navigateur: ${ua}`;
 }
 
+
+function flashScanOk(){
+  const box = document.querySelector('.scanner-camera');
+  if(!box) return;
+  box.classList.remove('scan-ok');
+  void box.offsetWidth;
+  box.classList.add('scan-ok');
+  setTimeout(() => box.classList.remove('scan-ok'), 350);
+}
+
 function beep(ok=true){
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -42,7 +53,7 @@ function beep(ok=true){
   }catch(e){}
 }
 
-function handleCode(value){
+function handleCode(value, readMs=null){
   value = String(value || '').trim();
   if(!value) return;
 
@@ -56,7 +67,8 @@ function handleCode(value){
   scannerReadCount++;
 
   document.getElementById('scannerLastCode').textContent = value;
-  document.getElementById('scannerReadTime').textContent = Math.round(now - scannerStartedAt) + ' ms';
+  const measured = Number.isFinite(readMs) ? readMs : scannerLastAnalyzeMs;
+  document.getElementById('scannerReadTime').textContent = Number.isFinite(measured) && measured > 0 ? Math.round(measured) + ' ms' : '-';
   document.getElementById('scannerReadCount').textContent = String(scannerReadCount);
 
   const hist = document.getElementById('scannerHistory');
@@ -64,6 +76,7 @@ function handleCode(value){
     hist.innerHTML = `<div>${new Date().toLocaleTimeString()} · ${esc(value)}</div>` + hist.innerHTML;
   }
 
+  flashScanOk();
   beep(true);
   scannerStartedAt = performance.now();
 
@@ -133,14 +146,16 @@ async function startJsQrScanner(){
     frame++;
     try{
       // Lecture prioritaire au centre pour accélérer le scan continu.
-      const roiSize = Math.floor(Math.min(vw, vh) * 0.62);
+      const roiSize = Math.floor(Math.min(vw, vh) * 0.56);
       const sx = Math.max(0, Math.floor((vw - roiSize) / 2));
       const sy = Math.max(0, Math.floor((vh - roiSize) / 2));
       canvas.width = roiSize;
       canvas.height = roiSize;
       ctx.drawImage(video, sx, sy, roiSize, roiSize, 0, 0, roiSize, roiSize);
       let img = ctx.getImageData(0, 0, roiSize, roiSize);
+      let t0 = performance.now();
       let code = window.jsQR(img.data, roiSize, roiSize, { inversionAttempts:'dontInvert' });
+      let readMs = performance.now() - t0;
 
       // Une fois sur six, on vérifie toute l'image si le QR n'est pas parfaitement centré.
       if(!code && frame % 6 === 0){
@@ -150,11 +165,13 @@ async function startJsQrScanner(){
         canvas.height = scaleH;
         ctx.drawImage(video, 0, 0, scaleW, scaleH);
         img = ctx.getImageData(0, 0, scaleW, scaleH);
+        t0 = performance.now();
         code = window.jsQR(img.data, scaleW, scaleH, { inversionAttempts:'dontInvert' });
+        readMs = performance.now() - t0;
       }
-      if(code && code.data) handleCode(code.data);
+      if(code && code.data){ scannerLastAnalyzeMs = readMs; handleCode(code.data, readMs); }
     }catch(e){}
-  }, 75);
+  }, 60);
 }
 
 async function startNativePreviewAndBarcode(){
@@ -191,7 +208,7 @@ async function startHtml5Scanner(){
   await html5Scanner.start(
     cameraConfig,
     { fps:18, qrbox:{ width:190, height:190 }, aspectRatio:1.333 },
-    decodedText => handleCode(decodedText),
+    decodedText => handleCode(decodedText, null),
     () => {}
   );
   setStatus('Scan en cours. Mode compatible iPhone. ' + scannerDiagnostics(), 'muted');
@@ -308,9 +325,12 @@ async function scanQrFrame(){
   const video = document.getElementById('qrScannerVideo');
   if(!scannerDetector || !video || video.readyState < 2) return;
   try{
+    const t0 = performance.now();
     const codes = await scannerDetector.detect(video);
+    const readMs = performance.now() - t0;
     if(!codes.length) return;
-    handleCode(codes[0].rawValue);
+    scannerLastAnalyzeMs = readMs;
+    handleCode(codes[0].rawValue, readMs);
   }catch(e){}
 }
 
