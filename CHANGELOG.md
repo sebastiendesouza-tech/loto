@@ -1,3 +1,11 @@
+## v3.1.0 - scanner rapide et cartons hauts
+
+- Scanner compact : fenêtre vidéo réduite.
+- Lecture QR optimisée : analyse prioritaire au centre de l’image.
+- Objectif : réduire le délai de lecture en scan continu.
+- Cartons : cases passées à 22 x 23 mm, carton 3 toujours en bas de l’A4.
+- PDF A4 : 3 cartons optimisés pour limiter la découpe au massicot.
+
 # Changelog
 
 ## v3.0.9 - Calibration impression + scanner jsQR
