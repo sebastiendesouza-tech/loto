@@ -1,4 +1,4 @@
-# LOTO SDS v2.2.10-final
+# LOTO SDS v2.2.11-final
 
 Dernière version fonctionnelle de la V2.
 
@@ -27,5 +27,5 @@ La V3 portera sur la création et l’impression des cartons.
 La V4 portera sur la vente/scanne des cartons et l’anti-fraude.
 
 
-## v2.2.10-final
+## v2.2.11-final
 Interface animateur responsive : la mise en page s'adapte automatiquement entre PC, tablette et téléphone. Aucun bouton Tablette/Téléphone n'est nécessaire.
