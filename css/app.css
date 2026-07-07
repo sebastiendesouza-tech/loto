@@ -388,3 +388,25 @@
 .scan-time{font-size:22px!important;font-weight:900!important;margin:6px 0 10px!important;}
 .scan-count{font-size:15px!important;margin:0 0 10px!important;}
 .scanner-history{display:none!important;}
+
+/* v3.1.7 - modele classique final */
+.sheet-a4-classic,.sheet-a3-classic{background:#fff;color:#111;box-sizing:border-box;box-shadow:0 4px 18px rgba(0,0,0,.18);border-radius:10px;display:grid;gap:0;overflow:hidden;justify-items:stretch;align-items:stretch;}
+.sheet-a4-classic{width:297mm;height:210mm;grid-template-columns:repeat(2,148.5mm);grid-template-rows:repeat(2,105mm);}
+.sheet-a3-classic{width:297mm;height:420mm;grid-template-columns:repeat(2,148.5mm);grid-template-rows:repeat(4,105mm);}
+.classic-card{width:148.5mm!important;height:105mm!important;border:0!important;border-radius:0!important;padding:0!important;box-sizing:border-box!important;background:#fff!important;overflow:hidden!important;}
+.classic-card .classic-head{height:18mm;width:135mm;margin:0 auto;background:#fff;color:#111;display:grid;grid-template-columns:13mm 1fr 54mm;align-items:center;column-gap:4mm;padding:0;box-sizing:border-box;}
+.classic-card .qr-box{width:13mm!important;height:13mm!important;background:#fff;flex:0 0 13mm;transform:translateY(1mm);}
+.classic-card .qr-box canvas,.classic-card .qr-box img{width:13mm!important;height:13mm!important;}
+.classic-title-block{display:contents!important;line-height:1.15!important;}
+.classic-title{display:block!important;font-weight:700;font-size:2.8mm;white-space:nowrap;color:#111;text-align:center;grid-column:2;}
+.classic-code-head{display:block!important;font-weight:1000;font-size:4.25mm;white-space:nowrap;color:#111;text-align:right;grid-column:3;letter-spacing:-.15mm;}
+.classic-code{display:none!important;}
+.classic-grid{width:135mm!important;height:75mm!important;margin:3mm auto 0!important;border-collapse:collapse!important;table-layout:fixed!important;border:.35mm solid #444!important;background:#fff!important;}
+.classic-grid td{width:15mm!important;height:25mm!important;border:.25mm solid #444!important;text-align:center!important;vertical-align:middle!important;position:relative!important;background:#fff!important;padding:0!important;}
+.classic-grid .big-num{display:block!important;font-size:18.3mm!important;line-height:18.5mm!important;font-weight:1000!important;color:#000!important;}
+.classic-grid .mini-num{position:absolute!important;left:0!important;right:0!important;bottom:.7mm!important;font-size:4.4mm!important;line-height:4.4mm!important;color:#111!important;font-weight:600!important;}
+.classic-grid td.empty{background:#fff!important;}
+.classic-grid td.empty span{display:block!important;width:calc(100% - 2.4mm)!important;height:calc(100% - 4mm)!important;margin:2mm 1.2mm!important;border-radius:0!important;background:#c4c4bd!important;}
+.classic-foot{display:none!important;}
+@media(max-width:850px){.sheet-a4-classic,.sheet-a3-classic{width:100%;height:auto;grid-template-columns:1fr}.classic-card{width:100%!important;height:auto!important;min-height:190px!important}.classic-card .classic-head,.classic-grid,.classic-foot{width:92%!important}.classic-grid{height:auto!important}.classic-grid td{height:54px!important}.classic-grid .big-num{font-size:34px!important;line-height:38px!important}.classic-grid .mini-num{font-size:11px!important;line-height:11px!important}.classic-title{font-size:11px}.classic-code-head{font-size:12px}.classic-foot{font-size:11px!important}}
+@media print{@page{margin:0}.sheet-a4-classic,.sheet-a3-classic{box-shadow:none!important;border:none!important;border-radius:0!important;margin:0!important;page-break-after:always!important}.sheet-a4-classic{width:297mm!important;height:210mm!important}.sheet-a3-classic{width:297mm!important;height:420mm!important}.classic-card{width:148.5mm!important;height:105mm!important;break-inside:avoid!important;page-break-inside:avoid!important}}
