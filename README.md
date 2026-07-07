@@ -2,7 +2,7 @@
 
 Application web PWA pour l'animation d'un loto associatif.
 
-Version : v3.1.2.
+Version : v3.1.7.
 
 ## Nouveautés principales
 
@@ -24,7 +24,7 @@ Les cartons créés sont enregistrés avec :
 - `lignes`
 - `actif`
 
-Le QR Code imprimé contient uniquement le code métier du carton, par exemple `SDS-00001-00000001`.
+Le QR Code imprimé contient uniquement le code métier du carton, par exemple `SDS-15-0001`.
 
 
 ## V3 - Cartons et scanner
@@ -38,3 +38,8 @@ La V3 ajoute la production de cartons :
 - préparation de la base pour la vente, le retour, l'échange et le contrôle des cartons.
 
 Avant d'utiliser les métadonnées V3 en production, appliquer `sql/supabase.sql` dans Supabase. Si ce SQL n'est pas encore appliqué, l'enregistrement des cartons reste compatible en mode minimal.
+
+
+## Réglage micro / enceinte V3.1.7
+
+La reconnaissance vocale se coupe automatiquement 1 seconde après l’acceptation d’un numéro, puis reprend. Le même numéro est aussi ignoré pendant 5 secondes pour éviter la reprise du son par l’enceinte.

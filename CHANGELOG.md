@@ -1,8 +1,42 @@
-## v3.1.2 - temps de décodage scanner
+# v3.1.7 - Réglage micro / enceinte
+
+- Pause automatique de la reconnaissance vocale pendant 1 seconde après validation d’un numéro.
+- Anti-doublon vocal renforcé : même numéro ignoré pendant 5 secondes après acceptation.
+- Redémarrage automatique du micro après la pause.
+- Objectif : éviter que le micro-cravate reprenne le son de l’enceinte.
+
+# v3.1.7 - Ajustement modèle classique A6
+
+- Grille descendue de 3 mm pour protéger le QR Code à l’impression.
+- Code carton déplacé sous “Loto by SdS” dans l’en-tête.
+- Code carton agrandi pour le commissaire.
+- Numéros de grille agrandis.
+- Fond blanc conservé, sans bandeau noir.
+
+# v3.1.7 - Design classique sobre A6
+
+- Modèle Classique A6 revu dans le code de l’application.
+- Fond blanc pour économiser l’encre.
+- Suppression du bandeau noir.
+- Pas de bordure extérieure de carton, uniquement la grille.
+- QR Code en 12 x 12 mm dans l’en-tête.
+- Mention Loto by SdS une seule fois, en petit.
+- Identifiant SDS imprimé une seule fois.
+- Cases du modèle classique : 15 x 25 mm.
+
+# v3.1.7 - Modèle classique A6
+
+- Ajout du choix de modèle : Classique A6 ou Premium SdS.
+- Modèle Classique : 4 cartons par A4 paysage.
+- Modèle Classique : planche A3 portrait avec 8 emplacements, les 6 premiers pour la planche et les 2 du bas en individuels.
+- QR Code placé dans le bandeau haut du carton.
+- PDF généré selon le modèle choisi.
+
+## v3.1.7 - temps de décodage scanner
 - Le temps affiché ne compte plus le temps de placement du QR Code.
 - Il correspond au temps de décodage/analyse de l’image qui contient le QR Code.
 
-## v3.1.2 - scan bip et contour vert
+## v3.1.7 - scan bip et contour vert
 - Scanner : ajout d'un contour vert bref à chaque lecture réussie.
 - Scanner : bip conservé et déclenché immédiatement à la reconnaissance.
 - Scanner : interface de test simplifiée, temps de lecture conservé.
@@ -68,7 +102,7 @@
 - Format du carton fixé autour de cases 20 x 20 mm pour jetons de 17 mm.
 - Mise en page A4 individuel 2 ou 3 cartons par page.
 - Mise en page A3 paysage pour planches de 6 cartons.
-- Identifiants métiers au format SDS-00001-00000001 et SDSP-00001-000001.
+- Identifiants métiers au format SDS-XX-XXXX et SDSP-XX-XXXX.
 - QR Code court : il contient uniquement le code du carton.
 
 
@@ -111,3 +145,22 @@
 - Cartons individuels A4 : choix 2 ou 3 par feuille.
 - Planches A3 : génération par lots de 6 cartons.
 - Bouton Générer PDF / imprimer pour tester les sorties avant de figer le format.
+
+
+## v3.1.7
+- Nouveau design Classique A6 sobre : fond blanc, sans bandeau noir.
+- QR Code conservé dans l'en-tête, code carton affiché une seule fois.
+- Suppression du logo/texte répété pour économiser l'encre.
+- Suppression du cadre extérieur du carton, seules les lignes de grille restent visibles.
+
+## V3.1.7 final ajustée
+- Identifiant carton simplifié au format `SDS-XX-XXXX` : 2 chiffres pour l’association, 4 chiffres pour le carton.
+- QR Code simplifié : il contient uniquement ce nouvel identifiant court.
+- Numéros principaux du modèle Classique encore agrandis.
+- Petits numéros sous les numéros principaux agrandis.
+- Le modèle Classique est considéré comme validé après ce réglage.
+
+## V3.1.7 final PDF corrigée
+- Correction du générateur PDF du modèle Classique : les grands numéros sont maintenant agrandis directement dans le PDF.
+- Correction du générateur PDF du modèle Classique : les petits numéros sous les grands sont également agrandis.
+- Conservation du format d'identifiant court `SDS-XX-XXXX` dans le QR Code et sur le carton.
