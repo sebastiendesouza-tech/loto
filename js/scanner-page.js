@@ -6,6 +6,22 @@ let saisieStep='grid';
 let currentDraft=null;
 let barcodeDetector=null;
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
+
+function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
+function queueDeviceId(){let id=localStorage.getItem('loto_scan_device_id'); if(!id){id='phone_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6); localStorage.setItem('loto_scan_device_id',id);} return id;}
+async function insertScanQueue(type,payload){
+  const client=Loto.supabaseClient;
+  if(!client) throw new Error('Supabase non configuré');
+  const {error}=await client.from('scan_queue').insert({
+    session_code:queueSessionCode(),
+    device_id:queueDeviceId(),
+    mode:'saisie_cartons',
+    type,
+    payload,
+    status:'new'
+  });
+  if(error) throw error;
+}
 async function readImportInbox(){
   const client=Loto.supabaseClient; if(!client) return {};
   try{
@@ -86,40 +102,29 @@ async function publishImportDraft(row, stage='grid'){
 
 
 async function saveOcrDraft(grid, quality, rawText){
-  const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');
-  const code=await nextImportCode(); const numero=codeToNumero(code); const m=code.match(/SDS-(\d{1,2})-(\d{1,4})$/i);
-  const row={numero,carton_code:code,association_id:cleanAssociationId(m[1]),card_order:Number(m[2]),external_code:null,external_code_type:null,external_ocr_quality:null,numbers_signature:numbersSignatureFromGrid(grid),serie:'IMPORT',lignes:gridToLignes3x9(grid),grille:grid,qr_payload:code,status:'a_enregistrer',origine:'Scan OCR saisie cartons',ocr_quality:quality,ocr_text:String(rawText||'').slice(0,1000),actif:true,updated_at:new Date().toISOString()};
-  try{localStorage.setItem('loto_last_scanned_card_code',code);}catch(e){}
-  await publishImportDraft(row,'grid_ok');
-  try{
-    const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'});
-    if(error) throw error;
-    await publishImportDraft({...row,sync_ok:true},'grid_ok');
-  }catch(e){
-    await publishImportDraft({...row,sync_error:'table loto_cartons non écrite: '+(e.message||e)},'grid_ok');
-    console.warn('Brouillon publié en session mais table loto_cartons non écrite',e);
-  }
-  return row;
+  const payload={
+    source:'ocr_camera_v344',
+    confidence:quality,
+    grid:grid,
+    rawText:String(rawText||'').slice(0,1000),
+    at:new Date().toISOString()
+  };
+  await insertScanQueue('draft_grid', payload);
+  currentDraft={grid, quality, rawText:String(rawText||''), sentAt:new Date().toISOString()};
+  return currentDraft;
 }
 async function updateDraftIdentifier(identifier, type='ocr', quality=null){
-  if(!currentDraft?.numero) throw new Error('Brouillon absent.');
-  const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');
-  const ext=String(identifier||'').trim(); if(!ext) throw new Error('Identifiant vide.');
-  const {data:existing,error:checkErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('external_code',ext).neq('numero',currentDraft.numero).limit(1);
-  if(checkErr) throw checkErr;
-  if(existing&&existing.length) throw new Error('Identifiant déjà utilisé : '+ext);
-  const patch={external_code:ext,external_code_type:type,external_ocr_quality:quality,qr_payload:ext,updated_at:new Date().toISOString()};
-  currentDraft={...currentDraft,...patch};
-  await publishImportDraft(currentDraft,'identifier_ok');
-  try{
-    const {error}=await client.from('loto_cartons').update(patch).eq('numero',currentDraft.numero);
-    if(error) throw error;
-    await publishImportDraft({...currentDraft,sync_ok:true},'identifier_ok');
-  }catch(e){
-    await publishImportDraft({...currentDraft,sync_error:'identifiant non écrit en table: '+(e.message||e)},'identifier_ok');
-    console.warn('Identifiant publié en session mais table loto_cartons non mise à jour',e);
-  }
-  try{localStorage.setItem('loto_last_scanned_card_code',currentDraft.carton_code);}catch(e){}
+  const ext=String(identifier||'').trim();
+  if(!ext) throw new Error('Identifiant vide.');
+  const payload={
+    identifier:ext,
+    external_code:ext,
+    external_code_type:type,
+    quality:quality,
+    at:new Date().toISOString()
+  };
+  await insertScanQueue('draft_identifier', payload);
+  currentDraft={...(currentDraft||{}), identifier:ext, external_code_type:type, identifier_quality:quality};
   return currentDraft;
 }
 
@@ -179,7 +184,7 @@ function initPage(){const title=document.getElementById('scanPageTitle'); const 
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
-  await publishImportDraft(currentDraft,'identifier_skipped');
+  try{ await insertScanQueue('draft_identifier_skipped',{message:'identifiant à saisir sur PC',at:new Date().toISOString()}); }catch(e){console.warn('Message skip non envoyé',e);}
   setStatus('Brouillon envoyé sans identifiant. Complète le numéro sur le PC avant validation.','ok');
   setTimeout(()=>resetForNextCard('Brouillon envoyé. Place un autre carton dans le cadre.'),1100);
 }

@@ -75,21 +75,17 @@
   }
 
   function init(){
-    el('scanPageTitle').textContent='Import cartons - test scan_queue';
-    el('scanPageHelp').textContent='Étape V3.4.3 : tester la communication puis envoyer une grille de test vers le pseudo-carton du PC.';
+    el('scanPageTitle').textContent='Import cartons - OCR réel';
+    el('scanPageHelp').textContent='Démarre la caméra. Étape 1 : lire les 15 numéros. Étape 2 : lire le QR, le code-barres ou le numéro du carton.';
     el('scanBackLink').href='administration.html#cartons';
 
     const bar=document.querySelector('.scan-startbar');
-    if(bar){
-      bar.innerHTML='';
-      bar.appendChild(addButton('Envoyer TEST','green',sendTest));
-      bar.appendChild(addButton('Envoyer GRILLE TEST','secondary',sendTestGrid));
+    if(bar && !document.getElementById('sendScanQueueTest')){
+      bar.appendChild(addButton('Envoyer TEST','secondary',sendTest)).id='sendScanQueueTest';
+      bar.appendChild(addButton('Envoyer GRILLE TEST','secondary',sendTestGrid)).id='sendScanQueueGridTest';
     }
 
-    document.querySelector('.scanner-camera')?.setAttribute('style','display:none');
-    const rt=el('scannerReadTime'); if(rt) rt.textContent='non utilisé';
     const skip=el('skipIdentifierBtn'); if(skip) skip.style.display='none';
-
     sendPresence();
     setInterval(sendPresence,5000);
   }
