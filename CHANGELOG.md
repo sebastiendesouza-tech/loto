@@ -1,4 +1,14 @@
-# v3.2.6 - Scan saisie cartons
+# v3.2.7 - Scan saisie cartons en deux étapes
+
+- QR d’accès affiché dans Administration > Cartons.
+- Aucune caméra ouverte sur le PC.
+- Étape 1 : OCR de la grille complète avec 15 numéros.
+- Étape 2 : lecture de l’identifiant du carton par QR code, code-barres ou OCR du numéro imprimé.
+- Identifiant externe obligatoire avant validation d’un carton importé.
+- Contrôle doublon sur l’identifiant externe et sur les 15 numéros.
+- Le commissaire peut retrouver un carton importé avec son identifiant externe.
+
+# v3.2.7 - Scan saisie cartons
 
 - Ajout du mode scan saisie cartons en page autonome.
 - Grande zone caméra en mode paysage.
@@ -8,7 +18,7 @@
 - QR code dans Administration > Cartons pour ouvrir le scan sur téléphone.
 - Pseudo carton affiché côté administration après scan pour correction / validation.
 
-# v3.2.6 - Validation des cartons scannés
+# v3.2.7 - Validation des cartons scannés
 
 - Scanner saisie cartons : enregistrement en brouillon au statut À enregistrer.
 - Administration > Cartons : affichage des cartons À enregistrer.
@@ -200,7 +210,7 @@
 - Correction du générateur PDF du modèle Classique : les petits numéros sous les grands sont également agrandis.
 - Conservation du format d'identifiant court `SDS-XX-XXXX` dans le QR Code et sur le carton.
 
-## v3.2.6
+## v3.2.7
 - Création des cartons simplifiée : ID association + nombre de cartons uniquement.
 - Numéro d'ordre automatique à partir du dernier carton de l'association.
 - Suppression de l'aperçu HTML : le PDF devient l'aperçu officiel.
