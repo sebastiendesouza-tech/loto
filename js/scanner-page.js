@@ -152,170 +152,162 @@ async function readIdentifierFromFrame(video, canvas, ctx){
   return null;
 }
 
-function ensureV20Panel(){
-  let panel=document.getElementById('scanV20Panel');
-  if(panel) return panel;
+let v20SnapshotCanvas=null;
+let v20ResultCanvas=null;
+let v20SnapshotCtx=null;
+let v20ResultCtx=null;
+let v20Corners=[];
+let v20Dragging=-1;
+
+function initSaisieCartonV20UI(){
+  if(scannerUsageMode!=='saisie_cartons') return;
+  const bar=document.querySelector('.scan-startbar');
+  if(bar && !document.getElementById('captureCartonBtn')){
+    const capture=document.createElement('button');
+    capture.id='captureCartonBtn';
+    capture.type='button';
+    capture.className='green';
+    capture.textContent='Photographier le carton';
+    capture.addEventListener('click',captureCartonV20);
+    const rectify=document.createElement('button');
+    rectify.id='redresserCartonBtn';
+    rectify.type='button';
+    rectify.className='secondary';
+    rectify.textContent='Redresser';
+    rectify.disabled=true;
+    rectify.addEventListener('click',redresserCartonV20);
+    const reset=document.createElement('button');
+    reset.id='resetCartonBtn';
+    reset.type='button';
+    reset.className='light';
+    reset.textContent='Refaire';
+    reset.addEventListener('click',resetCartonV20);
+    bar.appendChild(capture);
+    bar.appendChild(rectify);
+    bar.appendChild(reset);
+  }
   const card=document.querySelector('.scan-main-card');
-  panel=document.createElement('div');
-  panel.id='scanV20Panel';
-  panel.className='scan-v20-panel';
-  panel.innerHTML=`
-    <div class="scan-v20-actions">
-      <button id="captureCardBtn" class="green" type="button">Photographier le carton</button>
-      <button id="retryCardBtn" class="secondary" type="button" style="display:none">Refaire</button>
-    </div>
-    <div class="scan-v20-preview" id="scanV20Preview" style="display:none">
-      <h2>Résultat V20 : carton redressé</h2>
-      <canvas id="cardWarpCanvas"></canvas>
-      <p class="muted">Contrôle demandé : le carton doit être droit, complet, lisible, et les bords doivent être parallèles. On ne lit pas encore les numéros.</p>
-    </div>`;
-  card?.appendChild(panel);
-  document.getElementById('captureCardBtn')?.addEventListener('click',captureAndRectifyCardV20);
-  document.getElementById('retryCardBtn')?.addEventListener('click',resetV20Capture);
-  return panel;
-}
-function resetV20Capture(){
-  document.getElementById('scanV20Preview')?.style && (document.getElementById('scanV20Preview').style.display='none');
-  document.getElementById('retryCardBtn')?.style && (document.getElementById('retryCardBtn').style.display='none');
-  document.getElementById('captureCardBtn')?.style && (document.getElementById('captureCardBtn').style.display='inline-block');
-  setFrame('warn');
-  setStatus('Place le carton dans le cadre. Puis appuie sur Photographier le carton.','muted');
-}
-function getVideoFrameCanvas(video){
-  const src=document.createElement('canvas');
-  const w=video.videoWidth||1280, h=video.videoHeight||720;
-  src.width=w; src.height=h;
-  src.getContext('2d',{willReadFrequently:true}).drawImage(video,0,0,w,h);
-  return src;
-}
-function overlayCropRect(video){
-  const w=video.videoWidth||1280, h=video.videoHeight||720;
-  // Correspond à .scan-frame-overlay { inset: 7%; }
-  const marginX=Math.round(w*.07), marginY=Math.round(h*.07);
-  return {x:marginX,y:marginY,w:w-marginX*2,h:h-marginY*2};
-}
-function cropCanvas(src, r){
-  const c=document.createElement('canvas'); c.width=r.w; c.height=r.h;
-  c.getContext('2d',{willReadFrequently:true}).drawImage(src,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
-  return c;
-}
-function detectCardCorners(canvas){
-  const w=canvas.width, h=canvas.height;
-  const ctx=canvas.getContext('2d',{willReadFrequently:true});
-  const img=ctx.getImageData(0,0,w,h); const d=img.data;
-  let minX=w,minY=h,maxX=0,maxY=0,count=0;
-  let tl=null,tr=null,br=null,bl=null;
-  let bestTL=1e9,bestTR=1e9,bestBR=-1e9,bestBL=1e9;
-  const step=Math.max(2,Math.round(Math.min(w,h)/260));
-  for(let y=0;y<h;y+=step){
-    for(let x=0;x<w;x+=step){
-      const i=(y*w+x)*4;
-      const r=d[i],g=d[i+1],b=d[i+2];
-      const lum=(r*0.299+g*0.587+b*0.114);
-      const contrast=Math.max(r,g,b)-Math.min(r,g,b);
-      // Garde surtout lignes foncées / chiffres / bordures, ignore les grandes zones claires.
-      if(lum<150 && contrast>8){
-        count++; if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
-        const s=x+y, trScore=(w-x)+y, brScore=x+y, blScore=x+(h-y);
-        if(s<bestTL){bestTL=s;tl={x,y};}
-        if(trScore<bestTR){bestTR=trScore;tr={x,y};}
-        if(brScore>bestBR){bestBR=brScore;br={x,y};}
-        if(blScore<bestBL){bestBL=blScore;bl={x,y};}
-      }
-    }
+  if(card && !document.getElementById('v20CartonZone')){
+    const zone=document.createElement('div');
+    zone.id='v20CartonZone';
+    zone.className='v20-carton-zone';
+    zone.innerHTML=`
+      <div class="v20-help"><b>V20 scan carton</b><br>1. Cadre le carton entier en paysage. 2. Clique sur Photographier. 3. Ajuste les 4 points si besoin. 4. Clique sur Redresser.</div>
+      <div class="v20-canvas-wrap" style="display:none"><p><b>Image capturée - ajuste les 4 coins</b></p><canvas id="v20SnapshotCanvas"></canvas></div>
+      <div class="v20-result-wrap" style="display:none"><p><b>Résultat redressé 900 × 300</b></p><canvas id="v20ResultCanvas" width="900" height="300"></canvas></div>`;
+    card.appendChild(zone);
+    v20SnapshotCanvas=document.getElementById('v20SnapshotCanvas');
+    v20ResultCanvas=document.getElementById('v20ResultCanvas');
+    v20SnapshotCtx=v20SnapshotCanvas?.getContext('2d',{willReadFrequently:true});
+    v20ResultCtx=v20ResultCanvas?.getContext('2d',{willReadFrequently:true});
+    installV20CornerEvents();
   }
-  const boxW=maxX-minX, boxH=maxY-minY;
-  const enough=count>80 && boxW>w*.45 && boxH>h*.35;
-  if(!enough){
-    return [{x:0,y:0},{x:w,y:0},{x:w,y:h},{x:0,y:h}];
-  }
-  // Les extrêmes basés sur les pixels foncés peuvent attraper des chiffres. On stabilise avec la boîte englobante.
-  const padX=Math.round(boxW*.03), padY=Math.round(boxH*.05);
-  minX=Math.max(0,minX-padX); maxX=Math.min(w,maxX+padX); minY=Math.max(0,minY-padY); maxY=Math.min(h,maxY+padY);
-  return [
-    {x:Math.max(0,Math.min(tl?.x??minX,minX+Math.round(boxW*.10))),y:Math.max(0,Math.min(tl?.y??minY,minY+Math.round(boxH*.10)))},
-    {x:Math.min(w,Math.max(tr?.x??maxX,maxX-Math.round(boxW*.10))),y:Math.max(0,Math.min(tr?.y??minY,minY+Math.round(boxH*.10)))},
-    {x:Math.min(w,Math.max(br?.x??maxX,maxX-Math.round(boxW*.10))),y:Math.min(h,Math.max(br?.y??maxY,maxY-Math.round(boxH*.10)))},
-    {x:Math.max(0,Math.min(bl?.x??minX,minX+Math.round(boxW*.10))),y:Math.min(h,Math.max(bl?.y??maxY,maxY-Math.round(boxH*.10)))}
-  ];
 }
-function solvePerspective(srcPts, dstPts){
+function resetCartonV20(){
+  const sw=document.querySelector('.v20-canvas-wrap'); if(sw) sw.style.display='none';
+  const rw=document.querySelector('.v20-result-wrap'); if(rw) rw.style.display='none';
+  const b=document.getElementById('redresserCartonBtn'); if(b) b.disabled=true;
+  v20Corners=[]; setStatus('Prêt. Cadre le carton puis photographie.','muted'); setFrame('warn');
+}
+function captureCartonV20(){
+  const video=document.getElementById('qrScannerVideo');
+  if(!video || video.readyState<2){setStatus('Caméra non prête. Démarre la caméra.','red'); return;}
+  initSaisieCartonV20UI();
+  const vw=video.videoWidth||1280, vh=video.videoHeight||720;
+  const maxW=1100;
+  const scale=Math.min(1,maxW/vw);
+  const w=Math.round(vw*scale), h=Math.round(vh*scale);
+  v20SnapshotCanvas.width=w; v20SnapshotCanvas.height=h;
+  v20SnapshotCtx.drawImage(video,0,0,w,h);
+  v20SnapshotCanvas._baseImage=v20SnapshotCtx.getImageData(0,0,w,h);
+  const mX=w*.08, mY=h*.14;
+  v20Corners=[{x:mX,y:mY},{x:w-mX,y:mY},{x:w-mX,y:h-mY},{x:mX,y:h-mY}];
+  document.querySelector('.v20-canvas-wrap').style.display='block';
+  document.querySelector('.v20-result-wrap').style.display='none';
+  const b=document.getElementById('redresserCartonBtn'); if(b) b.disabled=false;
+  drawV20Corners();
+  setStatus('Image capturée. Ajuste les 4 coins du carton puis clique sur Redresser.','ok');
+}
+function drawV20Corners(){
+  if(!v20SnapshotCanvas || !v20SnapshotCtx || v20Corners.length!==4) return;
+  const img=v20SnapshotCtx.getImageData(0,0,v20SnapshotCanvas.width,v20SnapshotCanvas.height);
+  v20SnapshotCtx.putImageData(img,0,0);
+  // Re-dessine depuis une copie sauvegardée si disponible
+  if(v20SnapshotCanvas._baseImage) v20SnapshotCtx.putImageData(v20SnapshotCanvas._baseImage,0,0);
+  else v20SnapshotCanvas._baseImage=img;
+  v20SnapshotCtx.lineWidth=4;
+  v20SnapshotCtx.strokeStyle='#f2a900';
+  v20SnapshotCtx.fillStyle='rgba(242,169,0,.18)';
+  v20SnapshotCtx.beginPath();
+  v20SnapshotCtx.moveTo(v20Corners[0].x,v20Corners[0].y);
+  for(let i=1;i<4;i++) v20SnapshotCtx.lineTo(v20Corners[i].x,v20Corners[i].y);
+  v20SnapshotCtx.closePath();
+  v20SnapshotCtx.fill();
+  v20SnapshotCtx.stroke();
+  v20SnapshotCtx.fillStyle='#ffffff';
+  v20SnapshotCtx.strokeStyle='#061326';
+  v20Corners.forEach((p,i)=>{v20SnapshotCtx.beginPath(); v20SnapshotCtx.arc(p.x,p.y,13,0,Math.PI*2); v20SnapshotCtx.fill(); v20SnapshotCtx.stroke(); v20SnapshotCtx.fillStyle='#061326'; v20SnapshotCtx.font='bold 14px Arial'; v20SnapshotCtx.textAlign='center'; v20SnapshotCtx.textBaseline='middle'; v20SnapshotCtx.fillText(String(i+1),p.x,p.y); v20SnapshotCtx.fillStyle='#ffffff';});
+}
+function canvasPoint(evt,canvas){
+  const r=canvas.getBoundingClientRect();
+  const t=evt.touches?.[0] || evt;
+  return {x:(t.clientX-r.left)*canvas.width/r.width, y:(t.clientY-r.top)*canvas.height/r.height};
+}
+function installV20CornerEvents(){
+  if(!v20SnapshotCanvas) return;
+  function down(e){if(v20Corners.length!==4) return; const p=canvasPoint(e,v20SnapshotCanvas); let best=-1, bd=999999; v20Corners.forEach((c,i)=>{const d=(c.x-p.x)**2+(c.y-p.y)**2; if(d<bd){bd=d;best=i;}}); if(Math.sqrt(bd)<45){v20Dragging=best; e.preventDefault();}}
+  function move(e){if(v20Dragging<0) return; const p=canvasPoint(e,v20SnapshotCanvas); v20Corners[v20Dragging]={x:Math.max(0,Math.min(v20SnapshotCanvas.width,p.x)),y:Math.max(0,Math.min(v20SnapshotCanvas.height,p.y))}; drawV20Corners(); e.preventDefault();}
+  function up(){v20Dragging=-1;}
+  v20SnapshotCanvas.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+  v20SnapshotCanvas.addEventListener('touchstart',down,{passive:false}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
+}
+function solveHomography(src,dst){
   const A=[], b=[];
   for(let i=0;i<4;i++){
-    const x=srcPts[i].x,y=srcPts[i].y,u=dstPts[i].x,v=dstPts[i].y;
+    const x=src[i].x, y=src[i].y, u=dst[i].x, v=dst[i].y;
     A.push([x,y,1,0,0,0,-u*x,-u*y]); b.push(u);
     A.push([0,0,0,x,y,1,-v*x,-v*y]); b.push(v);
   }
   for(let i=0;i<8;i++){
     let max=i; for(let r=i+1;r<8;r++) if(Math.abs(A[r][i])>Math.abs(A[max][i])) max=r;
     [A[i],A[max]]=[A[max],A[i]]; [b[i],b[max]]=[b[max],b[i]];
-    const piv=A[i][i]||1e-9;
-    for(let c=i;c<8;c++) A[i][c]/=piv; b[i]/=piv;
+    const div=A[i][i]||1e-12; for(let c=i;c<8;c++) A[i][c]/=div; b[i]/=div;
     for(let r=0;r<8;r++) if(r!==i){const f=A[r][i]; for(let c=i;c<8;c++) A[r][c]-=f*A[i][c]; b[r]-=f*b[i];}
   }
   return [b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],1];
 }
-function invert3x3(m){
-  const [a,b,c,d,e,f,g,h,i]=m;
-  const A=e*i-f*h, B=c*h-b*i, C=b*f-c*e, D=f*g-d*i, E=a*i-c*g, F=c*d-a*f, G=d*h-e*g, H=b*g-a*h, I=a*e-b*d;
-  const det=a*A+b*D+c*G || 1e-9;
-  return [A/det,B/det,C/det,D/det,E/det,F/det,G/det,H/det,I/det];
-}
-function warpPerspectiveCanvas(src, corners, outW=900, outH=300){
-  const dst=document.createElement('canvas'); dst.width=outW; dst.height=outH;
-  const sctx=src.getContext('2d',{willReadFrequently:true});
-  const srcImg=sctx.getImageData(0,0,src.width,src.height); const sd=srcImg.data;
-  const out=dst.getContext('2d',{willReadFrequently:true});
-  const outImg=out.createImageData(outW,outH); const od=outImg.data;
-  const H=solvePerspective(corners,[{x:0,y:0},{x:outW-1,y:0},{x:outW-1,y:outH-1},{x:0,y:outH-1}]);
-  const inv=invert3x3(H);
+function redresserCartonV20(){
+  if(!v20SnapshotCanvas || v20Corners.length!==4){setStatus('Photographie d’abord le carton.','red'); return;}
+  const outW=900, outH=300;
+  v20ResultCanvas.width=outW; v20ResultCanvas.height=outH;
+  const src=v20SnapshotCtx.getImageData(0,0,v20SnapshotCanvas.width,v20SnapshotCanvas.height);
+  const out=v20ResultCtx.createImageData(outW,outH);
+  const dstCorners=[{x:0,y:0},{x:outW-1,y:0},{x:outW-1,y:outH-1},{x:0,y:outH-1}];
+  const H=solveHomography(dstCorners,v20Corners);
   for(let y=0;y<outH;y++){
     for(let x=0;x<outW;x++){
-      const den=inv[6]*x+inv[7]*y+inv[8];
-      const sx=(inv[0]*x+inv[1]*y+inv[2])/den;
-      const sy=(inv[3]*x+inv[4]*y+inv[5])/den;
-      const ox=(y*outW+x)*4;
-      if(sx>=0&&sy>=0&&sx<src.width&&sy<src.height){
-        const ix=Math.max(0,Math.min(src.width-1,Math.round(sx)));
-        const iy=Math.max(0,Math.min(src.height-1,Math.round(sy)));
-        const si=(iy*src.width+ix)*4;
-        od[ox]=sd[si]; od[ox+1]=sd[si+1]; od[ox+2]=sd[si+2]; od[ox+3]=255;
-      }else{od[ox]=255; od[ox+1]=255; od[ox+2]=255; od[ox+3]=255;}
+      const den=H[6]*x+H[7]*y+1;
+      const sx=(H[0]*x+H[1]*y+H[2])/den;
+      const sy=(H[3]*x+H[4]*y+H[5])/den;
+      const ix=Math.max(0,Math.min(src.width-1,Math.round(sx)));
+      const iy=Math.max(0,Math.min(src.height-1,Math.round(sy)));
+      const si=(iy*src.width+ix)*4;
+      const di=(y*outW+x)*4;
+      out.data[di]=src.data[si]; out.data[di+1]=src.data[si+1]; out.data[di+2]=src.data[si+2]; out.data[di+3]=255;
     }
   }
-  out.putImageData(outImg,0,0);
-  return dst;
-}
-async function captureAndRectifyCardV20(){
-  const video=document.getElementById('qrScannerVideo');
-  if(!video||video.readyState<2){setStatus('Caméra pas encore prête.','red'); return;}
-  try{
-    scannerProcessing=true;
-    setStatus('Capture en cours : redressement du carton...','muted');
-    const t0=performance.now();
-    const frame=getVideoFrameCanvas(video);
-    const crop=cropCanvas(frame, overlayCropRect(video));
-    const corners=detectCardCorners(crop);
-    const warped=warpPerspectiveCanvas(crop,corners,900,300);
-    const out=document.getElementById('cardWarpCanvas');
-    out.width=warped.width; out.height=warped.height;
-    out.getContext('2d').drawImage(warped,0,0);
-    document.getElementById('scanV20Preview').style.display='block';
-    document.getElementById('retryCardBtn').style.display='inline-block';
-    document.getElementById('captureCardBtn').style.display='none';
-    setReadTime(performance.now()-t0);
-    setFrame('ok'); beep(true);
-    try{localStorage.setItem('loto_v20_last_rectified_card',out.toDataURL('image/jpeg',.86));}catch(e){}
-    setStatus('✓ V20 terminée : vérifie seulement si le carton redressé est propre. OCR désactivé.','ok');
-  }catch(e){setFrame('warn'); setStatus('Redressement impossible : '+(e.message||e),'red'); beep(false);}
-  finally{scannerProcessing=false;}
+  v20ResultCtx.putImageData(out,0,0);
+  document.querySelector('.v20-result-wrap').style.display='block';
+  setFrame('ok'); setStatus('Carton redressé. Vérifie seulement la géométrie : pas d’OCR dans cette version.','ok');
 }
 async function startSaisieCartonsLoop(){
-  ensureV20Panel();
-  saisieStep='v20_rectification';
+  initSaisieCartonV20UI();
+  saisieStep='capture';
+  scannerProcessing=false;
   setSkipVisible(false);
   setFrame('warn');
-  setStatus('V20 : place le carton entier dans le cadre, téléphone en paysage, puis photographie.','muted');
+  setStatus('V20 : caméra active. Cadre tout le carton en paysage, puis clique sur Photographier le carton.','muted');
+  scannerTimer=null;
 }
 async function startQrScanner(){
   stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
@@ -324,7 +316,7 @@ async function startQrScanner(){
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='V20 - scan carton'; if(help) help.textContent='Capture du carton, ajustement des coins puis redressement. Aucun OCR dans cette version.'; initSaisieCartonV20UI(); if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
