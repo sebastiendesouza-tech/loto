@@ -1,11 +1,36 @@
-# v3.1.7 - Réglage micro / enceinte
+# v3.2.4 - Validation des cartons scannés
+
+- Scanner saisie cartons : enregistrement en brouillon au statut À enregistrer.
+- Administration > Cartons : affichage des cartons À enregistrer.
+- Édition de la grille en 3 × 9 avant validation.
+- Boutons Modifier et Valider sur les cartons scannés.
+- Ajout du champ optionnel ocr_quality dans le SQL.
+
+# v3.2.1 - Scanner commissaire / saisie cartons
+
+- Ajout d'un choix de mode dans le scanner existant.
+- Mode Scanner commissaire : lecture et contrôle simple du code carton.
+- Mode Scanner saisie cartons : scan du code, saisie des 3 lignes de grille, validation puis enregistrement Supabase.
+- Le carton validé est enregistré avec le statut disponible.
+- Fonctionnement optionnel, non bloquant.
+
+# v3.2.0 - Gestion des cartons et suivi optionnel des ventes
+
+- Ajout d'une option par loto : suivi des cartons vendus.
+- Option désactivée par défaut pour ne pas bloquer les petits lotos.
+- Ajout d'une gestion simple des cartons enregistrés dans l'administration.
+- Ajout de l'enregistrement manuel / correction d'un carton importé.
+- Ajout du marquage vendu / disponible pour le loto actif.
+- Contrôle commissaire : vérification vente uniquement si l'option est cochée.
+
+# v3.2.0 - Réglage micro / enceinte
 
 - Pause automatique de la reconnaissance vocale pendant 1 seconde après validation d’un numéro.
 - Anti-doublon vocal renforcé : même numéro ignoré pendant 5 secondes après acceptation.
 - Redémarrage automatique du micro après la pause.
 - Objectif : éviter que le micro-cravate reprenne le son de l’enceinte.
 
-# v3.1.7 - Ajustement modèle classique A6
+# v3.2.0 - Ajustement modèle classique A6
 
 - Grille descendue de 3 mm pour protéger le QR Code à l’impression.
 - Code carton déplacé sous “Loto by SdS” dans l’en-tête.
@@ -13,7 +38,7 @@
 - Numéros de grille agrandis.
 - Fond blanc conservé, sans bandeau noir.
 
-# v3.1.7 - Design classique sobre A6
+# v3.2.0 - Design classique sobre A6
 
 - Modèle Classique A6 revu dans le code de l’application.
 - Fond blanc pour économiser l’encre.
@@ -24,7 +49,7 @@
 - Identifiant SDS imprimé une seule fois.
 - Cases du modèle classique : 15 x 25 mm.
 
-# v3.1.7 - Modèle classique A6
+# v3.2.0 - Modèle classique A6
 
 - Ajout du choix de modèle : Classique A6 ou Premium SdS.
 - Modèle Classique : 4 cartons par A4 paysage.
@@ -32,11 +57,11 @@
 - QR Code placé dans le bandeau haut du carton.
 - PDF généré selon le modèle choisi.
 
-## v3.1.7 - temps de décodage scanner
+## v3.2.0 - temps de décodage scanner
 - Le temps affiché ne compte plus le temps de placement du QR Code.
 - Il correspond au temps de décodage/analyse de l’image qui contient le QR Code.
 
-## v3.1.7 - scan bip et contour vert
+## v3.2.0 - scan bip et contour vert
 - Scanner : ajout d'un contour vert bref à chaque lecture réussie.
 - Scanner : bip conservé et déclenché immédiatement à la reconnaissance.
 - Scanner : interface de test simplifiée, temps de lecture conservé.
@@ -147,20 +172,29 @@
 - Bouton Générer PDF / imprimer pour tester les sorties avant de figer le format.
 
 
-## v3.1.7
+## v3.2.0
 - Nouveau design Classique A6 sobre : fond blanc, sans bandeau noir.
 - QR Code conservé dans l'en-tête, code carton affiché une seule fois.
 - Suppression du logo/texte répété pour économiser l'encre.
 - Suppression du cadre extérieur du carton, seules les lignes de grille restent visibles.
 
-## V3.1.7 final ajustée
+## V3.2.0 final ajustée
 - Identifiant carton simplifié au format `SDS-XX-XXXX` : 2 chiffres pour l’association, 4 chiffres pour le carton.
 - QR Code simplifié : il contient uniquement ce nouvel identifiant court.
 - Numéros principaux du modèle Classique encore agrandis.
 - Petits numéros sous les numéros principaux agrandis.
 - Le modèle Classique est considéré comme validé après ce réglage.
 
-## V3.1.7 final PDF corrigée
+## V3.2.0 final PDF corrigée
 - Correction du générateur PDF du modèle Classique : les grands numéros sont maintenant agrandis directement dans le PDF.
 - Correction du générateur PDF du modèle Classique : les petits numéros sous les grands sont également agrandis.
 - Conservation du format d'identifiant court `SDS-XX-XXXX` dans le QR Code et sur le carton.
+
+## v3.2.4
+- Création des cartons simplifiée : ID association + nombre de cartons uniquement.
+- Numéro d'ordre automatique à partir du dernier carton de l'association.
+- Suppression de l'aperçu HTML : le PDF devient l'aperçu officiel.
+- Bouton "Créer PDF" et bouton "Enregistrer les cartons".
+- Contrôle doublon identifiant et doublon des 15 numéros.
+- Ajout de la page autonome scan.html.
+- Scanner retiré du menu principal, accessible par QR/lien direct et bouton commissaire.
