@@ -485,3 +485,10 @@
 .admin-scan-qr-img,.admin-scan-qr-box img{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;display:block!important;image-rendering:pixelated!important;}
 #adminScanPseudoGrid.pseudo-grid{display:grid!important;grid-template-columns:repeat(9,48px)!important;grid-auto-rows:42px!important;gap:6px!important;max-width:520px!important;width:max-content!important;}
 #adminScanPseudoGrid.pseudo-grid input{width:48px!important;height:42px!important;box-sizing:border-box!important;text-align:center!important;padding:4px!important;}
+
+
+/* V3.4.10 - scan import : grande zone grille, petite zone identifiant uniquement */
+.scan-frame-grid-large{inset:5%!important;border-style:solid!important;}
+.scan-frame-small{inset:25% 18%!important;border-style:dashed!important;}
+.scan-saisie-mode .scan-camera-large{min-height:68vh!important;}
+.scan-saisie-mode .scan-camera-large video{height:68vh!important;}
