@@ -1,7 +1,3 @@
-Loto by SdS V3.4.18
+# Loto by SdS v3.4.19
 
-OCR import cartons : validation metier par ligne, ordre croissant et filtrage des chiffres parasites.
-
-# Loto by SdS v3.4.18
-
-Version de correction OCR : lignes verrouillees apres deux lectures identiques.
+Version import cartons par capture contrôlée : cadrer le carton, capturer, OCR, envoi au PC, puis lecture de l'identifiant.

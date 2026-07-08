@@ -1,14 +1,9 @@
-V3.4.18 - OCR avec regles metier
+# V3.4.19 - Import par capture contrôlée
 
-- Suppression de la double lecture trop lente.
-- Filtrage des chiffres parasites trop proches.
-- Verrouillage d une ligne si 5 numeros strictement croissants sont lus.
-- Conservation du verrouillage ligne par ligne et du scan de l identifiant.
+- Suppression de l'OCR continu pour la grille.
+- Ajout du bouton Capturer le carton.
+- Analyse OCR sur une image stable capturée.
+- Envoi de la grille au PC après capture.
+- Passage ensuite à l'identifiant.
+- Identifiant compatible lettres, chiffres, / et -.
 
-# Changelog
-
-## v3.4.17
-- OCR import : verrouillage de ligne apres 2 lectures identiques.
-- Conserve le verrouillage ligne par ligne.
-- Evite le verrouillage trop rapide quand des chiffres sont coupes ou mal espaces.
-- Workflow scan_queue inchange.
