@@ -6,26 +6,93 @@
   function sessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
   const deviceId=localStorage.getItem('loto_scan_device_id') || ('phone_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6));
   localStorage.setItem('loto_scan_device_id',deviceId);
+
+  const TEST_GRID=[
+    [4,'',17,31,'',53,69,'',85],
+    [7,'',23,'',42,58,'',74,''],
+    ['',12,28,'',46,'',63,79,90]
+  ];
+
   async function insertQueue(type,payload){
-    const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré');
-    const {error}=await client.from('scan_queue').insert({session_code:sessionCode(),device_id:deviceId,mode:'saisie_cartons',type,payload,status:'new'});
+    const client=Loto.supabaseClient;
+    if(!client) throw new Error('Supabase non configuré');
+    const {error}=await client.from('scan_queue').insert({
+      session_code:sessionCode(),
+      device_id:deviceId,
+      mode:'saisie_cartons',
+      type,
+      payload,
+      status:'new'
+    });
     if(error) throw error;
   }
-  async function sendPresence(){try{await insertQueue('presence',{status:'connected',url:location.href,at:new Date().toISOString()}); setStatus('🟢 Connecté au PC.');}catch(e){setStatus('Erreur connexion Supabase : '+(e.message||e),false);}}
-  async function sendTest(){try{const msg='HELLO '+new Date().toLocaleTimeString('fr-FR'); await insertQueue('test',{message:msg}); setStatus('✓ Message envoyé : '+msg,true);}catch(e){setStatus('Erreur envoi TEST : '+(e.message||e),false);}}
-  function setStatus(text,ok=true){const s=el('scannerStatus'); if(s){s.textContent=text; s.className=(ok?'ok-note':'bad-note')+' scan-minimal-status';}}
+
+  function setStatus(text,ok=true){
+    const s=el('scannerStatus');
+    if(s){s.textContent=text; s.className=(ok?'ok-note':'bad-note')+' scan-minimal-status';}
+  }
+
+  async function sendPresence(){
+    try{
+      await insertQueue('presence',{status:'connected',url:location.href,at:new Date().toISOString()});
+      setStatus('🟢 Connecté au PC.');
+    }catch(e){
+      setStatus('Erreur connexion Supabase : '+(e.message||e),false);
+    }
+  }
+
+  async function sendTest(){
+    try{
+      const msg='HELLO '+new Date().toLocaleTimeString('fr-FR');
+      await insertQueue('test',{message:msg});
+      setStatus('✓ Message envoyé : '+msg,true);
+    }catch(e){
+      setStatus('Erreur envoi TEST : '+(e.message||e),false);
+    }
+  }
+
+  async function sendTestGrid(){
+    try{
+      await insertQueue('draft_grid',{
+        source:'test_grid_v343',
+        confidence:100,
+        grid:TEST_GRID,
+        at:new Date().toISOString()
+      });
+      setStatus('✓ Grille de test envoyée au PC.',true);
+    }catch(e){
+      setStatus('Erreur envoi grille : '+(e.message||e),false);
+    }
+  }
+
+  function addButton(label, className, handler){
+    const btn=document.createElement('button');
+    btn.textContent=label;
+    btn.className=className || 'secondary';
+    btn.type='button';
+    btn.addEventListener('click',handler);
+    return btn;
+  }
+
   function init(){
-    el('scanPageTitle').textContent='Import cartons - test connexion';
-    el('scanPageHelp').textContent='Étape 1 : vérifier la communication téléphone → Supabase → PC. Aucun OCR pour cette version.';
+    el('scanPageTitle').textContent='Import cartons - test scan_queue';
+    el('scanPageHelp').textContent='Étape V3.4.3 : tester la communication puis envoyer une grille de test vers le pseudo-carton du PC.';
     el('scanBackLink').href='administration.html#cartons';
-    el('startQrScanner').textContent='Envoyer TEST';
-    el('stopQrScanner').style.display='none';
+
+    const bar=document.querySelector('.scan-startbar');
+    if(bar){
+      bar.innerHTML='';
+      bar.appendChild(addButton('Envoyer TEST','green',sendTest));
+      bar.appendChild(addButton('Envoyer GRILLE TEST','secondary',sendTestGrid));
+    }
+
     document.querySelector('.scanner-camera')?.setAttribute('style','display:none');
     const rt=el('scannerReadTime'); if(rt) rt.textContent='non utilisé';
-    const oldStart=el('startQrScanner');
-    const clone=oldStart.cloneNode(true); oldStart.parentNode.replaceChild(clone,oldStart);
-    clone.addEventListener('click',sendTest);
-    sendPresence(); setInterval(sendPresence,5000);
+    const skip=el('skipIdentifierBtn'); if(skip) skip.style.display='none';
+
+    sendPresence();
+    setInterval(sendPresence,5000);
   }
+
   Loto.ensureSession().then(init).catch(init);
 })();
