@@ -1,4 +1,4 @@
-# Loto by SdS v3.4.4
+# Loto by SdS v3.4.5
 
 Corrections :
 - QR import admin affiché en image intégrée base64 : plus de message “QR en préparation”.
@@ -6,12 +6,12 @@ Corrections :
 - Pseudo-carton forcé en 3 lignes x 9 colonnes.
 - Communication scan_queue conservée.
 
-Loto by SdS - v3.4.4
+Loto by SdS - v3.4.5
 
 Version de stabilisation du module import par scan_queue.
 
 
-## V3.4.4
+## V3.4.5
 
 - Ajout du bouton téléphone **Envoyer GRILLE TEST**.
 - Envoi d’un message `draft_grid` dans `scan_queue`.
