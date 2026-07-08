@@ -38,7 +38,7 @@ animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animChe
 document.getElementById('winner').onclick=()=>Loto.winner();
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
 if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
-function renderLot(s){if(startMiniBingoBtn) startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none'; if(s.miniBingoActive){currentLot.innerHTML='<b>MINI-BINGO</b> · tirage de départage en cours';return;}const p=Loto.currentPartie();const prize=Loto.currentPrize();if(!p||!prize){currentLot.innerHTML='<b>Lot en cours :</b> partie simple sans programme';return;}const req=Loto.currentRequirement();currentLot.innerHTML=`<b>${p.name||'Partie'}</b> · <span>${Loto.gameModeLabel(p)}</span> · <strong>${req.label}</strong> · <b>LOT : ${prize.label||'Lot non renseigné'}</b>`;}
+function renderLot(s){if(startMiniBingoBtn) startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none'; if(s.miniBingoActive){currentLot.innerHTML='<b class="lot-orange">MINI-BINGO</b><br><span>tirage de départage en cours</span>';return;}const p=Loto.currentPartie();const prize=Loto.currentPrize();if(!p||!prize){currentLot.innerHTML='<b class="lot-orange">Lot en cours : partie simple</b><br><span>tirage simple</span>';return;}const req=Loto.currentRequirement();currentLot.innerHTML=`<b class="lot-orange">LOT : ${esc(prize.label||'Lot non renseigné')}</b><br><span>${esc(req.label||'')} · ${esc(Loto.gameModeLabel(p))}</span>`;}
 Loto.onChange(s=>{
   Loto.pageHeader();
   Loto.renderNumbers(grid,{button:true});
