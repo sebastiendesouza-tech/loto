@@ -5,13 +5,31 @@ if(scannerUsageMode!=='saisie_cartons') scannerUsageMode='commissaire';
 let saisieStep='grid';
 let currentDraft=null;
 let barcodeDetector=null;
+const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
+async function readImportInbox(){
+  const client=Loto.supabaseClient; if(!client) return {};
+  try{
+    const {data,error}=await client.from('loto_app_sessions').select('state').eq('code',IMPORT_INBOX_CODE).maybeSingle();
+    if(error) throw error;
+    return data?.state || {};
+  }catch(e){ console.warn('Lecture inbox import impossible',e); return {}; }
+}
+async function saveImportInbox(patch){
+  const client=Loto.supabaseClient; if(!client) return;
+  try{
+    const previous=await readImportInbox();
+    const next={...previous,...(patch||{}),updatedAt:new Date().toISOString(),appVersion:(window.LOTO_CONFIG?.APP_VERSION||'')};
+    const {error}=await client.from('loto_app_sessions').upsert({code:IMPORT_INBOX_CODE,state:next,updated_at:new Date().toISOString()});
+    if(error) throw error;
+  }catch(e){ console.warn('Ecriture inbox import impossible',e); }
+}
 
 let scannerPresenceTimer=null;
 async function markImportScannerPresence(connected=true){
   if(scannerUsageMode!=='saisie_cartons') return;
-  try{
-    await Loto.save({importScanner:{connected:!!connected,mode:'saisie_cartons',lastSeen:Date.now(),status:connected?'waiting':'closed'}});
-  }catch(e){console.warn('Presence scanner non envoyee',e);}
+  const presence={connected:!!connected,mode:'saisie_cartons',lastSeen:Date.now(),status:connected?'waiting':'closed'};
+  try{ await Loto.save({importScanner:presence}); }catch(e){console.warn('Presence scanner session non envoyee',e);}
+  await saveImportInbox({importScanner:presence});
 }
 function startImportScannerPresence(){
   if(scannerUsageMode!=='saisie_cartons') return;
@@ -51,13 +69,21 @@ async function nextImportCode(){
 }
 
 async function publishImportDraft(row, stage='grid'){
+  const draft={...row, import_stage:stage, scan_updated_at:new Date().toISOString()};
+  const presence={connected:true,mode:'saisie_cartons',lastSeen:Date.now(),status:stage};
   try{
-    const draft={...row, import_stage:stage, scan_updated_at:new Date().toISOString()};
     const existing=Array.isArray(Loto.state()?.importDrafts) ? Loto.state().importDrafts : [];
     const without=existing.filter(x=>String(x.numero)!==String(draft.numero));
-    await Loto.save({lastImportDraft:draft, importDrafts:[draft,...without].slice(0,20), importScanner:{connected:true,mode:'saisie_cartons',lastSeen:Date.now(),status:stage}});
-  }catch(e){console.warn('Publication brouillon import impossible',e);}
+    await Loto.save({lastImportDraft:draft, importDrafts:[draft,...without].slice(0,20), importScanner:presence});
+  }catch(e){console.warn('Publication brouillon import session impossible',e);}
+  try{
+    const inbox=await readImportInbox();
+    const existing=Array.isArray(inbox.importDrafts) ? inbox.importDrafts : [];
+    const without=existing.filter(x=>String(x.numero)!==String(draft.numero));
+    await saveImportInbox({lastImportDraft:draft, importDrafts:[draft,...without].slice(0,50), importScanner:presence});
+  }catch(e){console.warn('Publication brouillon import inbox impossible',e);}
 }
+
 
 async function saveOcrDraft(grid, quality, rawText){
   const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');

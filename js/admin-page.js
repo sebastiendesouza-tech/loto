@@ -678,9 +678,11 @@ document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEdit
 document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
 document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });
 
-// v3.3.6 - QR inline fiable + synchronisation import robuste
+// v3.3.7 - inbox import globale pour telephone -> PC
+const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 const ADMIN_SCAN_QR_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcIAAAHCAQAAAABUY/ToAAADuklEQVR4nO2cW4qrShSGv3WqII8KPYAMRWewh3ToIfUMdCgZwAbrsUH590NVGU13c2CTkMtZ66E7Jn5owc+6lpr4Oxv/+UsQnHTSSSeddNJJJx+PtGIRs3YxSGZm7ZL/MJqZ9ame1d/5bp18LDLmf90AkN4QLBjNHEWKiHQQNBOQwgyA3e9unXxkMq3+JR9GGI8S4/HT7N+TZeGYWbzeNZ18TdLMDqKbguhOEbopSO8tWH+zazr5amQzw9gC43Hmi4O6zTWdfAWykTQAdCczDYD1LGZ2lDQ0yq1ISfP1runka5AlvRlzvhMAwmzd9Abdx0HWfcTZulOcgcWuc00nX4vMGtoNPBaD5tMEM4zHTxNpMWj2Y5HnWqeTtyatB6xPZkAQox1kPYtBOsh6QO9mZtau2fUzrtPJW5BIkjQ0MzUpCrkuk6aaAHUqv26J51qnk7cjsyKgmZGmoHPWrAEo4sqftDXXkJPVqibm7HOqVObtOZ0kaQqim9wPOfkDmQ6yPkWgJkVZTQNBwGKMLWy7jc+5TievT5ZY1k1kd1Na1JpLizo7qPVX1oDmfsjJYrW2TwCpJdfxY/s796l3HaElQrLaCHiudTp5a9J6guqYI0g6RTSkyKZF/d6SfZP1d75bJx+L3OTUOWEemlLM5yQaKDn1QK3VPJY5ubOSD60doCIkrUnRWVflO9eQk3urPcaSTmto5lVXpXF0ruhLle8acnJrZz9UK7SQe0FZTUVSc+1YTx7LnLywzdzeuo+W7HhgMZEitp5hAFo3xD7bOp28HbmddeSmYk2KgNofGqAMzTyWOfnVzhGMLJqJGrzqcKNO06Cc4hpy8gey04xZG8TYBkHzmSccdKeDrM/Z9boR7d536+SjkF/n9lP9pcthLOiiP1QOn2udTt6O3MzLavmlzbg1h7YBPB9y8kfb9anXsh62bmnbd3QNOXlpRRJTKEP5ddZRqvxGG12d5/uuISer5e6PQUAkg25CjBbE+CvISHHO2XUx7w85+S2ZY1neMZ0iWTTdKSJpLc5y7v3pdZmTF1bqsmw1oOVMehPazpvTPB9y8nsya2MC6RQxO0rlMel0WH3TDKNFrL/33Tr5UORuL+wUaqdot39o56p85urkf5AaUsR6gsyOZW7PaOUZfEnyfYxO7i1eftFN7ebIIGI0v6Plkiy9zb6f2slvyaZMM8iPBQEaUnlzlXQ65GzJenxe5uT35HjxMH1+cUMZpOVxKyzrS2Wuck0nX4Q0f8e5k0466aSTTjr5Pyf/AGWJJbLs72IeAAAAAElFTkSuQmCC";
 let adminImportFallbackState = null;
+let adminImportInboxState = null;
 function adminScanUrl(){
   if(location.hostname.includes('github.io')){
     return 'https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons';
@@ -690,7 +692,15 @@ function adminScanUrl(){
 function latestImportState(){
   const live=Loto.state()||{};
   const fallback=adminImportFallbackState||{};
-  return {...fallback,...live, importScanner: live.importScanner||fallback.importScanner, lastImportDraft: live.lastImportDraft||fallback.lastImportDraft, importDrafts: live.importDrafts||fallback.importDrafts};
+  const inbox=adminImportInboxState||{};
+  return {
+    ...fallback,
+    ...live,
+    ...inbox,
+    importScanner: inbox.importScanner || live.importScanner || fallback.importScanner,
+    lastImportDraft: inbox.lastImportDraft || live.lastImportDraft || fallback.lastImportDraft,
+    importDrafts: inbox.importDrafts || live.importDrafts || fallback.importDrafts
+  };
 }
 function renderAdminScanQr(){
   const url=adminScanUrl();
@@ -722,14 +732,18 @@ async function pollImportSessionState(){
   const client=Loto.supabaseClient; if(!client) return;
   try{
     const code=(Loto.state()?.sessionCode)||localStorage.getItem('loto_session_code')||'SESSION_ACTIVE';
-    const {data,error}=await client.from('loto_app_sessions').select('state,updated_at').eq('code',code).maybeSingle();
-    if(!error && data?.state){
-      adminImportFallbackState=data.state;
+    const {data,error}=await client.from('loto_app_sessions').select('code,state,updated_at').in('code',[code,IMPORT_INBOX_CODE]);
+    if(!error && Array.isArray(data)){
+      for(const row of data){
+        if(row.code===code && row.state) adminImportFallbackState=row.state;
+        if(row.code===IMPORT_INBOX_CODE && row.state) adminImportInboxState=row.state;
+      }
       renderAdminScanQr();
       if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard();
     }
   }catch(e){ console.warn('Lecture session import impossible',e); }
 }
+
 
 async function renderLastScannedPseudoCard(){
   const gridBox=document.getElementById('adminScanPseudoGrid');
@@ -795,9 +809,15 @@ function initImportCardsRealtime(){
       .on('postgres_changes',{event:'*',schema:'public',table:'loto_cartons',filter:'status=eq.a_enregistrer'},()=>{
         renderLastScannedPseudoCard();
       })
+      .on('postgres_changes',{event:'*',schema:'public',table:'loto_app_sessions',filter:'code=eq.'+IMPORT_INBOX_CODE},payload=>{
+        if(payload?.new?.state) adminImportInboxState=payload.new.state;
+        renderAdminScanQr();
+        renderLastScannedPseudoCard();
+      })
       .subscribe();
   }catch(e){ console.warn('Realtime import cartons indisponible',e); }
 }
+
 
 setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash(); initImportCardsRealtime();},300);
 setInterval(renderAdminScanQr,5000);
