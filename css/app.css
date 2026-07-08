@@ -444,3 +444,16 @@
 .qr-box{min-width:190px;min-height:190px;display:flex;align-items:center;justify-content:center}
 .scan-skip-line{text-align:center;margin:.7rem 0 0}
 .scan-saisie-mode .scan-camera-large{min-height:58vh}
+
+
+/* V3.3.1 - homogénéisation affichages */
+:root{--sds-num-ready:#bfe4ff;--sds-num-ready-border:#7ebce8;--sds-num-ready-text:#073763;}
+.num{background:var(--sds-num-ready)!important;color:var(--sds-num-ready-text)!important;border-color:var(--sds-num-ready-border)!important;box-shadow:none!important;animation:none!important;transition:none!important;}
+.num.drawn{background:var(--orange)!important;color:#071421!important;border-color:#ffd166!important;box-shadow:none!important;}
+.num.pending{background:var(--orange)!important;color:#071421!important;border-color:#ffd166!important;box-shadow:none!important;animation:none!important;filter:none!important;transform:none!important;}
+.public-v213 .public-prize-lot{display:block;color:var(--orange)!important;font-size:22px;font-weight:1000;line-height:1.08;margin:0 0 5px 0;}
+.public-v213 .public-prize-step{display:block;color:#dbeafe!important;font-size:17px;font-weight:900;line-height:1.1;}
+.public-v213 .public-prize-row.won .public-prize-lot,.public-v213 .public-prize-row.won .public-prize-step{color:#93a9c5!important;}
+.public-v213 .public-game-mode{color:#dbeafe;margin-bottom:14px;}
+.lot-orange{color:var(--orange)!important;font-weight:1000;}
+.current-lot.compact-lot{white-space:normal;overflow:visible;text-overflow:clip;display:block;line-height:1.25;}
