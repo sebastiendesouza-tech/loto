@@ -1,20 +1,30 @@
-# V20 - Scanner carton loto
+# V20 - Scan carton
 
-Objectif de cette version : tester uniquement la géométrie.
+Objectif de cette version : tester la lecture géométrique d'un carton avant toute tentative d'OCR.
 
-Fonctionnement :
-1. Ouvrir `scanner.html?mode=saisie_cartons` ou le QR de saisie cartons depuis l'administration.
-2. Démarrer la caméra.
+## Ce qui est inclus
+
+- Conservation de la base webapp existante.
+- Conservation du mode commissaire.
+- Mode `saisie_cartons` remplacé par un test scanner carton.
+- Caméra téléphone.
+- Bouton `Photographier le carton`.
+- Image capturée affichée sous la caméra.
+- 4 coins ajustables au doigt ou à la souris.
+- Bouton `Redresser`.
+- Résultat redressé en 900 x 300.
+- Aucun OCR.
+- Aucun enregistrement de numéros.
+
+## Test
+
+1. Ouvrir la page de scan en mode saisie cartons.
+2. Cliquer sur `Démarrer caméra`.
 3. Mettre le téléphone en paysage.
-4. Placer tout le carton dans le cadre.
-5. Appuyer sur **Photographier le carton**.
-6. Vérifier le résultat affiché : le carton doit être redressé, complet et lisible.
+4. Cadrer tout le carton.
+5. Cliquer sur `Photographier le carton`.
+6. Ajuster les 4 coins si besoin.
+7. Cliquer sur `Redresser`.
+8. Vérifier si le carton redressé est propre.
 
-Important : cette version ne lit pas les numéros et n'enregistre aucun carton. Elle sert à valider la capture et le redressement avant de passer au découpage des 27 cases.
-
-Si le redressement est mauvais :
-- améliorer l'éclairage ;
-- poser le carton sur un fond contrasté ;
-- cadrer plus près ;
-- éviter les reflets ;
-- garder le téléphone parallèle au carton.
+Si le redressement est bon, la prochaine version pourra découper les 27 cases.

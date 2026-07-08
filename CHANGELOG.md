@@ -1,11 +1,11 @@
-# V20 - Scanner carton géométrique
 
-- Remplacement du mode OCR direct de saisie cartons par une V20 de test.
-- Capture caméra avec cadre paysage.
-- Découpe de la zone cadrée.
-- Tentative de détection des coins/bords du carton.
-- Redressement en canvas 900 x 300.
-- Aucun OCR et aucun enregistrement Supabase dans cette version.
+## V20 - Scan carton géométrique
+
+- Remplacement du test d'envoi de grille en mode saisie cartons.
+- Ajout capture caméra du carton.
+- Ajout image capturée avec 4 coins ajustables.
+- Ajout redressement perspective vers 900 x 300.
+- Aucun OCR dans cette version.
 
 # Loto by SdS v3.4.3
 
