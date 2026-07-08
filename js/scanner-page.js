@@ -9,6 +9,9 @@ let lastPartialGridSignature='';
 let lastPartialGridSentAt=0;
 let partialGridSent=false;
 let importDraftLocked=false;
+let gridCandidateSince=0;
+let gridReadAllowed=false;
+let lastFramePresence=false;
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 
 function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
@@ -70,7 +73,7 @@ function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudi
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function setNewCardButtonVisible(show){const b=document.getElementById('newImportCardBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetForNextCard(message='Place un carton dans le cadre puis démarre la caméra.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setNewCardButtonVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
+function resetForNextCard(message='Place un carton dans le cadre puis démarre la caméra.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setNewCardButtonVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
 function completeCurrentCard(message='✓ Carton terminé. Contrôle et valide sur le PC.'){importDraftLocked=true; scannerProcessing=false; setSkipVisible(false); setFrame('ok'); stopQrScanner(false); setStatus(message,'ok'); setNewCardButtonVisible(true); markImportScannerPresence(true);}
 function cleanAssociationId(v){const raw=String(v||'1').replace(/\D/g,''); return String(raw||'1').slice(-2).padStart(2,'0');}
 function cardInternalNumero(a,o){return Number(cleanAssociationId(a))*10000+Number(o||0);}
@@ -179,6 +182,31 @@ function drawRoi(video, canvas, ctx, small=false){
   if(small){sw=Math.floor(vw*.52); sh=Math.floor(vh*.42); sx=Math.floor((vw-sw)/2); sy=Math.floor((vh-sh)/2);}
   const outW=small?640:Math.min(vw,1100); const outH=Math.round(outW*sh/sw); canvas.width=outW; canvas.height=outH; ctx.drawImage(video,sx,sy,sw,sh,0,0,outW,outH); return {w:outW,h:outH};
 }
+
+function frameHasCard(canvas, ctx){
+  try{
+    const w=canvas.width, h=canvas.height;
+    if(!w||!h) return false;
+    const sx=Math.floor(w*0.12), sy=Math.floor(h*0.12), sw=Math.floor(w*0.76), sh=Math.floor(h*0.76);
+    const img=ctx.getImageData(sx,sy,sw,sh).data;
+    let count=0, dark=0, light=0, sum=0, sum2=0;
+    const step=16;
+    for(let i=0;i<img.length;i+=4*step){
+      const y=0.299*img[i]+0.587*img[i+1]+0.114*img[i+2];
+      sum+=y; sum2+=y*y; count++;
+      if(y<95) dark++;
+      if(y>185) light++;
+    }
+    if(!count) return false;
+    const mean=sum/count;
+    const variance=Math.max(0,sum2/count-mean*mean);
+    const contrast=Math.sqrt(variance);
+    const darkRatio=dark/count;
+    const lightRatio=light/count;
+    // Un carton dans le cadre donne normalement du blanc + des traits/chiffres foncés.
+    return lightRatio>0.18 && darkRatio>0.008 && contrast>24;
+  }catch(e){ return true; }
+}
 async function readIdentifierFromFrame(video, canvas, ctx){
   const {w,h}=drawRoi(video,canvas,ctx,true); const t0=performance.now();
   try{ if(window.jsQR){const img=ctx.getImageData(0,0,w,h); const qr=window.jsQR(img.data,w,h,{inversionAttempts:'attemptBoth'}); if(qr?.data) return {value:qr.data,type:'qr',quality:100,ms:performance.now()-t0};} }catch(e){}
@@ -187,12 +215,31 @@ async function readIdentifierFromFrame(video, canvas, ctx){
   return null;
 }
 async function startSaisieCartonsLoop(){
-  const video=document.getElementById('qrScannerVideo'); const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{willReadFrequently:true}); saisieStep='grid'; setStatus('Étape 1/2 : téléphone en paysage, cadre tout le carton. Scan continu.','muted'); setFrame('warn');
+  const video=document.getElementById('qrScannerVideo'); const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{willReadFrequently:true}); saisieStep='grid'; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; setStatus('Étape 1/2 : place le carton dans le grand cadre. Lecture OCR seulement quand il est bien cadré.','muted'); setFrame('warn');
   scannerTimer=setInterval(async()=>{
     if(importDraftLocked || scannerProcessing||!video||video.readyState<2||!window.Tesseract) return; scannerProcessing=true;
     try{
       if(saisieStep==='grid'){
         drawRoi(video,canvas,ctx,false);
+        const cardPresent=frameHasCard(canvas,ctx);
+        const nowPresence=Date.now();
+        if(cardPresent){
+          if(!lastFramePresence) gridCandidateSince=nowPresence;
+          lastFramePresence=true;
+        }else{
+          gridCandidateSince=0;
+          gridReadAllowed=false;
+          lastFramePresence=false;
+        }
+        if(!cardPresent || nowPresence-gridCandidateSince<700){
+          setReadTime(NaN);
+          setFrame('warn');
+          setStatus(cardPresent ? 'Carton détecté. Stabilisation du cadrage...' : 'Place tout le carton dans le grand cadre.','muted');
+          scannerProcessing=false;
+          return;
+        }
+        gridReadAllowed=true;
+        setStatus('Carton bien cadré — lecture OCR en cours.','muted');
         const t0=performance.now();
         const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
         const ms=performance.now()-t0;
@@ -236,13 +283,13 @@ async function startSaisieCartonsLoop(){
   }, saisieStep==='grid'?1800:1100);
 }
 async function startQrScanner(){
-  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; setNewCardButtonVisible(false); saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
+  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; setNewCardButtonVisible(false); saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grand cadre pour tout le carton. Étape 2 : petit cadre pour QR, code-barres ou identifiant.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
