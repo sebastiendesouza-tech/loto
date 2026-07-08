@@ -322,9 +322,27 @@
   }
   async function fetchCard(numero){
     if(!supabaseClient) return null;
-    const { data, error } = await supabaseClient.from('loto_cartons').select('*').eq('numero', Number(numero)).eq('actif', true).maybeSingle();
-    if(error) console.warn(error);
-    return data;
+    const raw = String(numero ?? '').trim();
+    let query = supabaseClient.from('loto_cartons').select('*').eq('actif', true);
+    const asNumber = Number(raw);
+    if(raw && !Number.isNaN(asNumber)){
+      const { data, error } = await query.eq('numero', asNumber).maybeSingle();
+      if(error) console.warn(error);
+      if(data) return data;
+    }
+    const m = raw.match(/SDS-(\d{1,2})-(\d{1,4})$/i);
+    if(m){
+      const internal = Number(String(m[1]).padStart(2,'0'))*10000 + Number(m[2]);
+      const { data, error } = await supabaseClient.from('loto_cartons').select('*').eq('actif', true).eq('numero', internal).maybeSingle();
+      if(error) console.warn(error);
+      if(data) return data;
+    }
+    if(raw){
+      const { data, error } = await supabaseClient.from('loto_cartons').select('*').eq('actif', true).or('carton_code.eq.'+raw+',qr_payload.eq.'+raw+',external_code.eq.'+raw).limit(1);
+      if(error) console.warn(error);
+      if(data && data[0]) return data[0];
+    }
+    return null;
   }
   function checkCard(card){
     const allDrawn = [...(state.drawnNumbers || [])];
@@ -405,7 +423,7 @@
       }
     }
     const checked = [{...result, at:new Date().toISOString()}, ...(state.checkedCards || [])].slice(0,50);
-    await save({ checkedCards: checked, history:addLog('check','Contrôle carton ' + numero, result) });
+    await save({ checkedCards: checked, history:addLog('check','Contrôle carton ' + (card.external_code || card.carton_code || numero), result) });
     return { found:true, result };
   }
   async function showPublicCard(result){ await save({ publicCard: result, history:addLog('show_card','Affichage carton ' + result.numero) }); }

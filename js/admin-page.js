@@ -571,8 +571,9 @@ async function listManagedCards(){
   out.innerHTML=data.map(c=>{
     const st=c.status||'disponible';
     const badge=st==='a_enregistrer'?'🟡 À enregistrer':(st==='disponible'?'🟢 Validé / disponible':(st==='vendu'?'🔵 Vendu':esc(st)));
-    const q=Number.isFinite(Number(c.ocr_quality)) ? ' · lecture '+Number(c.ocr_quality)+' %' : '';
-    return `<div class="saved-row"><div><b>${esc(c.carton_code||('Carton '+c.numero))}</b><br><span class="muted">${esc(c.serie||'STANDARD')} · ${badge}${q} · origine : ${esc(c.origine||'')}</span></div><div class="toolbar"><button data-edit-card="${esc(c.numero)}">Modifier</button>${st==='a_enregistrer'?`<button class="green" data-validate-card="${esc(c.numero)}">Valider</button>`:''}<button data-sold-card="${esc(c.carton_code||c.numero)}">Vendu</button><button data-free-card="${esc(c.carton_code||c.numero)}">Disponible</button></div></div>`;
+    const q=Number.isFinite(Number(c.ocr_quality)) ? ' · grille '+Number(c.ocr_quality)+' %' : '';
+    const ext=c.external_code ? ` · identifiant : ${esc(c.external_code)} (${esc(c.external_code_type||'')})` : ' · identifiant à saisir';
+    return `<div class="saved-row"><div><b>${esc(c.external_code||c.carton_code||('Carton '+c.numero))}</b><br><span class="muted">Interne : ${esc(c.carton_code||c.numero)} · ${esc(c.serie||'STANDARD')} · ${badge}${q}${ext} · origine : ${esc(c.origine||'')}</span></div><div class="toolbar"><button data-edit-card="${esc(c.numero)}">Modifier</button>${st==='a_enregistrer'?`<button class="green" data-validate-card="${esc(c.numero)}">Valider</button>`:''}<button data-sold-card="${esc(c.external_code||c.carton_code||c.numero)}">Vendu</button><button data-free-card="${esc(c.external_code||c.carton_code||c.numero)}">Disponible</button></div></div>`;
   }).join('');
   out.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>openEditCard(Number(b.dataset.editCard)));
   out.querySelectorAll('[data-validate-card]').forEach(b=>b.onclick=()=>quickValidateCard(Number(b.dataset.validateCard)));
@@ -596,9 +597,14 @@ async function saveEditedCard(statusOverride=null){
   const client=Loto.supabaseClient; if(!client){ statusText('editCardStatusBox','Supabase non configuré.',false); return; }
   try{
     const code=document.getElementById('editCardCode')?.value.trim(); const numero=codeToNumero(code)||editingCardNumero;
-    if(!numero) throw new Error('Code carton ou numéro obligatoire.');
+    if(!numero) throw new Error('Code interne ou numéro obligatoire.');
+    const externalCode=document.getElementById('editExternalCode')?.value.trim();
+    const externalType=document.getElementById('editExternalType')?.value.trim() || (externalCode ? 'manuel' : null);
+    const finalStatus=statusOverride||document.getElementById('editCardStatus')?.value||'a_enregistrer';
+    if(finalStatus==='disponible' && !externalCode) throw new Error('Identifiant du carton obligatoire avant validation.');
+    if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('external_code',externalCode).neq('numero',numero).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
     const grille=readGridEditor('editGridEditor');
-    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('editCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:code||String(numero),status:statusOverride||document.getElementById('editCardStatus')?.value||'a_enregistrer',ocr_quality:Number(document.getElementById('editCardQuality')?.value||100),origine:'Scan saisie cartons',actif:true,updated_at:new Date().toISOString()};
+    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,external_code:externalCode||null,external_code_type:externalType,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('editCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode||code||String(numero),status:finalStatus,ocr_quality:Number(document.getElementById('editCardQuality')?.value||100),origine:'Scan saisie cartons',actif:true,updated_at:new Date().toISOString()};
     const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
     statusText('editCardStatusBox', statusOverride==='disponible' ? 'Carton validé.' : 'Modifications enregistrées.', true);
     cartonStatus(statusOverride==='disponible' ? 'Carton validé : '+row.carton_code : 'Carton mis à jour : '+row.carton_code, true);
@@ -607,6 +613,9 @@ async function saveEditedCard(statusOverride=null){
 }
 async function quickValidateCard(numero){
   const client=Loto.supabaseClient; if(!client){ cartonStatus('Supabase non configuré.',false); return; }
+  const {data:card,error:readErr}=await client.from('loto_cartons').select('external_code,serie').eq('numero',numero).maybeSingle();
+  if(readErr){cartonStatus('Erreur validation : '+readErr.message,false); return;}
+  if((card?.serie||'').toUpperCase()==='IMPORT' && !card?.external_code){cartonStatus('Identifiant du carton obligatoire avant validation.',false); openEditCard(numero); return;}
   const {error}=await client.from('loto_cartons').update({status:'disponible',updated_at:new Date().toISOString()}).eq('numero',numero);
   if(error) cartonStatus('Erreur validation : '+error.message,false); else cartonStatus('Carton validé.',true);
   listManagedCards();
@@ -614,18 +623,30 @@ async function quickValidateCard(numero){
 async function saveManualCard(){
   const client=Loto.supabaseClient; if(!client){ statusText('generatedCardsStatus','Supabase non configuré.',false); return; }
   try{
-    const code=document.getElementById('manualCardCode')?.value.trim();
-    const numero=codeToNumero(code); if(!numero) throw new Error('Code carton ou numéro obligatoire.');
+    const externalCode=document.getElementById('manualCardExternalCode')?.value.trim();
+    const code=document.getElementById('manualCardCode')?.value.trim() || ('SDS-99-'+String(Date.now()%10000).padStart(4,'0'));
+    const numero=codeToNumero(code); if(!numero) throw new Error('Code interne ou numéro obligatoire.');
+    const targetStatus=document.getElementById('manualCardStatus')?.value||'a_enregistrer';
+    if(targetStatus==='disponible' && !externalCode) throw new Error('Identifiant du carton obligatoire avant validation.');
+    if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero').eq('external_code',externalCode).neq('numero',numero).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
     const grille=readGridEditor('manualGridEditor');
-    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('manualCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:code||String(numero),status:document.getElementById('manualCardStatus')?.value||'a_enregistrer',ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
+    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,external_code:externalCode||null,external_code_type:externalCode?'manuel':null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('manualCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode||code||String(numero),status:targetStatus,ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
     const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
     cartonStatus('Carton enregistré : '+row.carton_code,true); refreshCartonCount(); listManagedCards();
   }catch(e){ cartonStatus('Erreur : '+(e.message||e),false); }
 }
+
+async function resolveCardNumero(value){
+  const v=String(value||'').trim(); const n=codeToNumero(v); if(n) return n;
+  const client=Loto.supabaseClient; if(!client||!v) return null;
+  const {data}=await client.from('loto_cartons').select('numero').or('external_code.eq.'+v+',carton_code.eq.'+v+',qr_payload.eq.'+v).limit(1);
+  return data?.[0]?.numero || null;
+}
+
 async function markCardSold(value){
   const client=Loto.supabaseClient; if(!client){ statusText('salesTrackingStatus','Supabase non configuré.',false); return; }
   const v=value || document.getElementById('saleCardCode')?.value;
-  const numero=codeToNumero(v); if(!numero){ statusText('salesTrackingStatus','Code carton obligatoire.',false); return; }
+  const numero=await resolveCardNumero(v); if(!numero){ statusText('salesTrackingStatus','Identifiant carton obligatoire ou introuvable.',false); return; }
   const s=Loto.state();
   const sale={loto_id:s.program?.id||s.sessionCode, loto_title:s.program?.title||s.lotoName||'', numero, carton_code:String(v||''), seller:document.getElementById('saleSeller')?.value||'', status:'vendu', sold_at:new Date().toISOString()};
   const {error}=await client.from('loto_cartons').update({status:'vendu',updated_at:new Date().toISOString()}).eq('numero',numero);
@@ -637,7 +658,7 @@ async function markCardSold(value){
 async function markCardAvailable(value){
   const client=Loto.supabaseClient; if(!client){ statusText('salesTrackingStatus','Supabase non configuré.',false); return; }
   const v=value || document.getElementById('saleCardCode')?.value;
-  const numero=codeToNumero(v); if(!numero){ statusText('salesTrackingStatus','Code carton obligatoire.',false); return; }
+  const numero=await resolveCardNumero(v); if(!numero){ statusText('salesTrackingStatus','Identifiant carton obligatoire ou introuvable.',false); return; }
   const {error}=await client.from('loto_cartons').update({status:'disponible',updated_at:new Date().toISOString()}).eq('numero',numero);
   if(error){ statusText('salesTrackingStatus','Erreur : '+error.message,false); return; }
   const s=Loto.state(); try{ await client.from('loto_carton_sales').delete().eq('loto_id',s.program?.id||s.sessionCode).eq('numero',numero); }catch(e){}
@@ -661,6 +682,7 @@ function adminScanUrl(){
 }
 function renderAdminScanQr(){
   const a=document.getElementById('openScanSaisie'); if(a) a.href=adminScanUrl();
+  const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=adminScanUrl();
   const qr=document.getElementById('scanSaisieQr');
   if(qr){ qr.innerHTML=''; if(window.QRCode) new QRCode(qr,{text:adminScanUrl(),width:170,height:170,correctLevel:QRCode.CorrectLevel.M}); else qr.textContent=adminScanUrl(); }
 }
@@ -676,7 +698,7 @@ async function renderLastScannedPseudoCard(){
     const {data,error}=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
     if(error||!data) throw error||new Error('carton introuvable');
     renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
-    if(status) status.textContent='Dernier scan : '+(data.carton_code||code)+' · '+(data.status||'a_enregistrer')+' · lecture '+(data.ocr_quality??'-')+' %';
+    if(status) status.textContent='Dernier scan : '+(data.external_code||data.carton_code||code)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · identifiant '+(data.external_code_type||'à saisir');
     document.getElementById('cardStatusFilter').value='a_enregistrer';
     listManagedCards();
   }catch(e){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Dernier scan : '+code+' non relu dans Supabase.'; }
