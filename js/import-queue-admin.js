@@ -102,11 +102,12 @@
     const {data,error}=await client.from('scan_queue').select('*').eq('session_code',sessionCode()).eq('mode',MODE).order('created_at',{ascending:false}).limit(12);
     if(error){setStatus('Erreur lecture scan_queue : '+error.message,false); return;}
     const messages=(data||[]).filter(x=>x.type!=='presence');
-    const latestGrid=messages.find(x=>x.type==='draft_grid' || x.type==='draft_grid_partial' || x.type==='draft_full');
     const latestIdentifier=messages.find(x=>x.type==='draft_identifier');
+    const lockTime=latestIdentifier ? new Date(latestIdentifier.created_at).getTime() : null;
+    const latestGrid=messages.find(x=>(x.type==='draft_grid' || x.type==='draft_grid_partial' || x.type==='draft_full') && (!lockTime || new Date(x.created_at).getTime()<=lockTime));
     const latestTest=messages.find(x=>x.type==='test' || x.type==='pc_test');
     if(latestGrid) applyPayload(latestGrid);
-    if(latestIdentifier) applyPayload(latestIdentifier);
+    if(latestIdentifier){ applyPayload(latestIdentifier); setStatus('Carton complet : identifiant reçu à '+new Date(latestIdentifier.created_at).toLocaleTimeString('fr-FR')+'. La grille est verrouillée côté téléphone.',true); }
     const lastUseful=messages[0];
     if(lastUseful){
       if(!latestGrid && !latestIdentifier) applyPayload(lastUseful);
