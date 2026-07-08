@@ -702,26 +702,7 @@ function latestImportState(){
     importDrafts: inbox.importDrafts || live.importDrafts || fallback.importDrafts
   };
 }
-function renderAdminScanQr(){
-  const url=adminScanUrl();
-  const a=document.getElementById('openScanSaisie'); if(a) a.href=url;
-  const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=url;
-  const qrBox=document.getElementById('scanSaisieQr');
-  const phoneBox=document.getElementById('scanSaisiePhoneStatus');
-  const st=latestImportState().importScanner || {};
-  const connected=!!st.connected && st.mode==='saisie_cartons' && (Date.now()-Number(st.lastSeen||0)<30000);
-  if(phoneBox){
-    phoneBox.style.display=connected?'block':'none';
-    phoneBox.innerHTML=connected ? "<b>📱 Téléphone connecté</b><br><span>Mode : saisie de cartons</span><br><span>En attente d'un carton...</span>" : '';
-  }
-  if(qrBox){
-    qrBox.style.display=connected?'none':'flex';
-    if(!connected){
-      qrBox.dataset.currentUrl=url;
-      qrBox.innerHTML='<img class="admin-scan-qr-img" src="'+ADMIN_SCAN_QR_DATA_URI+'" alt="QR code scan saisie cartons" width="170" height="170">';
-    }
-  }
-}
+function renderAdminScanQr(){ /* v3.4.1 : QR et etat telephone geres par import-queue-admin.js */ }
 function importDraftFromState(){
   const st=latestImportState();
   if(st.lastImportDraft?.numero) return st.lastImportDraft;
@@ -745,53 +726,7 @@ async function pollImportSessionState(){
 }
 
 
-async function renderLastScannedPseudoCard(){
-  const gridBox=document.getElementById('adminScanPseudoGrid');
-  const status=document.getElementById('adminScanLastStatus');
-  const idInput=document.getElementById('adminScanExternalCode');
-  if(!gridBox) return;
-  const showBlank=(msg)=>{
-    renderGridEditor('adminScanPseudoGrid', emptyGrid3x9());
-    if(idInput) idInput.value='';
-    if(status) status.textContent=msg || 'En attente d’un carton scanné.';
-  };
-  const client=Loto.supabaseClient;
-  if(!client){ showBlank('Supabase non configuré.'); return; }
-  try{
-    let data=importDraftFromState();
-    if(data?.numero){
-      try{
-        const res=await client.from('loto_cartons').select('*').eq('numero',data.numero).maybeSingle();
-        if(!res.error && res.data) data={...data,...res.data};
-      }catch(e){ console.warn('Brouillon visible via session, table non relue',e); }
-    }
-    if(!data){
-      let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
-      if(code){
-        try{
-          const numero=codeToNumero(code);
-          const res=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
-          if(!res.error && res.data) data=res.data;
-        }catch(e){}
-      }
-    }
-    if(!data){
-      try{
-        const res=await client.from('loto_cartons').select('*').eq('status','a_enregistrer').eq('serie','IMPORT').eq('actif',true).order('updated_at',{ascending:false}).limit(1);
-        if(!res.error) data=res.data?.[0]||null;
-      }catch(e){ console.warn('Lecture table import impossible',e); }
-    }
-    if(!data){ showBlank('Aucun carton à enregistrer. Le champ identifiant se remplira après scan.'); return; }
-    renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
-    if(idInput) idInput.value=data.external_code||'';
-    if(status){
-      const ident=data.external_code ? ('identifiant '+data.external_code+' ('+(data.external_code_type||'lu')+')') : 'identifiant à compléter sur PC';
-      status.textContent='Dernier brouillon : '+(data.carton_code||data.numero)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · '+ident+(data.sync_error?' · ⚠ '+data.sync_error:'');
-    }
-    const f=document.getElementById('cardStatusFilter'); if(f) f.value='a_enregistrer';
-    listManagedCards();
-  }catch(e){ showBlank('Impossible de relire le dernier brouillon : '+(e.message||e)); }
-}
+async function renderLastScannedPseudoCard(){ /* v3.4.1 : pseudo-carton gere par import-queue-admin.js */ }
 function openCartonsTabFromHash(){
   if(location.hash==='#cartons'){
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
