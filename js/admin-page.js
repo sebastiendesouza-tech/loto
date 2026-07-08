@@ -685,20 +685,15 @@ function qrImageFallback(url, size=170){
 }
 function renderQrInto(el, url, size=170){
   if(!el) return;
-  el.innerHTML='';
+  const fallbackHtml='<img src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="'+size+'" height="'+size+'">';
   try{
+    el.innerHTML='';
     if(window.QRCode){
       new QRCode(el,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
-      return;
+      if(el.children.length) return;
     }
   }catch(e){}
-  const img=document.createElement('img');
-  img.alt='QR code';
-  img.width=size;
-  img.height=size;
-  img.src=qrImageFallback(url,size);
-  img.onerror=()=>{ el.textContent=url; };
-  el.appendChild(img);
+  el.innerHTML=fallbackHtml;
 }
 function renderAdminScanQr(){
   const url=adminScanUrl();
