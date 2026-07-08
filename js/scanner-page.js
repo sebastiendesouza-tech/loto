@@ -15,6 +15,8 @@ let lastFramePresence=false;
 let stableOcrCounts={};
 let stableOcrAccepted=[];
 let stableOcrLastSeenAt=0;
+let lastGridRowsSignature='';
+let lastGridRowsCount=0;
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 
 function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
@@ -76,7 +78,7 @@ function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudi
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function setNewCardButtonVisible(show){const b=document.getElementById('newImportCardBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetStableOcr(){stableOcrCounts={}; stableOcrAccepted=[]; stableOcrLastSeenAt=0;}
+function resetStableOcr(){stableOcrCounts={}; stableOcrAccepted=[]; stableOcrLastSeenAt=0; lastGridRowsSignature=''; lastGridRowsCount=0;}
 function normalizeOcrNumbers(nums){return (nums||[]).map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90);}
 function updateStableOcrNumbers(nums){
   const clean=normalizeOcrNumbers(nums);
@@ -102,6 +104,114 @@ function gridToLignes3x9(grid){return grid.map(r=>r.filter(n=>n!==null));}
 function emptyGrid3x9(){return Array.from({length:3},()=>Array(9).fill(null));}
 function buildGridFromNumbers(nums){const g=emptyGrid3x9(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=(i%5)*2; g[r][c]=n;}); return g;}
 function parseOcrNumbers(text){const found=(String(text||'').match(/\b\d{1,2}\b/g)||[]).map(Number).filter(n=>n>=1&&n<=90); const uniq=[]; for(const n of found){ if(!uniq.includes(n)) uniq.push(n); } return uniq.slice(0,15);}
+
+function wordBox(word){
+  const b=word?.bbox || word || {};
+  const x0=Number(b.x0 ?? b.left ?? b.x ?? 0);
+  const y0=Number(b.y0 ?? b.top ?? b.y ?? 0);
+  const x1=Number(b.x1 ?? (x0 + Number(b.width ?? 0)));
+  const y1=Number(b.y1 ?? (y0 + Number(b.height ?? 0)));
+  return {x0,y0,x1,y1,cx:(x0+x1)/2,cy:(y0+y1)/2,w:Math.max(1,x1-x0),h:Math.max(1,y1-y0)};
+}
+function ocrWordsToNumberItems(result){
+  const words=Array.isArray(result?.data?.words) ? result.data.words : [];
+  const items=[];
+  for(const word of words){
+    const raw=String(word?.text||'').replace(/[^0-9]/g,'');
+    if(!raw) continue;
+    const box=wordBox(word);
+    // Un mot de 1 ou 2 chiffres est idéal. S'il est plus long, on le découpe prudemment en paires.
+    const chunks=raw.length<=2 ? [raw] : (raw.match(/\d{1,2}/g)||[]);
+    if(chunks.length===1){
+      const n=Number(chunks[0]);
+      if(Number.isInteger(n)&&n>=1&&n<=90) items.push({...box,text:chunks[0],n});
+    }else{
+      const partW=box.w/chunks.length;
+      chunks.forEach((c,i)=>{
+        const n=Number(c);
+        if(Number.isInteger(n)&&n>=1&&n<=90){
+          const x0=box.x0+i*partW, x1=box.x0+(i+1)*partW;
+          items.push({...box,x0,x1,cx:(x0+x1)/2,text:c,n});
+        }
+      });
+    }
+  }
+  return items;
+}
+function clusterItemsIntoRows(items){
+  if(!items.length) return [];
+  const sorted=items.slice().sort((a,b)=>a.cy-b.cy);
+  const rows=[];
+  const avgH=sorted.reduce((s,it)=>s+it.h,0)/sorted.length;
+  for(const it of sorted){
+    let row=rows.find(r=>Math.abs(r.cy-it.cy)<Math.max(avgH*1.2,22));
+    if(!row){row={cy:it.cy,items:[]}; rows.push(row);} 
+    row.items.push(it);
+    row.cy=row.items.reduce((s,x)=>s+x.cy,0)/row.items.length;
+  }
+  rows.sort((a,b)=>a.cy-b.cy);
+  // Si Tesseract crée plus de 3 petites lignes, on les regroupe dans 3 bandes horizontales.
+  if(rows.length>3){
+    const minY=Math.min(...items.map(i=>i.cy));
+    const maxY=Math.max(...items.map(i=>i.cy));
+    const span=Math.max(1,maxY-minY+1);
+    const bands=[{cy:0,items:[]},{cy:0,items:[]},{cy:0,items:[]}];
+    for(const it of items){
+      const idx=Math.max(0,Math.min(2,Math.floor(((it.cy-minY)/span)*3)));
+      bands[idx].items.push(it);
+    }
+    return bands.filter(r=>r.items.length).map(r=>{r.cy=r.items.reduce((s,x)=>s+x.cy,0)/r.items.length; return r;}).sort((a,b)=>a.cy-b.cy);
+  }
+  return rows;
+}
+function numbersFromRowItems(rowItems){
+  const row=rowItems.slice().sort((a,b)=>a.cx-b.cx);
+  const out=[];
+  const used=new Set();
+  const avgH=row.length ? row.reduce((s,it)=>s+it.h,0)/row.length : 18;
+  for(let i=0;i<row.length;i++){
+    if(used.has(i)) continue;
+    const cur=row[i];
+    let val=cur.n;
+    // Recompose 2 chiffres coupés en 2 mots seulement s'ils sont très proches.
+    if(String(cur.text).length===1 && i+1<row.length && !used.has(i+1)){
+      const next=row[i+1];
+      const gap=next.x0-cur.x1;
+      const combined=Number(String(cur.text)+String(next.text));
+      if(String(next.text).length===1 && gap>=-2 && gap<Math.max(12,avgH*0.75) && combined>=10 && combined<=90){
+        val=combined;
+        used.add(i+1);
+      }
+    }
+    if(Number.isInteger(val)&&val>=1&&val<=90&&!out.includes(val)) out.push(val);
+    used.add(i);
+  }
+  return out.slice(0,5);
+}
+function parseOcrNumbersByRows(result){
+  const items=ocrWordsToNumberItems(result);
+  if(!items.length){
+    const nums=parseOcrNumbers(result?.data?.text||'');
+    return {rows:[nums.slice(0,5),nums.slice(5,10),nums.slice(10,15)], nums};
+  }
+  const rows=clusterItemsIntoRows(items).slice(0,3).map(r=>numbersFromRowItems(r.items));
+  while(rows.length<3) rows.push([]);
+  const nums=rows.flat().slice(0,15);
+  return {rows, nums};
+}
+function buildGridFromRows(rows){
+  const g=emptyGrid3x9();
+  (rows||[]).slice(0,3).forEach((row,r)=>{
+    (row||[]).slice(0,5).forEach((n,i)=>{ g[r][(i%5)*2]=n; });
+  });
+  return g;
+}
+function stableRowsAccepted(rows){
+  const signature=(rows||[]).map(r=>(r||[]).join(',')).join('|');
+  if(signature && signature===lastGridRowsSignature) lastGridRowsCount++;
+  else {lastGridRowsSignature=signature; lastGridRowsCount=1;}
+  return signature && lastGridRowsCount>=2;
+}
 function parseIdentifierText(text){
   const raw=String(text||'')
     .toUpperCase()
@@ -263,29 +373,24 @@ async function startSaisieCartonsLoop(){
         const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
         const ms=performance.now()-t0;
         setReadTime(ms);
-        const rawNums=parseOcrNumbers(result?.data?.text||'');
-        const nums=updateStableOcrNumbers(rawNums);
+        const parsed=parseOcrNumbersByRows(result);
+        const rows=parsed.rows;
+        const nums=parsed.nums;
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
-        if(rawNums.length>0){
-          const grid=buildGridFromNumbers(nums);
-          const sig=nums.join('-');
-          const now=Date.now();
-          if(nums.length>0 && (sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500)){
-            await savePartialOcrDraft(grid,quality,result?.data?.text||'',nums.length);
-            lastPartialGridSignature=sig;
-            lastPartialGridSentAt=now;
-            partialGridSent=true;
-          }
-          setFrame(nums.length>=15?'ok':'warn');
-          setStatus('Étape 1/2 : '+nums.length+'/15 numéros confirmés. Lecture brute : '+rawNums.length+'/15. Stabilisation OCR en cours.','muted');
-          if(nums.length>=15){
+        if(nums.length>0){
+          const grid=buildGridFromRows(rows);
+          const confirmed=nums.length>=15 && stableRowsAccepted(rows);
+          setFrame(confirmed?'ok':'warn');
+          setStatus('Étape 1/2 : lecture par lignes '+nums.length+'/15. Ordre : gauche → droite, haut → bas. '+(nums.length>=15?'Stabilisation 2 lectures...':'Continue à cadrer.'),'muted');
+          if(confirmed){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
+            partialGridSent=true;
             setFrame('ok');
             beep(true);
-            setStatus('✓ 15 numéros confirmés et envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ Grille complète envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
-            setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);
+            setTimeout(()=>{scannerProcessing=false; setFrame('warn');},900);
           }else{
             scannerProcessing=false;
           }
@@ -309,7 +414,7 @@ async function startQrScanner(){
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grand cadre pour tout le carton. Étape 2 : petit cadre pour QR, code-barres ou identifiant.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : lecture par lignes, de gauche à droite et de haut en bas. Étape 2 : petit cadre pour QR, code-barres ou identifiant.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
