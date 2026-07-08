@@ -463,3 +463,11 @@
 .admin-scan-qr-img,.admin-scan-qr-box img{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;image-rendering:pixelated;display:block}
 .phone-scan-status{background:#eefdf3;border:1px solid #86efac;border-radius:12px;padding:14px;margin:0 auto 8px;max-width:210px;text-align:center;color:#14532d;line-height:1.45}
 .scan-admin-qr{min-width:210px}
+
+/* v3.3.5 - pseudo carton import visible avant scan */
+.admin-scan-id-label{display:block;margin:8px 0 10px;max-width:360px;font-weight:700}
+.admin-scan-id-label input{margin-top:5px;font-size:1.1rem;font-weight:800;background:#fff}
+.pseudo-card .toolbar{margin-top:10px}
+.scan-step-banner{margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef7ff;border:1px solid #b7defa;font-weight:700}
+.scan-step-banner.ok{background:#e8f8ee;border-color:#8ed1a8}
+.scan-step-banner.bad{background:#fff0f0;border-color:#f0aaaa}
