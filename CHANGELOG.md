@@ -1,4 +1,11 @@
-# v3.4.13 - cadrage OCR stabilisé
+# v3.4.14 - OCR par lignes
+
+- Lecture de la grille triée par coordonnées.
+- Regroupement en 3 lignes horizontales.
+- Tri des numéros de gauche à droite dans chaque ligne.
+- Envoi de la grille seulement après 15 numéros et 2 lectures stables.
+- Identifiant inchangé : QR / code-barres / OCR avec lettres, chiffres, / et -.
+
 
 - Reprise de la base v3.4.11 / v3.4.6.
 - OCR grille lance uniquement quand le carton est détecté et stable dans le grand cadre.
