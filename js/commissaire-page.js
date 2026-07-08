@@ -36,12 +36,12 @@ function diagnosticHtml(r){
 
 function renderLot(s){
   if(!currentLot) return;
-  if(s.miniBingoActive){ currentLot.innerHTML = '<b class="lot-orange">MINI-BINGO</b><br><span>tirage de départage en cours</span>'; return; }
+  if(s.miniBingoActive){ currentLot.innerHTML = '<b>MINI-BINGO</b> · tirage de départage en cours'; return; }
   const p = Loto.currentPartie();
   const prize = Loto.currentPrize();
-  if(!p || !prize){ currentLot.innerHTML = '<b class="lot-orange">Lot en cours : partie simple</b><br><span>tirage simple</span>'; return; }
+  if(!p || !prize){ currentLot.innerHTML = '<b>Lot en cours :</b> partie simple sans programme'; return; }
   const req = Loto.currentRequirement();
-  currentLot.innerHTML = `<b class="lot-orange">LOT : ${esc(prize.label || 'Lot non renseigné')}</b><br><span>${esc(req.label || '')} · ${esc(Loto.gameModeLabel(p))}</span>`;
+  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(Loto.gameModeLabel(p))}</span><br><strong>${esc(req.label || '')}</strong><br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
 }
 
 function renderResult(payload){

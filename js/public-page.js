@@ -70,7 +70,7 @@ function renderLots(s){
 
   publicPartHeader.textContent = s.miniBingoActive ? 'MINI-BINGO' : (total ? `Partie ${index}/${total}` : 'Partie simple');
   publicGameTitle.textContent = s.miniBingoActive ? 'Mini-bingo' : (total ? `Partie n°${index}` : 'Partie simple');
-  publicGameMode.textContent = s.miniBingoActive ? 'Mini-bingo' : (partie ? Loto.gameModeLabel(partie) : 'Tirage simple');
+  publicGameMode.textContent = s.miniBingoActive ? 'Jeu : Mini-bingo' : (partie ? `Jeu : ${Loto.gameModeLabel(partie)}` : 'Jeu : tirage simple');
 
   if(!opts.showLots || !partie){
     publicStep.textContent = '';
@@ -84,7 +84,7 @@ function renderLots(s){
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
     const lotLabel = (partie?.gameMode || 'ligne') === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
-    return `<div class="public-prize-row ${cls}"><span class="public-prize-lot">${lotLabel} : ${lot}</span><span class="public-prize-step">${stepLabelFor(partie,i)}</span></div>`;
+    return `<div class="public-prize-row ${cls}"><span class="public-prize-step">${stepLabelFor(partie,i)}</span><span class="public-prize-lot">${lotLabel} : ${lot}</span></div>`;
   }).join('')}</div>`;
 }
 

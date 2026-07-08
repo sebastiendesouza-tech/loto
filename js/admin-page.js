@@ -112,7 +112,7 @@ document.getElementById('deleteStandardCartons')?.addEventListener('click',delet
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
 document.getElementById('testCardBtn')?.addEventListener('click', testCard);
 
-Loto.onChange(s=>{Loto.pageHeader(); renderAdminScanQr(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
+Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);
 
 
@@ -135,26 +135,34 @@ function rangeForColumn(col){ if(col===0) return [1,9]; if(col===8) return [80,9
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildCardGrid(){
   const grid=Array.from({length:3},()=>Array(9).fill(null));
-  const rowCounts=[0,0,0]; const colCounts=Array(9).fill(0);
-  for(let col=0;col<9;col++){
-    const possible=shuffle([0,1,2].filter(r=>rowCounts[r]<5));
-    const row=possible[0]; grid[row][col]=0; rowCounts[row]++; colCounts[col]++;
+  const colCounts=Array(9).fill(0);
+
+  // Chaque ligne reçoit 5 colonnes. Une colonne peut rester vide.
+  // Une colonne peut être utilisée par 1, 2 ou 3 lignes.
+  for(let r=0;r<3;r++){
+    const rowCols=[];
+    let guard=0;
+    while(rowCols.length<5 && guard<200){
+      guard++;
+      const candidates=[...Array(9).keys()].filter(c=>!rowCols.includes(c) && colCounts[c]<3);
+      const c=shuffle(candidates)[0];
+      if(c===undefined) break;
+      rowCols.push(c);
+      colCounts[c]++;
+    }
+    rowCols.forEach(c=>grid[r][c]=0);
   }
-  while(rowCounts.some(c=>c<5)){
-    const r=shuffle([0,1,2].filter(r=>rowCounts[r]<5))[0];
-    const cols=shuffle([...Array(9).keys()].filter(c=>grid[r][c]===null && colCounts[c]<3));
-    const c=cols[0]; if(c===undefined) break;
-    grid[r][c]=0; rowCounts[r]++; colCounts[c]++;
-  }
+
   for(let col=0;col<9;col++){
     const [min,max]=rangeForColumn(col);
     const pool=[]; for(let n=min;n<=max;n++) pool.push(n);
     shuffle(pool);
-    const rows=[0,1,2].filter(r=>grid[r][col]===0).sort((a,b)=>a-b);
-    const nums=pool.slice(0,rows.length).sort((a,b)=>a-b);
-    rows.forEach((r,i)=>grid[r][col]=nums[i]);
+    const rows=[0,1,2].filter(r=>grid[r][col]===0);
+    const nums=pool.slice(0,rows.length);
+    // Pas de croissance verticale obligatoire : attribution aléatoire aux lignes occupées.
+    shuffle(rows).forEach((r,i)=>grid[r][col]=nums[i]);
   }
-  return grid;
+  return grid.map(row=>row.map(n=>n||0));
 }
 function gridToLignes(grid){ return grid.map(row=>row.filter(n=>Number.isInteger(n))); }
 function cleanAssociationId(value){
@@ -167,7 +175,7 @@ function cartonCodeFromOrder(order, associationId){ return 'SDS-'+cleanAssociati
 function cartonCode(numeroOrOrder, associationId){ return cartonCodeFromOrder(numeroOrOrder, associationId); }
 function sheetCode(sheetNumber, associationId){ return 'SDSP-'+cleanAssociationId(associationId)+'-'+String(String(Math.max(0, Number(sheetNumber||1))).slice(-4)).padStart(4,'0'); }
 function numbersSignatureFromGrid(grid){
-  const nums=(grid||[]).flat().filter(n=>Number.isInteger(Number(n))).map(n=>Number(n)).sort((a,b)=>a-b);
+  const nums=(grid||[]).flat().map(n=>Number(n)||0).filter(n=>Number.isInteger(n) && n>0).sort((a,b)=>a-b);
   return nums.map(n=>String(n).padStart(2,'0')).join('-');
 }
 async function nextOrderForAssociation(associationId){
@@ -528,34 +536,94 @@ function statusText(elId, text, good=true){
   const el=document.getElementById(elId); if(!el) return;
   el.textContent=text; el.className='notice '+(good?'ok-note':'bad-note'); el.style.display='block';
 }
-function emptyGrid3x9(){ return Array.from({length:3},()=>Array(9).fill(null)); }
+function emptyGrid3x9(){ return Array.from({length:3},()=>Array(9).fill(0)); }
 function normalizeGrid3x9(grid, lignes){
-  if(Array.isArray(grid) && grid.length===3 && grid.every(r=>Array.isArray(r) && r.length===9)) return grid.map(r=>r.map(n=>Number.isInteger(Number(n)) ? Number(n) : null));
+  if(Array.isArray(grid) && grid.length===3 && grid.every(r=>Array.isArray(r) && r.length===9)) return grid.map(r=>r.map(n=>{ const v=Number(n)||0; return Number.isInteger(v) && v>0 ? v : 0; }));
   const g=emptyGrid3x9();
   if(Array.isArray(lignes) && lignes.length===3){
-    lignes.forEach((line,r)=>{ (line||[]).slice(0,5).forEach((n,i)=>{ g[r][i*2]=Number(n)||null; }); });
+    lignes.forEach((line,r)=>{ (line||[]).slice(0,5).forEach((n,i)=>{ const v=Number(n)||0; g[r][i*2]=v>0?v:0; }); });
   }
   return g;
 }
 function renderGridEditor(elId, grid){
   const el=document.getElementById(elId); if(!el) return;
   const g=normalizeGrid3x9(grid);
-  el.innerHTML=g.map((row,r)=>row.map((n,c)=>`<input inputmode="numeric" min="1" max="90" maxlength="2" data-grid="${elId}" data-r="${r}" data-c="${c}" value="${n||''}">`).join('')).join('');
+  el.innerHTML=g.map((row,r)=>row.map((n,c)=>`<input inputmode="numeric" min="1" max="90" maxlength="2" data-grid="${elId}" data-r="${r}" data-c="${c}" value="${n>0?n:''}">`).join('')).join('');
+}
+function validateGridRules(grid){
+  const g=normalizeGrid3x9(grid);
+  const all=g.flat().filter(n=>n>0);
+  if(all.length!==15) throw new Error('La grille doit contenir exactement 15 numéros.');
+  if(all.some(n=>!Number.isInteger(n)||n<1||n>90)) throw new Error('Les numéros doivent être entre 1 et 90.');
+  if(new Set(all).size!==15) throw new Error('Doublon détecté dans le carton.');
+  g.forEach((row,r)=>{
+    const nums=row.filter(n=>n>0);
+    if(nums.length!==5) throw new Error('La ligne '+(r+1)+' doit contenir 5 numéros.');
+    for(let i=1;i<nums.length;i++){ if(nums[i]<=nums[i-1]) throw new Error('La ligne '+(r+1)+' doit être strictement croissante.'); }
+  });
+  for(let c=0;c<9;c++){
+    const [min,max]=rangeForColumn(c);
+    const col=[g[0][c],g[1][c],g[2][c]].filter(n=>n>0);
+    // Une colonne peut être vide. Elle peut contenir au maximum 3 numéros.
+    if(col.length>3) throw new Error('La colonne '+(c+1)+' contient trop de numéros.');
+    if(col.some(n=>n<min||n>max)) throw new Error('Colonne '+(c+1)+' incohérente : valeurs attendues de '+min+' à '+max+'.');
+    // Pas de contrôle de croissance verticale : les numéros d'une colonne peuvent
+    // être dans n'importe quel ordre sur les 3 lignes.
+  }
+  return g;
 }
 function readGridEditor(elId){
   const grid=emptyGrid3x9();
   document.querySelectorAll(`[data-grid="${elId}"]`).forEach(inp=>{
     const r=Number(inp.dataset.r), c=Number(inp.dataset.c); const raw=String(inp.value||'').trim();
-    grid[r][c]=raw?Number(raw):null;
+    grid[r][c]=raw?Number(raw):0;
   });
-  const all=grid.flat().filter(n=>n!==null);
-  if(all.length!==15) throw new Error('La grille doit contenir exactement 15 numéros.');
+  return validateGridRules(grid);
+}
+function gridToLignes(grid){ return normalizeGrid3x9(grid).map(row=>row.filter(n=>n>0)); }
+
+function columnForNumber(n){
+  n=Number(n);
+  if(n>=1 && n<=9) return 0;
+  if(n>=80 && n<=90) return 8;
+  if(n>=10 && n<=79) return Math.floor(n/10);
+  return -1;
+}
+function parseQuickCardInput(value){
+  const raw=String(value||'').trim();
+  if(!raw) throw new Error('Saisie rapide vide.');
+  let lineParts=raw.split(/\n+/).map(line=>line.match(/\d+/g)?.map(Number)||[]).filter(line=>line.length);
+  if(lineParts.length===1 && lineParts[0].length===15) lineParts=[lineParts[0].slice(0,5),lineParts[0].slice(5,10),lineParts[0].slice(10,15)];
+  if(lineParts.length!==3) throw new Error('Il faut 3 lignes, ou 15 numéros saisis à la suite.');
+  if(lineParts.some(line=>line.length!==5)) throw new Error('Chaque ligne doit contenir 5 numéros.');
+  return lineParts;
+}
+function buildGridFromQuickLines(lines){
+  const grid=emptyGrid3x9();
+  const all=lines.flat();
   if(all.some(n=>!Number.isInteger(n)||n<1||n>90)) throw new Error('Les numéros doivent être entre 1 et 90.');
   if(new Set(all).size!==15) throw new Error('Doublon détecté dans le carton.');
-  if(grid.some(row=>row.filter(n=>n!==null).length!==5)) throw new Error('Chaque ligne doit contenir 5 numéros.');
+  lines.forEach((line,r)=>{
+    for(let i=1;i<line.length;i++){ if(line[i]<=line[i-1]) throw new Error('La ligne '+(r+1)+' doit être strictement croissante.'); }
+    line.forEach(n=>{
+      const c=columnForNumber(n);
+      if(c<0) throw new Error('Numéro invalide : '+n);
+      if(grid[r][c]>0) throw new Error('Ligne '+(r+1)+' : deux numéros dans la même colonne ('+grid[r][c]+' et '+n+').');
+      grid[r][c]=n;
+    });
+  });
+  return validateGridRules(grid);
+}
+function quickStatus(text, good=true){ statusText('quickCardStatus', text, good); }
+function prepareQuickCardGrid(){
+  const lines=parseQuickCardInput(document.getElementById('quickCardInput')?.value||'');
+  const grid=buildGridFromQuickLines(lines);
+  renderGridEditor('manualGridEditor', grid);
+  const block=document.getElementById('manualGridBlock'); if(block) block.style.display='block';
+  quickStatus('Contrôle OK : carton prêt à enregistrer.', true);
   return grid;
 }
-function gridToLignes(grid){ return grid.map(row=>row.filter(n=>n!==null)); }
+
 let editingCardNumero=null;
 async function listManagedCards(){
   const client=Loto.supabaseClient; const out=document.getElementById('managedCardsList'); if(!out) return;
@@ -585,8 +653,6 @@ async function openEditCard(numero){
   const {data,error}=await client.from('loto_cartons').select('*').eq('numero',numero).single();
   if(error){ cartonStatus('Erreur lecture carton : '+error.message,false); return; }
   editingCardNumero=numero;
-  document.getElementById('editExternalCode').value=data.external_code||'';
-  document.getElementById('editExternalType').value=data.external_code_type||'';
   document.getElementById('editCardCode').value=data.carton_code||'';
   document.getElementById('editCardSerie').value=data.serie||'IMPORT';
   document.getElementById('editCardQuality').value=data.ocr_quality??'';
@@ -622,19 +688,38 @@ async function quickValidateCard(numero){
   if(error) cartonStatus('Erreur validation : '+error.message,false); else cartonStatus('Carton validé.',true);
   listManagedCards();
 }
+async function nextManualCardInternal(client){
+  const prefix='SDS-99-';
+  try{
+    const {data,error}=await client.from('loto_cartons').select('numero,carton_code').ilike('carton_code',prefix+'%').order('numero',{ascending:false}).limit(1);
+    if(error) throw error;
+    const last=data?.[0]?.numero ? Number(data[0].numero) : cardInternalNumero('99',0);
+    const nextOrder=Math.max(1, (last % 10000) + 1);
+    return {numero:cardInternalNumero('99',nextOrder), code:prefix+String(nextOrder).padStart(4,'0')};
+  }catch(e){
+    const fallback=Date.now()%10000 || 1;
+    return {numero:cardInternalNumero('99',fallback), code:prefix+String(fallback).padStart(4,'0')};
+  }
+}
 async function saveManualCard(){
-  const client=Loto.supabaseClient; if(!client){ statusText('generatedCardsStatus','Supabase non configuré.',false); return; }
+  const client=Loto.supabaseClient; if(!client){ cartonStatus('Supabase non configuré.',false); return; }
   try{
     const externalCode=document.getElementById('manualCardExternalCode')?.value.trim();
-    const code=document.getElementById('manualCardCode')?.value.trim() || ('SDS-99-'+String(Date.now()%10000).padStart(4,'0'));
-    const numero=codeToNumero(code); if(!numero) throw new Error('Code interne ou numéro obligatoire.');
-    const targetStatus=document.getElementById('manualCardStatus')?.value||'a_enregistrer';
-    if(targetStatus==='disponible' && !externalCode) throw new Error('Identifiant du carton obligatoire avant validation.');
-    if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero').eq('external_code',externalCode).neq('numero',numero).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
+    if(!externalCode) throw new Error('Identifiant du carton obligatoire.');
     const grille=readGridEditor('manualGridEditor');
-    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,external_code:externalCode||null,external_code_type:externalCode?'manuel':null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('manualCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode||code||String(numero),status:targetStatus,ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
+    const signature=numbersSignatureFromGrid(grille);
+    if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('external_code',externalCode).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
+    if(signature){ const {data:dupGrid,error:dupGridErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('numbers_signature',signature).limit(1); if(dupGridErr) throw dupGridErr; if(dupGrid&&dupGrid.length){ const d=dupGrid[0]; throw new Error('Carton déjà existant avec les mêmes 15 numéros : '+(d.external_code||d.carton_code||d.numero)); } }
+    const internal=await nextManualCardInternal(client);
+    const row={numero:internal.numero,carton_code:internal.code,association_id:cleanAssociationId('99'),card_order:internal.numero%10000,external_code:externalCode,external_code_type:'manuel',numbers_signature:signature,serie:'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode,status:'disponible',ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
     const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
-    cartonStatus('Carton enregistré : '+row.carton_code,true); refreshCartonCount(); listManagedCards();
+    cartonStatus('Carton enregistré : '+row.external_code,true); refreshCartonCount();
+    const idEl=document.getElementById('manualCardExternalCode'); const inputEl=document.getElementById('quickCardInput');
+    if(idEl) idEl.value=''; if(inputEl) inputEl.value='';
+    renderGridEditor('manualGridEditor', emptyGrid3x9());
+    const block=document.getElementById('manualGridBlock'); if(block) block.style.display='none';
+    quickStatus('',true); const quick=document.getElementById('quickCardStatus'); if(quick) quick.style.display='none';
+    if(idEl) idEl.focus();
   }catch(e){ cartonStatus('Erreur : '+(e.message||e),false); }
 }
 
@@ -667,66 +752,74 @@ async function markCardAvailable(value){
   statusText('salesTrackingStatus','Carton remis disponible.',true);
   listManagedCards();
 }
+
+function manualControlExistingCard(){
+  try{
+    prepareQuickCardGrid();
+  }catch(e){
+    const block=document.getElementById('manualGridBlock'); if(block) block.style.display='none';
+    quickStatus('Erreur : '+(e.message||e), false);
+  }
+}
+async function manualSaveExistingCard(){
+  await saveManualCard();
+}
+window.manualControlExistingCard=manualControlExistingCard;
+window.manualSaveExistingCard=manualSaveExistingCard;
 document.getElementById('listManagedCards')?.addEventListener('click',listManagedCards);
-document.getElementById('saveManualCard')?.addEventListener('click',saveManualCard);
+document.getElementById('prepareQuickCard')?.addEventListener('click',manualControlExistingCard);
+document.getElementById('quickCardInput')?.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); try{ prepareQuickCardGrid(); }catch(err){ quickStatus('Erreur : '+(err.message||err),false); } } });
+document.getElementById('saveManualCard')?.addEventListener('click',manualSaveExistingCard);
 document.getElementById('markCardSold')?.addEventListener('click',()=>markCardSold());
 document.getElementById('markCardAvailable')?.addEventListener('click',()=>markCardAvailable());
 
 renderGridEditor('manualGridEditor', emptyGrid3x9());
-document.getElementById('clearManualGrid')?.addEventListener('click',()=>renderGridEditor('manualGridEditor', emptyGrid3x9()));
 document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEditedCard());
 document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
 document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });
 
-// v3.3.7 - inbox import globale pour telephone -> PC
-const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
-const ADMIN_SCAN_QR_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcIAAAHCAQAAAABUY/ToAAADuklEQVR4nO2cW4qrShSGv3WqII8KPYAMRWewh3ToIfUMdCgZwAbrsUH590NVGU13c2CTkMtZ66E7Jn5owc+6lpr4Oxv/+UsQnHTSSSeddNJJJx+PtGIRs3YxSGZm7ZL/MJqZ9ame1d/5bp18LDLmf90AkN4QLBjNHEWKiHQQNBOQwgyA3e9unXxkMq3+JR9GGI8S4/HT7N+TZeGYWbzeNZ18TdLMDqKbguhOEbopSO8tWH+zazr5amQzw9gC43Hmi4O6zTWdfAWykTQAdCczDYD1LGZ2lDQ0yq1ISfP1runka5AlvRlzvhMAwmzd9Abdx0HWfcTZulOcgcWuc00nX4vMGtoNPBaD5tMEM4zHTxNpMWj2Y5HnWqeTtyatB6xPZkAQox1kPYtBOsh6QO9mZtau2fUzrtPJW5BIkjQ0MzUpCrkuk6aaAHUqv26J51qnk7cjsyKgmZGmoHPWrAEo4sqftDXXkJPVqibm7HOqVObtOZ0kaQqim9wPOfkDmQ6yPkWgJkVZTQNBwGKMLWy7jc+5TievT5ZY1k1kd1Na1JpLizo7qPVX1oDmfsjJYrW2TwCpJdfxY/s796l3HaElQrLaCHiudTp5a9J6guqYI0g6RTSkyKZF/d6SfZP1d75bJx+L3OTUOWEemlLM5yQaKDn1QK3VPJY5ubOSD60doCIkrUnRWVflO9eQk3urPcaSTmto5lVXpXF0ruhLle8acnJrZz9UK7SQe0FZTUVSc+1YTx7LnLywzdzeuo+W7HhgMZEitp5hAFo3xD7bOp28HbmddeSmYk2KgNofGqAMzTyWOfnVzhGMLJqJGrzqcKNO06Cc4hpy8gey04xZG8TYBkHzmSccdKeDrM/Z9boR7d536+SjkF/n9lP9pcthLOiiP1QOn2udTt6O3MzLavmlzbg1h7YBPB9y8kfb9anXsh62bmnbd3QNOXlpRRJTKEP5ddZRqvxGG12d5/uuISer5e6PQUAkg25CjBbE+CvISHHO2XUx7w85+S2ZY1neMZ0iWTTdKSJpLc5y7v3pdZmTF1bqsmw1oOVMehPazpvTPB9y8nsya2MC6RQxO0rlMel0WH3TDKNFrL/33Tr5UORuL+wUaqdot39o56p85urkf5AaUsR6gsyOZW7PaOUZfEnyfYxO7i1eftFN7ebIIGI0v6Plkiy9zb6f2slvyaZMM8iPBQEaUnlzlXQ65GzJenxe5uT35HjxMH1+cUMZpOVxKyzrS2Wuck0nX4Q0f8e5k0466aSTTjr5Pyf/AGWJJbLs72IeAAAAAElFTkSuQmCC";
-let adminImportFallbackState = null;
-let adminImportInboxState = null;
+// v3.2.6 - QR d'ouverture du scan saisie cartons + pseudo carton retour scan
 function adminScanUrl(){
-  if(location.hostname.includes('github.io')){
-    return 'https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons';
-  }
   return new URL('scan.html?mode=saisie-cartons', location.href).href;
 }
-function latestImportState(){
-  const live=Loto.state()||{};
-  const fallback=adminImportFallbackState||{};
-  const inbox=adminImportInboxState||{};
-  return {
-    ...fallback,
-    ...live,
-    ...inbox,
-    importScanner: inbox.importScanner || live.importScanner || fallback.importScanner,
-    lastImportDraft: inbox.lastImportDraft || live.lastImportDraft || fallback.lastImportDraft,
-    importDrafts: inbox.importDrafts || live.importDrafts || fallback.importDrafts
-  };
+function qrImageFallback(url, size=170){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(url);
 }
-function renderAdminScanQr(){ /* v3.4.2 : QR et etat telephone geres par import-queue-admin.js */ }
-function importDraftFromState(){
-  const st=latestImportState();
-  if(st.lastImportDraft?.numero) return st.lastImportDraft;
-  if(Array.isArray(st.importDrafts) && st.importDrafts.length) return st.importDrafts[0];
-  return null;
-}
-async function pollImportSessionState(){
-  const client=Loto.supabaseClient; if(!client) return;
+function renderQrInto(el, url, size=170){
+  if(!el) return;
+  const fallbackHtml='<img src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="'+size+'" height="'+size+'">';
   try{
-    const code=(Loto.state()?.sessionCode)||localStorage.getItem('loto_session_code')||'SESSION_ACTIVE';
-    const {data,error}=await client.from('loto_app_sessions').select('code,state,updated_at').in('code',[code,IMPORT_INBOX_CODE]);
-    if(!error && Array.isArray(data)){
-      for(const row of data){
-        if(row.code===code && row.state) adminImportFallbackState=row.state;
-        if(row.code===IMPORT_INBOX_CODE && row.state) adminImportInboxState=row.state;
-      }
-      renderAdminScanQr();
-      if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard();
+    el.innerHTML='';
+    if(window.QRCode){
+      new QRCode(el,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+      if(el.children.length) return;
     }
-  }catch(e){ console.warn('Lecture session import impossible',e); }
+  }catch(e){}
+  el.innerHTML=fallbackHtml;
 }
-
-
-async function renderLastScannedPseudoCard(){ /* v3.4.2 : pseudo-carton gere par import-queue-admin.js */ }
+function renderAdminScanQr(){
+  const url=adminScanUrl();
+  const a=document.getElementById('openScanSaisie'); if(a) a.href=url;
+  const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=url;
+  renderQrInto(document.getElementById('scanSaisieQr'), url, 190);
+}
+async function renderLastScannedPseudoCard(){
+  const gridBox=document.getElementById('adminScanPseudoGrid'); const status=document.getElementById('adminScanLastStatus');
+  if(!gridBox) return;
+  let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
+  if(!code){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Aucun carton scanné sur ce poste.'; return; }
+  const client=Loto.supabaseClient;
+  if(!client){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Dernier scan : '+code+' (Supabase non configuré).'; return; }
+  try{
+    const numero=codeToNumero(code);
+    const {data,error}=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
+    if(error||!data) throw error||new Error('carton introuvable');
+    renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
+    if(status) status.textContent='Dernier scan : '+(data.external_code||data.carton_code||code)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · identifiant '+(data.external_code_type||'à saisir');
+    document.getElementById('cardStatusFilter').value='a_enregistrer';
+    listManagedCards();
+  }catch(e){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Dernier scan : '+code+' non relu dans Supabase.'; }
+}
 function openCartonsTabFromHash(){
   if(location.hash==='#cartons'){
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -734,40 +827,8 @@ function openCartonsTabFromHash(){
     renderLastScannedPseudoCard();
   }
 }
-
-let importCardsChannel=null;
-function initImportCardsRealtime(){
-  const client=Loto.supabaseClient;
-  if(!client || importCardsChannel) return;
-  try{
-    importCardsChannel=client.channel('admin-import-cartons')
-      .on('postgres_changes',{event:'*',schema:'public',table:'loto_cartons',filter:'status=eq.a_enregistrer'},()=>{
-        renderLastScannedPseudoCard();
-      })
-      .on('postgres_changes',{event:'*',schema:'public',table:'loto_app_sessions',filter:'code=eq.'+IMPORT_INBOX_CODE},payload=>{
-        if(payload?.new?.state) adminImportInboxState=payload.new.state;
-        renderAdminScanQr();
-        renderLastScannedPseudoCard();
-      })
-      .subscribe();
-  }catch(e){ console.warn('Realtime import cartons indisponible',e); }
-}
-
-
-setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash(); initImportCardsRealtime();},300);
-setInterval(renderAdminScanQr,5000);
-setInterval(pollImportSessionState,2000);
-setInterval(()=>{ if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard(); },2000);
-document.getElementById('refreshImportDrafts')?.addEventListener('click',()=>{ renderLastScannedPseudoCard(); listManagedCards(); });
+setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash();},300);
 window.addEventListener('hashchange',openCartonsTabFromHash);
-
-try{
-  Loto.onChange((st)=>{
-    if(document.getElementById('cartons')?.classList.contains('active') && st?.lastImportDraft){
-      renderLastScannedPseudoCard();
-    }
-  });
-}catch(e){}
 
 
 // v3.2.8 - les QR sont recalcules a chaque affichage de l'onglet Cartons
