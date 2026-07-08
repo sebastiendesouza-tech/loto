@@ -1,4 +1,4 @@
-# v3.2.4 - Validation des cartons scannés
+# v3.2.5 - Validation des cartons scannés
 
 - Scanner saisie cartons : enregistrement en brouillon au statut À enregistrer.
 - Administration > Cartons : affichage des cartons À enregistrer.
@@ -190,7 +190,7 @@
 - Correction du générateur PDF du modèle Classique : les petits numéros sous les grands sont également agrandis.
 - Conservation du format d'identifiant court `SDS-XX-XXXX` dans le QR Code et sur le carton.
 
-## v3.2.4
+## v3.2.5
 - Création des cartons simplifiée : ID association + nombre de cartons uniquement.
 - Numéro d'ordre automatique à partir du dernier carton de l'association.
 - Suppression de l'aperçu HTML : le PDF devient l'aperçu officiel.
