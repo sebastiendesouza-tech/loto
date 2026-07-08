@@ -1,3 +1,11 @@
+# v3.4.12 - cadrage OCR stabilisé
+
+- Reprise de la base v3.4.11 / v3.4.6.
+- OCR grille lance uniquement quand le carton est détecté et stable dans le grand cadre.
+- Grande zone conservée pour la grille.
+- Petite zone utilisée uniquement pour l'identifiant.
+- Identifiant alphanumérique avec / et - conservé.
+
 # V3.4.11 - OCR fiable + identifiant alphanumérique
 
 - Reprise de la V3.4.6 validée.
