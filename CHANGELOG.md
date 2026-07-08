@@ -1,3 +1,11 @@
+# v3.3.0 - Import cartons corrigé
+
+- QR d’accès scan saisie cartons généré dynamiquement dans Administration > Cartons.
+- Téléphone : bouton Ignorer / saisir plus tard pour l’identifiant difficile à lire.
+- Le scan ne bascule plus vers Administration après l’identifiant ; il reste prêt pour le carton suivant.
+- Les brouillons sans identifiant sont acceptés en À enregistrer, mais restent impossibles à valider tant que l’identifiant n’est pas complété.
+- Administration relit les brouillons à enregistrer depuis Supabase pour que PC et téléphone communiquent réellement.
+
 # V3.2.9
 
 - Correction QR code Administration > Cartons : QR visible directement avec image locale de secours.
