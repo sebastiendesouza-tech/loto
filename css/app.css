@@ -459,7 +459,7 @@
 .current-lot.compact-lot{white-space:normal;overflow:visible;text-overflow:clip;display:block;line-height:1.25;}
 
 /* v3.3.3 - QR administration lisible sur écran PC */
-.admin-scan-qr-box{width:150px!important;height:150px!important;min-width:150px!important;min-height:150px!important;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;box-sizing:content-box}
-.admin-scan-qr-img,.admin-scan-qr-box img{width:150px!important;height:150px!important;max-width:150px!important;max-height:150px!important;image-rendering:pixelated;display:block}
+.admin-scan-qr-box{width:170px!important;height:170px!important;min-width:170px!important;min-height:170px!important;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;box-sizing:content-box}
+.admin-scan-qr-img,.admin-scan-qr-box img{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;image-rendering:pixelated;display:block}
 .phone-scan-status{background:#eefdf3;border:1px solid #86efac;border-radius:12px;padding:14px;margin:0 auto 8px;max-width:210px;text-align:center;color:#14532d;line-height:1.45}
 .scan-admin-qr{min-width:210px}
