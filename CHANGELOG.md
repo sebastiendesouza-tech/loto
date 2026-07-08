@@ -1,13 +1,13 @@
-# V3.3.6
+## v3.3.7 - Import cartons : inbox Supabase global
 
-- QR Administration intégré en base64 : plus d'image cassée.
-- Brouillon affichable côté PC même si l'écriture table Supabase échoue.
-- Synchronisation renforcée via session Supabase + polling 2 s + Realtime.
-- Message diagnostic dans le pseudo-carton si la table `loto_cartons` n'est pas écrite.
+- Ajout d'une inbox Supabase globale `IMPORT_CARTONS_INBOX` pour transmettre les brouillons du téléphone vers le PC.
+- L'administration lit maintenant cette inbox en Realtime et par relecture de secours.
+- Le scan téléphone conserve les messages après envoi.
+- Version v3.3.7.
 
 # Changelog
 
-## v3.3.6
+## v3.3.5
 - Pseudo carton vierge affiché dans Administration > Cartons.
 - Champ identifiant du carton visible et vide avant scan.
 - Après scan, le champ se remplit si QR/code-barres/numéro lu.
