@@ -32,11 +32,10 @@
     if(s){s.textContent=text; s.className=(ok?'ok-note':'bad-note')+' scan-minimal-status';}
   }
 
-  let presenceOkShown=false;
   async function sendPresence(){
     try{
       await insertQueue('presence',{status:'connected',url:location.href,at:new Date().toISOString()});
-      if(!presenceOkShown){ setStatus('🟢 Connecté au PC.'); presenceOkShown=true; }
+      setStatus('🟢 Connecté au PC.');
     }catch(e){
       setStatus('Erreur connexion Supabase : '+(e.message||e),false);
     }
@@ -76,17 +75,21 @@
   }
 
   function init(){
-    el('scanPageTitle').textContent='Import cartons - OCR partiel';
-    el('scanPageHelp').textContent='Démarre la caméra. Les numéros détectés sont envoyés au PC au fur et à mesure. Les cases manquantes pourront être complétées à la main.';
+    el('scanPageTitle').textContent='Import cartons - test scan_queue';
+    el('scanPageHelp').textContent='Étape V3.4.3 : tester la communication puis envoyer une grille de test vers le pseudo-carton du PC.';
     el('scanBackLink').href='administration.html#cartons';
 
     const bar=document.querySelector('.scan-startbar');
-    if(bar && !document.getElementById('sendScanQueueTest')){
-      bar.appendChild(addButton('Envoyer TEST','secondary',sendTest)).id='sendScanQueueTest';
-      bar.appendChild(addButton('Envoyer GRILLE TEST','secondary',sendTestGrid)).id='sendScanQueueGridTest';
+    if(bar){
+      bar.innerHTML='';
+      bar.appendChild(addButton('Envoyer TEST','green',sendTest));
+      bar.appendChild(addButton('Envoyer GRILLE TEST','secondary',sendTestGrid));
     }
 
+    document.querySelector('.scanner-camera')?.setAttribute('style','display:none');
+    const rt=el('scannerReadTime'); if(rt) rt.textContent='non utilisé';
     const skip=el('skipIdentifierBtn'); if(skip) skip.style.display='none';
+
     sendPresence();
     setInterval(sendPresence,5000);
   }
