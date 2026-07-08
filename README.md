@@ -2,7 +2,7 @@
 
 Application web PWA pour l'animation d'un loto associatif.
 
-Version : v3.2.8.
+Version : v3.2.9.
 
 ## Nouveautés principales
 
@@ -58,14 +58,14 @@ Avant d'utiliser les métadonnées V3 en production, appliquer `sql/supabase.sql
 
 La reconnaissance vocale se coupe automatiquement 1 seconde après l’acceptation d’un numéro, puis reprend. Le même numéro est aussi ignoré pendant 5 secondes pour éviter la reprise du son par l’enceinte.
 
-### v3.2.8 - Cartons et scan autonome
+### v3.2.9 - Cartons et scan autonome
 La création de cartons demande seulement l'ID association et le nombre de cartons. L'application calcule automatiquement le prochain numéro disponible pour cette association, vérifie les doublons d'identifiant et les doublons de grille, puis génère le PDF. La page `scan.html` est autonome et peut être ouverte directement par QR code.
 
 
-### v3.2.8 - Scanner commissaire opérationnel
+### v3.2.9 - Scanner commissaire opérationnel
 
 Le mode commissaire de `scan.html` contrôle automatiquement le carton dès lecture du QR, ferme la caméra, revient sur `commissaire.html` et publie le résultat sur l’affichage public.
 
 
-### v3.2.8 - QR codes intégrés
+### v3.2.9 - QR codes intégrés
 Les QR codes de scan sont générés automatiquement depuis l'URL courante de l'application. Ils fonctionnent donc sur GitHub Pages et en local.

@@ -1,11 +1,18 @@
-# v3.2.8 - QR codes intégrés automatiquement
+# V3.2.9
+
+- Correction QR code Administration > Cartons : QR visible directement avec image locale de secours.
+- QR commissaire supprimé.
+- Bouton Commissaire “Scanner un carton” rétabli.
+- URL du bouton commissaire recalculée automatiquement.
+
+# v3.2.9 - QR codes intégrés automatiquement
 
 - Génération automatique du QR de scan saisie cartons dans Administration > Cartons.
 - Génération automatique du QR de scan commissaire sur la page Commissaire.
 - URL calculée selon l'adresse courante : GitHub Pages ou serveur local.
 - Fallback image si la librairie QR locale/CDN ne se charge pas.
 
-# v3.2.8 - Scan saisie cartons en deux étapes
+# v3.2.9 - Scan saisie cartons en deux étapes
 
 - QR d’accès affiché dans Administration > Cartons.
 - Aucune caméra ouverte sur le PC.
@@ -15,7 +22,7 @@
 - Contrôle doublon sur l’identifiant externe et sur les 15 numéros.
 - Le commissaire peut retrouver un carton importé avec son identifiant externe.
 
-# v3.2.8 - Scan saisie cartons
+# v3.2.9 - Scan saisie cartons
 
 - Ajout du mode scan saisie cartons en page autonome.
 - Grande zone caméra en mode paysage.
@@ -25,7 +32,7 @@
 - QR code dans Administration > Cartons pour ouvrir le scan sur téléphone.
 - Pseudo carton affiché côté administration après scan pour correction / validation.
 
-# v3.2.8 - Validation des cartons scannés
+# v3.2.9 - Validation des cartons scannés
 
 - Scanner saisie cartons : enregistrement en brouillon au statut À enregistrer.
 - Administration > Cartons : affichage des cartons À enregistrer.
@@ -217,7 +224,7 @@
 - Correction du générateur PDF du modèle Classique : les petits numéros sous les grands sont également agrandis.
 - Conservation du format d'identifiant court `SDS-XX-XXXX` dans le QR Code et sur le carton.
 
-## v3.2.8
+## v3.2.9
 - Création des cartons simplifiée : ID association + nombre de cartons uniquement.
 - Numéro d'ordre automatique à partir du dernier carton de l'association.
 - Suppression de l'aperçu HTML : le PDF devient l'aperçu officiel.
