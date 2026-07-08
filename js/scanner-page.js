@@ -6,13 +6,32 @@ let saisieStep='grid';
 let currentDraft=null;
 let barcodeDetector=null;
 
+let scannerPresenceTimer=null;
+async function markImportScannerPresence(connected=true){
+  if(scannerUsageMode!=='saisie_cartons') return;
+  try{
+    await Loto.save({importScanner:{connected:!!connected,mode:'saisie_cartons',lastSeen:Date.now(),status:connected?'waiting':'closed'}});
+  }catch(e){console.warn('Presence scanner non envoyee',e);}
+}
+function startImportScannerPresence(){
+  if(scannerUsageMode!=='saisie_cartons') return;
+  markImportScannerPresence(true);
+  if(scannerPresenceTimer) clearInterval(scannerPresenceTimer);
+  scannerPresenceTimer=setInterval(()=>markImportScannerPresence(true),10000);
+}
+function stopImportScannerPresence(){
+  if(scannerPresenceTimer) clearInterval(scannerPresenceTimer);
+  scannerPresenceTimer=null;
+  markImportScannerPresence(false);
+}
+
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 function setStatus(msg,type='muted'){const el=document.getElementById('scannerStatus'); if(el){el.className=type+' scan-minimal-status'; el.textContent=msg;}}
 function setReadTime(ms){const el=document.getElementById('scannerReadTime'); if(el) el.textContent=Number.isFinite(ms)?Math.round(ms)+' ms':'-';}
 function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop();ctx.close();},ok?90:180);}catch(e){}}
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetForNextCard(message='Carton envoyé. Place un autre carton dans le cadre.'){currentDraft=null; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setFrame('warn'); setStatus(message,'ok');}
+function resetForNextCard(message='Carton envoyé. Place un autre carton dans le cadre.'){currentDraft=null; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
 function cleanAssociationId(v){const raw=String(v||'1').replace(/\D/g,''); return String(raw||'1').slice(-2).padStart(2,'0');}
 function cardInternalNumero(a,o){return Number(cleanAssociationId(a))*10000+Number(o||0);}
 function codeToNumero(code){const s=String(code||'').trim(); const m=s.match(/SDS-(\d{1,2})-(\d{1,4})$/i); if(m) return cardInternalNumero(m[1],Number(m[2])); const tail=s.match(/(\d{1,6})\s*$/); return tail?Number(tail[1]):Number(s||0);}
@@ -101,7 +120,7 @@ async function startQrScanner(){
   stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
-  try{await startCamera(); if(scannerUsageMode==='saisie_cartons') await startSaisieCartonsLoop(); else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
+  try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
 function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
@@ -113,5 +132,6 @@ async function skipIdentifier(){
 document.getElementById('skipIdentifierBtn')?.addEventListener('click',skipIdentifier);
 document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
 document.getElementById('stopQrScanner')?.addEventListener('click',()=>stopQrScanner(true));
-window.addEventListener('pagehide',()=>stopQrScanner(false));
+window.addEventListener('pagehide',()=>{stopQrScanner(false); stopImportScannerPresence();});
 initPage(); Loto.pageHeader(); Loto.protectPage();
+Loto.ensureSession().then(()=>{Loto.pageHeader(); if(scannerUsageMode==='saisie_cartons') startImportScannerPresence();}).catch(()=>{});

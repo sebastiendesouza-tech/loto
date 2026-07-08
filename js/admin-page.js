@@ -112,7 +112,7 @@ document.getElementById('deleteStandardCartons')?.addEventListener('click',delet
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
 document.getElementById('testCardBtn').onclick=testCard;
 
-Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
+Loto.onChange(s=>{Loto.pageHeader(); renderAdminScanQr(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);
 
 
@@ -701,8 +701,32 @@ function renderAdminScanQr(){
   const url=adminScanUrl();
   const a=document.getElementById('openScanSaisie'); if(a) a.href=url;
   const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=url;
-  renderQrInto(document.getElementById('scanSaisieQr'), url, 190);
+  const qrBox=document.getElementById('scanSaisieQr');
+  const phoneBox=document.getElementById('scanSaisiePhoneStatus');
+  const st=Loto.state()?.importScanner || {};
+  const connected=!!st.connected && st.mode==='saisie_cartons' && (Date.now()-Number(st.lastSeen||0)<30000);
+  if(phoneBox){
+    phoneBox.style.display=connected?'block':'none';
+    phoneBox.innerHTML=connected ? "<b>📱 Téléphone connecté</b><br><span>Mode : saisie de cartons</span><br><span>En attente d'un carton...</span>" : '';
+  }
+  if(qrBox){
+    qrBox.style.display=connected?'none':'flex';
+    if(!connected){
+      const currentUrl=qrBox.dataset.currentUrl || '';
+      if(currentUrl!==url){
+        qrBox.dataset.currentUrl=url;
+        qrBox.innerHTML='';
+        try{
+          if(window.QRCode){ new QRCode(qrBox,{text:url,width:150,height:150,correctLevel:QRCode.CorrectLevel.M}); }
+          else throw new Error('QRCode lib absente');
+        }catch(e){
+          qrBox.innerHTML='<img class="admin-scan-qr-img" src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="150" height="150">';
+        }
+      }
+    }
+  }
 }
+
 async function renderLastScannedPseudoCard(){
   const gridBox=document.getElementById('adminScanPseudoGrid'); const status=document.getElementById('adminScanLastStatus');
   if(!gridBox) return;
@@ -750,6 +774,7 @@ function initImportCardsRealtime(){
 }
 
 setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash(); initImportCardsRealtime();},300);
+setInterval(renderAdminScanQr,5000);
 window.addEventListener('hashchange',openCartonsTabFromHash);
 
 
