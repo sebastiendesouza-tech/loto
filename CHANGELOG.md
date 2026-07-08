@@ -1,4 +1,12 @@
-# v3.4.15 - OCR par lignes
+# Changelog
+
+## v3.4.16
+
+- OCR import : verrouillage immediat d une ligne des qu elle atteint 5/5.
+- Suppression de l attente de double confirmation par ligne.
+- Les lignes restent independantes et ne redescendent plus apres verrouillage.
+
+# v3.4.16 - OCR par lignes
 
 - Lecture de la grille triée par coordonnées.
 - Regroupement en 3 lignes horizontales.
