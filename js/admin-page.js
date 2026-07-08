@@ -702,7 +702,7 @@ function latestImportState(){
     importDrafts: inbox.importDrafts || live.importDrafts || fallback.importDrafts
   };
 }
-function renderAdminScanQr(){ /* v3.4.1 : QR et etat telephone geres par import-queue-admin.js */ }
+function renderAdminScanQr(){ /* v3.4.2 : QR et etat telephone geres par import-queue-admin.js */ }
 function importDraftFromState(){
   const st=latestImportState();
   if(st.lastImportDraft?.numero) return st.lastImportDraft;
@@ -726,7 +726,7 @@ async function pollImportSessionState(){
 }
 
 
-async function renderLastScannedPseudoCard(){ /* v3.4.1 : pseudo-carton gere par import-queue-admin.js */ }
+async function renderLastScannedPseudoCard(){ /* v3.4.2 : pseudo-carton gere par import-queue-admin.js */ }
 function openCartonsTabFromHash(){
   if(location.hash==='#cartons'){
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
