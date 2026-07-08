@@ -1,3 +1,3 @@
-# Loto by SdS v3.4.9
+# Loto by SdS v3.4.10
 
-Correction OCR import : retour au moteur de lecture qui fonctionnait avant la tentative de détection des cases vides. Les cartons importés restent affichés en 5 x 3 côté administration.
+Correction OCR import : retour scan grande zone grille, identifiant en petite zone uniquement.

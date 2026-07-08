@@ -1,7 +1,7 @@
-# V3.4.9 - OCR import fiabilisé
+# V3.4.10 - OCR grande zone restauré
 
-- Retour à la lecture OCR simple des 15 numéros, sans détection des cases vides.
-- Conservation du format import en 5 x 3 côté PC.
-- Conservation des identifiants avec lettres, chiffres, `/` et `-`.
-- Conservation du bouton Enregistrer dans la base.
-- Cartons SDS conservés en 3 x 9.
+- Grille scannée avec la grande zone complète.
+- Petite zone utilisée uniquement pour l’identifiant.
+- Import conservé en 5 x 3.
+- Identifiants avec lettres, / et - conservés.
+- Bouton Enregistrer dans la base conservé.
