@@ -479,3 +479,9 @@
 .pseudo-grid input{min-width:0;text-align:center;font-weight:1000;font-size:20px;padding:9px 4px;border-radius:10px;border:1px solid var(--border);background:#f8fafc;}
 .scan-admin-layout{grid-template-columns:minmax(0,1fr) 240px!important;}
 @media(max-width:750px){.scan-admin-layout{grid-template-columns:1fr!important}.scan-admin-qr{text-align:center!important}.pseudo-grid{grid-template-columns:repeat(9,minmax(24px,1fr))!important;gap:4px!important}.pseudo-grid input{font-size:16px;padding:7px 2px}}
+
+/* V3.4.2 import scan fixes */
+.admin-scan-qr-box{width:190px!important;height:190px!important;min-width:190px!important;min-height:190px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;border:1px solid var(--border)!important;border-radius:12px!important;padding:8px!important;box-sizing:border-box!important;margin:0 auto 8px!important;}
+.admin-scan-qr-img,.admin-scan-qr-box img{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;display:block!important;image-rendering:pixelated!important;}
+#adminScanPseudoGrid.pseudo-grid{display:grid!important;grid-template-columns:repeat(9,48px)!important;grid-auto-rows:42px!important;gap:6px!important;max-width:520px!important;width:max-content!important;}
+#adminScanPseudoGrid.pseudo-grid input{width:48px!important;height:42px!important;box-sizing:border-box!important;text-align:center!important;padding:4px!important;}
