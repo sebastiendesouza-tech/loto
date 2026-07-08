@@ -80,7 +80,29 @@ function gridToLignes3x9(grid){return grid.map(r=>r.filter(n=>n!==null));}
 function emptyGrid3x9(){return Array.from({length:3},()=>Array(9).fill(null));}
 function buildGridFromNumbers(nums){const g=emptyGrid3x9(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=(i%5)*2; g[r][c]=n;}); return g;}
 function parseOcrNumbers(text){const found=(String(text||'').match(/\b\d{1,2}\b/g)||[]).map(Number).filter(n=>n>=1&&n<=90); const uniq=[]; for(const n of found){ if(!uniq.includes(n)) uniq.push(n); } return uniq.slice(0,15);}
-function parseIdentifierText(text){const candidates=(String(text||'').match(/\b\d{3,12}\b/g)||[]).map(x=>x.trim()); return candidates.sort((a,b)=>b.length-a.length)[0]||'';}
+function parseIdentifierText(text){
+  const cleaned=String(text||'').toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9\/-]/g,'');
+  const candidates=(cleaned.match(/[A-Z0-9][A-Z0-9\/-]{2,24}/g)||[]).map(x=>x.replace(/-{2,}/g,'-').replace(/\/{2,}/g,'/'));
+  return candidates.sort((a,b)=>b.length-a.length)[0]||'';
+}
+function buildGridFromOcrWords(result,w,h){
+  const grid=emptyGrid3x9();
+  const words=(result?.data?.words||[]).filter(Boolean);
+  let placed=0;
+  for(const word of words){
+    const txt=String(word.text||'').replace(/[^0-9]/g,'');
+    if(!txt) continue;
+    const n=Number(txt);
+    if(!Number.isInteger(n)||n<1||n>90) continue;
+    const box=word.bbox||{};
+    const x=((box.x0||0)+(box.x1||0))/2;
+    const y=((box.y0||0)+(box.y1||0))/2;
+    const r=Math.max(0,Math.min(2,Math.floor(y/(h/3))));
+    const c=Math.max(0,Math.min(8,Math.floor(x/(w/9))));
+    if(!grid[r][c]){grid[r][c]=n; placed++;}
+  }
+  return placed>=3 ? {grid,count:placed} : null;
+}
 
 async function nextImportCode(){
   const client=Loto.supabaseClient; const aid='99';
@@ -174,7 +196,7 @@ async function readIdentifierFromFrame(video, canvas, ctx){
   const {w,h}=drawRoi(video,canvas,ctx,true); const t0=performance.now();
   try{ if(window.jsQR){const img=ctx.getImageData(0,0,w,h); const qr=window.jsQR(img.data,w,h,{inversionAttempts:'attemptBoth'}); if(qr?.data) return {value:qr.data,type:'qr',quality:100,ms:performance.now()-t0};} }catch(e){}
   try{ if('BarcodeDetector' in window){ if(!barcodeDetector) barcodeDetector=new BarcodeDetector({formats:['qr_code','code_128','ean_13','ean_8','code_39','code_93','itf','upc_a','upc_e']}); const codes=await barcodeDetector.detect(canvas); if(codes?.[0]?.rawValue) return {value:codes[0].rawValue,type:codes[0].format==='qr_code'?'qr':'barcode',quality:100,ms:performance.now()-t0};} }catch(e){}
-  if(window.Tesseract){const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}, tessedit_char_whitelist:'0123456789'}); const value=parseIdentifierText(result?.data?.text||''); if(value) return {value,type:'ocr',quality:Math.round(result?.data?.confidence||80),ms:performance.now()-t0};}
+  if(window.Tesseract){const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}, tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'}); const value=parseIdentifierText(result?.data?.text||''); if(value) return {value,type:'ocr',quality:Math.round(result?.data?.confidence||80),ms:performance.now()-t0};}
   return null;
 }
 async function startSaisieCartonsLoop(){
@@ -185,28 +207,30 @@ async function startSaisieCartonsLoop(){
       if(saisieStep==='grid'){
         drawRoi(video,canvas,ctx,false);
         const t0=performance.now();
-        const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
+        const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}, tessedit_char_whitelist:'0123456789'});
         const ms=performance.now()-t0;
         setReadTime(ms);
+        const positional=buildGridFromOcrWords(result, canvas.width, canvas.height);
         const nums=parseOcrNumbers(result?.data?.text||'');
+        const grid=positional?.grid || buildGridFromNumbers(nums);
+        const count=positional?.count || nums.length;
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
-        if(nums.length>0){
-          const grid=buildGridFromNumbers(nums);
-          const sig=nums.join('-');
+        if(count>0){
+          const sig=JSON.stringify(grid);
           const now=Date.now();
           if(sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500){
-            await savePartialOcrDraft(grid,quality,result?.data?.text||'',nums.length);
+            await savePartialOcrDraft(grid,quality,result?.data?.text||'',count);
             lastPartialGridSignature=sig;
             lastPartialGridSentAt=now;
             partialGridSent=true;
           }
-          setFrame(nums.length>=15?'ok':'warn');
-          setStatus('Étape 1/2 : '+nums.length+'/15 numéros envoyés au PC. Les cases manquantes pourront être saisies à la main.','muted');
-          if(nums.length>=15){
+          setFrame(count>=15?'ok':'warn');
+          setStatus('Étape 1/2 : '+count+'/15 numéros envoyés au PC. Les cases vides sont conservées si elles sont reconnues.','muted');
+          if(count>=15){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             setFrame('ok');
             beep(true);
-            setStatus('✓ 15 numéros envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
             setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);
