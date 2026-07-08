@@ -1,9 +1,8 @@
-# Loto by SdS v3.4.7
+# Loto by SdS v3.4.8
 
-Version import cartons finalisation : OCR par position, identifiant alphanumérique, page Cartons épurée et bouton d’enregistrement en base.
+Version import fiable : les cartons scannés/importés sont traités en 5 x 3 avec les 15 numéros, sans tentative de retrouver les cases vides réelles. Les cartons créés par l'application conservent leur format 3 x 9.
 
 ## À tester
-- Scan progressif : la grille se remplit sur le PC.
-- Cases vides conservées quand l’OCR par position les détecte.
-- Identifiant avec chiffres, lettres, / ou -.
-- Bouton Enregistrer dans la base.
+- Scan progressif : le pseudo-carton 5 x 3 se remplit sur le PC.
+- Identifiant compatible chiffres, lettres, / et -.
+- Enregistrement dans la base.
