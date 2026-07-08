@@ -98,7 +98,24 @@ Loto.onChange((s) => {
     renderResult(null);
   }
 });
+
+function renderLastScanFromStorage(){
+  try{
+    const raw = localStorage.getItem('loto_last_commissaire_scan_result');
+    if(!raw) return;
+    localStorage.removeItem('loto_last_commissaire_scan_result');
+    const payload = JSON.parse(raw);
+    if(payload?.found){
+      renderResult(payload);
+      if(input) input.value = payload.result?.numero || payload.numero || '';
+    }else{
+      renderResult({ found:false, numero: payload?.numero || payload?.scannedCode || '' });
+    }
+  }catch(e){}
+}
+
 Loto.ensureSession();
+renderLastScanFromStorage();
 
 function correctionNumberValue(id){ return Number(document.getElementById(id)?.value || 0); }
 function setCorrectionMsg(text, good=true){ const el=document.getElementById('commCorrectionMsg'); if(!el) return; el.textContent=text; el.className=good?'ok':'bad'; }

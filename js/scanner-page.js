@@ -12,6 +12,7 @@ let scannerStartedAt = 0;
 let scannerLastAnalyzeMs = 0;
 let scannerMode = '';
 let scannerUsageMode = (new URLSearchParams(location.search).get('mode') || '').replace('-', '_') || localStorage.getItem('lotoScannerUsageMode') || 'commissaire';
+let scannerProcessing = false;
 
 function esc(s){
   return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -165,12 +166,42 @@ function beep(ok=true){
   }catch(e){}
 }
 
-function handleCode(value, readMs=null){
+async function handleCommissaireCode(value, measured){
+  if(scannerProcessing) return;
+  scannerProcessing = true;
+  try{
+    stopQrScanner(false);
+    const numero = codeToNumero(value);
+    if(!numero) throw new Error('Code carton illisible : ' + value);
+    setStatus('QR lu. Contrôle du carton en cours...', 'muted');
+    const payload = await Loto.controlCard(numero);
+    payload.scannedCode = value;
+    payload.readMs = measured;
+    payload.scannedAt = new Date().toISOString();
+
+    try{ localStorage.setItem('loto_last_commissaire_scan_result', JSON.stringify(payload)); }catch(e){}
+
+    if(payload?.found){
+      await Loto.showPublicCard(payload.result);
+      beep(payload.result?.valid !== false);
+    }else{
+      beep(false);
+    }
+
+    const target = 'commissaire.html?scan=1&numero=' + encodeURIComponent(numero);
+    setTimeout(() => { location.href = target; }, 250);
+  }catch(e){
+    scannerProcessing = false;
+    setStatus('Erreur contrôle : ' + (e.message || e), 'red');
+    beep(false);
+  }
+}
+
+async function handleCode(value, readMs=null){
   value = String(value || '').trim();
-  if(!value) return;
+  if(!value || scannerProcessing) return;
 
   const now = performance.now();
-  const continuous = document.getElementById('scannerContinuous')?.checked !== false;
 
   if(value === scannerLastValue && now - scannerLastAt < 900) return;
 
@@ -178,15 +209,25 @@ function handleCode(value, readMs=null){
   scannerLastAt = now;
   scannerReadCount++;
 
-  document.getElementById('scannerLastCode').textContent = value;
+  const lastCodeEl = document.getElementById('scannerLastCode');
+  if(lastCodeEl) lastCodeEl.textContent = value;
+  const measured = Number.isFinite(readMs) ? readMs : scannerLastAnalyzeMs;
+  const timeEl = document.getElementById('scannerReadTime');
+  if(timeEl) timeEl.textContent = Number.isFinite(measured) && measured > 0 ? Math.round(measured) + ' ms' : '-';
+  const countEl = document.getElementById('scannerReadCount');
+  if(countEl) countEl.textContent = String(scannerReadCount);
+
+  if(scannerUsageMode === 'commissaire'){
+    flashScanOk();
+    await handleCommissaireCode(value, measured);
+    return;
+  }
+
   if(scannerUsageMode === 'saisie_cartons'){
     const codeInput = document.getElementById('scanEntryCode');
     if(codeInput) codeInput.value = value;
     setScanEntryStatus('Code lu. Saisis la grille puis clique sur Valider et enregistrer le carton.', true);
   }
-  const measured = Number.isFinite(readMs) ? readMs : scannerLastAnalyzeMs;
-  document.getElementById('scannerReadTime').textContent = Number.isFinite(measured) && measured > 0 ? Math.round(measured) + ' ms' : '-';
-  document.getElementById('scannerReadCount').textContent = String(scannerReadCount);
 
   const hist = document.getElementById('scannerHistory');
   if(hist){
@@ -197,6 +238,7 @@ function handleCode(value, readMs=null){
   beep(true);
   scannerStartedAt = performance.now();
 
+  const continuous = document.getElementById('scannerContinuous')?.checked !== false;
   if(!continuous) stopQrScanner();
 }
 
