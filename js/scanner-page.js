@@ -17,6 +17,9 @@ let stableOcrAccepted=[];
 let stableOcrLastSeenAt=0;
 let lastGridRowsSignature='';
 let lastGridRowsCount=0;
+let lockedGridRows=[null,null,null];
+let rowLockSignatures=['','',''];
+let rowLockCounts=[0,0,0];
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 
 function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
@@ -78,7 +81,7 @@ function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudi
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function setNewCardButtonVisible(show){const b=document.getElementById('newImportCardBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetStableOcr(){stableOcrCounts={}; stableOcrAccepted=[]; stableOcrLastSeenAt=0; lastGridRowsSignature=''; lastGridRowsCount=0;}
+function resetStableOcr(){stableOcrCounts={}; stableOcrAccepted=[]; stableOcrLastSeenAt=0; lastGridRowsSignature=''; lastGridRowsCount=0; lockedGridRows=[null,null,null]; rowLockSignatures=['','','']; rowLockCounts=[0,0,0];}
 function normalizeOcrNumbers(nums){return (nums||[]).map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90);}
 function updateStableOcrNumbers(nums){
   const clean=normalizeOcrNumbers(nums);
@@ -206,6 +209,44 @@ function buildGridFromRows(rows){
   });
   return g;
 }
+
+function normalizeRowNumbers(row){
+  const out=[];
+  for(const n of (row||[]).map(Number)){
+    if(Number.isInteger(n)&&n>=1&&n<=90&&!out.includes(n)) out.push(n);
+  }
+  return out.slice(0,5);
+}
+function updateLockedRows(rows){
+  for(let i=0;i<3;i++){
+    if(lockedGridRows[i]) continue;
+    const row=normalizeRowNumbers((rows||[])[i]);
+    if(row.length<5){
+      rowLockSignatures[i]='';
+      rowLockCounts[i]=0;
+      continue;
+    }
+    const sig=row.join(',');
+    if(sig===rowLockSignatures[i]) rowLockCounts[i]++;
+    else { rowLockSignatures[i]=sig; rowLockCounts[i]=1; }
+    if(rowLockCounts[i]>=2){
+      lockedGridRows[i]=row.slice(0,5);
+      beep(true);
+    }
+  }
+  return lockedGridRows.map((r,i)=>r || normalizeRowNumbers((rows||[])[i]));
+}
+function lockedRowsCount(){return lockedGridRows.reduce((s,r)=>s+(r?1:0),0);}
+function lockedNumbersCount(){return lockedGridRows.reduce((s,r)=>s+(r?r.length:0),0);}
+function allRowsLocked(){return lockedGridRows.every(r=>Array.isArray(r)&&r.length===5);}
+function lineStatusText(rows){
+  return [0,1,2].map(i=>{
+    const locked=lockedGridRows[i];
+    const count=locked ? 5 : normalizeRowNumbers((rows||[])[i]).length;
+    return 'L'+(i+1)+' '+count+'/5'+(locked?' ✓':'');
+  }).join(' · ');
+}
+
 function stableRowsAccepted(rows){
   const signature=(rows||[]).map(r=>(r||[]).join(',')).join('|');
   if(signature && signature===lastGridRowsSignature) lastGridRowsCount++;
@@ -378,16 +419,20 @@ async function startSaisieCartonsLoop(){
         const nums=parsed.nums;
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
         if(nums.length>0){
-          const grid=buildGridFromRows(rows);
-          const confirmed=nums.length>=15 && stableRowsAccepted(rows);
+          const displayRows=updateLockedRows(rows);
+          const grid=buildGridFromRows(displayRows);
+          const lockedCount=lockedNumbersCount();
+          const currentCount=Math.max(lockedCount, normalizeOcrNumbers(displayRows.flat()).length);
+          const confirmed=allRowsLocked();
           setFrame(confirmed?'ok':'warn');
-          setStatus('Étape 1/2 : lecture par lignes '+nums.length+'/15. Ordre : gauche → droite, haut → bas. '+(nums.length>=15?'Stabilisation 2 lectures...':'Continue à cadrer.'),'muted');
+          setStatus('Étape 1/2 : lecture par lignes. '+lineStatusText(rows)+'. Total '+currentCount+'/15. Une ligne validée est verrouillée.','muted');
           if(confirmed){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             partialGridSent=true;
+            importDraftLocked=false;
             setFrame('ok');
             beep(true);
-            setStatus('✓ Grille complète envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ 3 lignes verrouillées. Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
             setTimeout(()=>{scannerProcessing=false; setFrame('warn');},900);
