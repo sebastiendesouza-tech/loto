@@ -1,8 +1,3 @@
-# Loto by SdS v3.4.8
+# Loto by SdS v3.4.9
 
-Version import fiable : les cartons scannés/importés sont traités en 5 x 3 avec les 15 numéros, sans tentative de retrouver les cases vides réelles. Les cartons créés par l'application conservent leur format 3 x 9.
-
-## À tester
-- Scan progressif : le pseudo-carton 5 x 3 se remplit sur le PC.
-- Identifiant compatible chiffres, lettres, / et -.
-- Enregistrement dans la base.
+Correction OCR import : retour au moteur de lecture qui fonctionnait avant la tentative de détection des cases vides. Les cartons importés restent affichés en 5 x 3 côté administration.
