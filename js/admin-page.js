@@ -2,7 +2,7 @@ Loto.pageHeader();
 Loto.protectPage();
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active');});
-const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList');
+const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList'),salesTrackingEnabled=document.getElementById('salesTrackingEnabled');
 
 const prizeTypes=['Lot 1','Lot 2','Lot 3'];
 function defaultPrize(i,label=''){return {type:prizeTypes[i] || 'Lot',label,enabled:true};}
@@ -45,11 +45,11 @@ function readProgram(){
     if(inp.dataset.prize){const pi=Number(inp.dataset.prize); parties[p].prizes[pi] ||= defaultPrize(pi); parties[p].prizes[pi].enabled=true; parties[p].prizes[pi].label=inp.value;}
   });
   parties.forEach((partie,i)=>{partie.name ||= 'Partie '+(i+1); normalizePartiePrizes(partie);});
-  return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,createdAt:new Date().toISOString()};
+  return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,createdAt:new Date().toISOString()};
 }
 function normalizedProgramForSave(){const p=readProgram(); const current=Loto.state().program || {}; p.id=current.id || p.id; p.createdAt=current.createdAt || p.createdAt; p.updatedAt=new Date().toISOString(); return p;}
-async function saveProgramToList({start=false}={}){const s=Loto.state(); const program=normalizedProgramForSave(); const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked}; const saved=[...(s.savedPrograms||[])]; const idx=saved.findIndex(x=>x.id===program.id); if(idx>=0) saved[idx]=program; else saved.unshift(program); const emptyProgram={id:'',title:'',date:'',parties:[]}; const patch={savedPrograms:saved.slice(0,80),options,program:emptyProgram}; if(start){Object.assign(patch,Loto.freshGamePatch(program)); patch.lotoName=program.title||'Loto by SdS'; patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];} await Loto.save(patch); showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré. Les champs sont prêts pour une nouvelle saisie.');}
-function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){ savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>'; return; } savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s)</span></div><div class="toolbar"><button data-load="${i}">Modifier</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load)));}
+async function saveProgramToList({start=false}={}){const s=Loto.state(); const program=normalizedProgramForSave(); program.sales_tracking_enabled=!!salesTrackingEnabled?.checked; const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked}; const saved=[...(s.savedPrograms||[])]; const idx=saved.findIndex(x=>x.id===program.id); if(idx>=0) saved[idx]=program; else saved.unshift(program); const emptyProgram={id:'',title:'',date:'',parties:[]}; const patch={savedPrograms:saved.slice(0,80),options,program:emptyProgram}; if(start){Object.assign(patch,Loto.freshGamePatch(program)); patch.lotoName=program.title||'Loto by SdS'; patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];} await Loto.save(patch); showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré. Les champs sont prêts pour une nouvelle saisie.');}
+function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){ savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>'; return; } savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s) · ${p.sales_tracking_enabled ? 'suivi ventes actif' : 'suivi ventes inactif'}</span></div><div class="toolbar"><button data-load="${i}">Modifier</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load)));}
 async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p) return; await Loto.save({program:p,lotoName:p.title||'Loto by SdS'}); document.querySelector('[data-tab="loto"]').click(); showSavedMessage('Loto chargé pour modification.');}
 
 document.getElementById('generateParties').onclick=()=>{let program=readProgram(); const target=Math.max(1,Number(partieCount.value||1)); while(program.parties.length<target) program.parties.push(defaultPartie(program.parties.length)); program.parties=program.parties.slice(0,target); Loto.save({program});};
@@ -112,14 +112,16 @@ document.getElementById('deleteStandardCartons')?.addEventListener('click',delet
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
 document.getElementById('testCardBtn').onclick=testCard;
 
-Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
+Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);
 
 
 // V3.0.0 - création de cartons, planches A3 et test scanner QR
 let generatedCards = [];
 let generatedMode = 'individual';
-let generatedPerPage = 2;
+let generatedModel = 'classic';
+let generatedPerPage = 4;
+let generatedKey = '';
 let scannerStream = null;
 let scannerTimer = null;
 let scannerDetector = null;
@@ -157,95 +159,153 @@ function buildCardGrid(){
 function gridToLignes(grid){ return grid.map(row=>row.filter(n=>Number.isInteger(n))); }
 function cleanAssociationId(value){
   const raw=String(value||'1').replace(/\D/g,'');
-  return String(Number(raw||1)).padStart(5,'0');
+  return String(raw || '1').slice(-2).padStart(2,'0');
 }
-function cartonCode(numero, associationId){ return 'SDS-'+cleanAssociationId(associationId)+'-'+String(numero).padStart(8,'0'); }
-function sheetCode(sheetNumber, associationId){ return 'SDSP-'+cleanAssociationId(associationId)+'-'+String(sheetNumber).padStart(6,'0'); }
-function renderPrintableCard(card){
+function cardInternalNumero(associationId, order){ return Number(cleanAssociationId(associationId)) * 10000 + Number(order || 0); }
+function cartonOrderFromNumero(numero, associationId){ const n=Number(numero||0); const a=Number(cleanAssociationId(associationId))*10000; return n>=a ? n-a : n; }
+function cartonCodeFromOrder(order, associationId){ return 'SDS-'+cleanAssociationId(associationId)+'-'+String(Math.max(0, Number(order||1))).padStart(4,'0').slice(-4); }
+function cartonCode(numeroOrOrder, associationId){ return cartonCodeFromOrder(numeroOrOrder, associationId); }
+function sheetCode(sheetNumber, associationId){ return 'SDSP-'+cleanAssociationId(associationId)+'-'+String(String(Math.max(0, Number(sheetNumber||1))).slice(-4)).padStart(4,'0'); }
+function numbersSignatureFromGrid(grid){
+  const nums=(grid||[]).flat().filter(n=>Number.isInteger(Number(n))).map(n=>Number(n)).sort((a,b)=>a-b);
+  return nums.map(n=>String(n).padStart(2,'0')).join('-');
+}
+async function nextOrderForAssociation(associationId){
+  const client=Loto.supabaseClient;
+  if(!client) return 1;
+  const aid=cleanAssociationId(associationId);
+  let maxOrder=0;
+  try{
+    const {data,error}=await client.from('loto_cartons').select('card_order,carton_code,numero').eq('association_id',aid).order('card_order',{ascending:false}).limit(1);
+    if(!error && data && data.length){
+      const c=data[0];
+      maxOrder=Number(c.card_order || String(c.carton_code||'').match(/(\d{1,4})$/)?.[1] || cartonOrderFromNumero(c.numero, aid) || 0);
+    }
+  }catch(e){}
+  if(!maxOrder){
+    try{
+      const {data}=await client.from('loto_cartons').select('carton_code,numero').ilike('carton_code','SDS-'+aid+'-%').limit(1000);
+      (data||[]).forEach(c=>{ const o=Number(String(c.carton_code||'').match(/(\d{1,4})$/)?.[1] || cartonOrderFromNumero(c.numero, aid) || 0); if(o>maxOrder) maxOrder=o; });
+    }catch(e){}
+  }
+  return maxOrder+1;
+}
+function renderPremiumPrintableCard(card){
   const qrId='qr_'+String(card.numero).replace(/\W/g,'_')+'_'+Math.random().toString(36).slice(2,6);
   const rows=card.grid.map(row=>`<tr>${row.map(n=>n?`<td><span class="big-num">${String(n)}</span><span class="mini-num">${String(n)}</span></td>`:'<td class="empty"><span></span></td>').join('')}</tr>`).join('');
-  return `<div class="loto-card-print"><div class="loto-card-inner"><div class="loto-card-head"><div><div class="carton-number-line">${esc(card.code)}</div><div class="loto-card-meta">${card.sheetCode ? esc(card.sheetCode)+' · carton '+card.sheetPosition : 'Carton individuel'}</div></div><div><div id="${qrId}" class="qr-box" data-qr="${esc(card.qrPayload)}"><span class="qr-fallback">${esc(card.qrPayload)}</span></div></div></div><table class="carton-grid"><tbody>${rows}</tbody></table><div class="loto-card-foot">Loto by SdS</div></div></div>`;
+  return `<div class="loto-card-print premium-card"><div class="loto-card-inner"><div class="loto-card-head"><div><div class="carton-number-line">${esc(card.code)}</div><div class="loto-card-meta">${card.sheetCode ? esc(card.sheetCode)+' · carton '+card.sheetPosition : 'Carton individuel'}</div></div><div><div id="${qrId}" class="qr-box" data-qr="${esc(card.qrPayload)}"><span class="qr-fallback">${esc(card.qrPayload)}</span></div></div></div><table class="carton-grid"><tbody>${rows}</tbody></table><div class="loto-card-foot">Loto by SdS</div></div></div>`;
+}
+function renderClassicPrintableCard(card){
+  const qrId='qr_'+String(card.numero).replace(/\W/g,'_')+'_'+Math.random().toString(36).slice(2,6);
+  const rows=card.grid.map(row=>`<tr>${row.map(n=>n?`<td><span class="big-num">${String(n)}</span><span class="mini-num">${String(n)}</span></td>`:'<td class="empty"><span></span></td>').join('')}</tr>`).join('');
+  return `<div class="loto-card-print classic-card"><div class="classic-head"><div id="${qrId}" class="qr-box" data-qr="${esc(card.qrPayload)}"><span class="qr-fallback">${esc(card.qrPayload)}</span></div><div class="classic-title-block"><div class="classic-title">Loto by SdS</div><div class="classic-code-head">${esc(card.code)}</div></div></div><table class="carton-grid classic-grid"><tbody>${rows}</tbody></table><div class="classic-foot"></div></div>`;
+}
+function renderPrintableCard(card){
+  return generatedModel==='classic' ? renderClassicPrintableCard(card) : renderPremiumPrintableCard(card);
 }
 function renderGeneratedCards(){
   const out=document.getElementById('generatedCardsPreview'); if(!out) return;
+  out.style.display='none';
   if(!generatedCards.length){ out.innerHTML=''; return; }
-  const pages=[];
-  const per=generatedMode==='sheets' ? 6 : generatedPerPage;
-  for(let i=0;i<generatedCards.length;i+=per){ pages.push(generatedCards.slice(i,i+per)); }
-  const cls=generatedMode==='sheets' ? 'sheet-a3' : ('sheet-a4 individual-'+per);
-  out.innerHTML=pages.map(page=>`<div class="${cls}">${page.map(renderPrintableCard).join('')}</div>`).join('');
+  out.innerHTML=generatedCards.map(card=>`<div class="qr-cache" data-qr="${esc(card.qrPayload)}" style="position:absolute;left:-9999px;top:-9999px;width:60px;height:60px"></div>`).join('');
   out.querySelectorAll('[data-qr]').forEach(el=>{
     const payload=el.dataset.qr;
     el.innerHTML='';
-    if(window.QRCode){ new QRCode(el,{text:payload,width:52,height:52,correctLevel:QRCode.CorrectLevel.L}); }
-    else el.innerHTML='<span class="qr-fallback">'+esc(payload)+'</span>';
+    if(window.QRCode){ new QRCode(el,{text:payload,width:60,height:60,correctLevel:QRCode.CorrectLevel.L}); }
+    else el.textContent=payload;
   });
 }
-function buildGeneratedCards({start,count,serie,mode,perPage=2,associationId='00001'}){
-  generatedCards=[]; generatedMode=mode; generatedPerPage=perPage;
+function buildGeneratedCards({startOrder,count,serie,mode,perPage=4,associationId='01',model='classic'}){
+  generatedCards=[]; generatedMode=mode; generatedModel=model; generatedPerPage=perPage;
+  const aid=cleanAssociationId(associationId);
+  const seenSignatures=new Set();
   for(let i=0;i<count;i++){
-    const numero=start+i;
-    const grid=buildCardGrid();
-    const sheetIndex=mode==='sheets' ? Math.floor(i/6)+1 : null;
-    const pos=mode==='sheets' ? (i%6)+1 : null;
-    const code=cartonCode(numero, associationId);
-    const sc=sheetIndex ? sheetCode(sheetIndex, associationId) : null;
-    generatedCards.push({numero,code,associationId:cleanAssociationId(associationId),serie,grid,lignes:gridToLignes(grid),sheetNumber:sheetIndex,sheetCode:sc,sheetPosition:pos,qrPayload:code,status:'disponible',origin:'Loto by SdS'});
+    const order=startOrder+i;
+    let grid=buildCardGrid();
+    let sig=numbersSignatureFromGrid(grid);
+    let tries=0;
+    while(seenSignatures.has(sig) && tries<40){ grid=buildCardGrid(); sig=numbersSignatureFromGrid(grid); tries++; }
+    seenSignatures.add(sig);
+    const numero=cardInternalNumero(aid, order);
+    const groupSize = (model==='classic' && mode==='sheets') ? 8 : 6;
+    const sheetIndex=mode==='sheets' ? Math.floor(i/groupSize)+1 : null;
+    const pos=mode==='sheets' ? (i%groupSize)+1 : null;
+    const code=cartonCodeFromOrder(order, aid);
+    const sc=sheetIndex ? sheetCode(sheetIndex, aid) : null;
+    generatedCards.push({numero,cardOrder:order,code,associationId:aid,serie,grid,lignes:gridToLignes(grid),numbersSignature:sig,sheetNumber:sheetIndex,sheetCode:sc,sheetPosition:pos,qrPayload:code,status:'disponible',origin:'Loto by SdS'});
   }
   renderGeneratedCards();
-  genStatus(`${generatedCards.length} carton(s) généré(s). QR court : ${generatedCards[0]?.qrPayload || ''}`,true);
+  genStatus(`${generatedCards.length} carton(s) préparé(s), à partir de ${generatedCards[0]?.code || ''}.`,true);
 }
 
-function updateCardGeneratorUi(){
-  const type=document.getElementById('genCardType')?.value||'individual';
-  const wrap=document.getElementById('genPerPageWrap');
-  if(wrap) wrap.style.display = 'none';
-  const help=document.getElementById('genHelp');
-  if(help) help.textContent = type==='individual' ? 'Individuel : PDF A4 avec 3 cartons par feuille.' : 'Planche : PDF A3 avec 6 cartons par feuille. Si le nombre n’est pas multiple de 6, il est complété pour terminer la dernière planche.';
-}
-function generateCardsUnified(){
-  const start=Number(document.getElementById('genStartNumber')?.value||200001);
+async function prepareGeneratedCards(){
   const requested=Math.max(1,Number(document.getElementById('genCardCount')?.value||1));
   const type=document.getElementById('genCardType')?.value||'individual';
-  const perPage=3;
+  const model=document.getElementById('genCardModel')?.value||'classic';
   const serie=(document.getElementById('genSerie')?.value||'STANDARD').trim()||'STANDARD';
   const associationId=cleanAssociationId(document.getElementById('genAssociationId')?.value||'1');
+  const key=[associationId,requested,type,model,serie].join('|');
+  if(generatedCards.length && generatedKey===key) return generatedCards;
+  const perPage = model==='classic' ? (type==='sheets' ? 8 : 4) : (type==='sheets' ? 6 : 3);
+  const startOrder=await nextOrderForAssociation(associationId);
+  if(startOrder>9999) throw new Error('Limite atteinte pour cette association : 9999 cartons.');
+  let count=requested;
   if(type==='sheets'){
-    const count=Math.ceil(requested/6)*6;
-    buildGeneratedCards({start,count,serie,mode:'sheets',perPage:6,associationId});
-    if(count!==requested) genStatus(`${requested} carton(s) demandé(s). ${count} carton(s) généré(s) pour compléter ${count/6} planche(s) A3.`,true);
-  }else{
-    buildGeneratedCards({start,count:requested,serie,mode:'individual',perPage,associationId});
+    const plancheSize = model==='classic' ? 8 : 6;
+    count=Math.ceil(requested/plancheSize)*plancheSize;
   }
+  if(startOrder+count-1>9999) throw new Error('Création impossible : le numéro de carton dépasserait 9999 pour cette association.');
+  buildGeneratedCards({startOrder,count,serie,mode:type==='sheets'?'sheets':'individual',perPage,associationId,model});
+  generatedKey=key;
+  if(count!==requested) genStatus(`${requested} carton(s) demandé(s). ${count} carton(s) préparé(s) pour compléter les feuilles. Premier code : ${generatedCards[0]?.code}.`,true);
+  return generatedCards;
+}
+async function generateCardsUnified(){
+  try{ await prepareGeneratedCards(); }
+  catch(e){ genStatus('Erreur préparation : '+(e.message||e),false); generatedCards=[]; }
 }
 
 function generateIndividualCards(){
-  const start=Number(document.getElementById('genIndStartNumber')?.value||200001);
+  const start=Number(document.getElementById('genIndStartNumber')?.value||1);
   const count=Math.max(1,Number(document.getElementById('genIndCount')?.value||1));
   const perPage=Math.max(1,Math.min(3,Number(document.getElementById('genIndPerPage')?.value||2)));
   const serie=(document.getElementById('genIndSerie')?.value||'INDIVIDUEL').trim()||'INDIVIDUEL';
-  buildGeneratedCards({start,count,serie,mode:'individual',perPage,associationId:'00001'});
+  buildGeneratedCards({start,count,serie,mode:'individual',perPage,associationId:'01'});
 }
 function generateSheetCards(){
-  const start=Number(document.getElementById('genSheetStartNumber')?.value||300001);
+  const start=Number(document.getElementById('genSheetStartNumber')?.value||1);
   const sheetCount=Math.max(1,Number(document.getElementById('genSheetCount')?.value||1));
   const serie=(document.getElementById('genSheetSerie')?.value||'PLANCHE_A3').trim()||'PLANCHE_A3';
-  buildGeneratedCards({start,count:sheetCount*6,serie,mode:'sheets',perPage:6,associationId:'00001'});
+  buildGeneratedCards({start,count:sheetCount*6,serie,mode:'sheets',perPage:6,associationId:'01'});
+}
+async function checkGeneratedDuplicates(){
+  const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');
+  const nums=generatedCards.map(c=>c.numero);
+  const sigs=generatedCards.map(c=>c.numbersSignature).filter(Boolean);
+  for(let i=0;i<nums.length;i+=100){
+    const {data,error}=await client.from('loto_cartons').select('numero,carton_code').in('numero', nums.slice(i,i+100));
+    if(error) throw error;
+    if(data?.length) throw new Error('Identifiant déjà existant : '+(data[0].carton_code||data[0].numero));
+  }
+  for(let i=0;i<sigs.length;i+=80){
+    const {data,error}=await client.from('loto_cartons').select('numero,carton_code,numbers_signature').in('numbers_signature', sigs.slice(i,i+80));
+    if(error) throw error;
+    if(data?.length) throw new Error('Grille déjà existante avec les mêmes 15 numéros : '+(data[0].carton_code||data[0].numero));
+  }
 }
 async function saveGeneratedCards(){
-  if(!generatedCards.length){ genStatus('Aucun carton généré.',false); return; }
   const client=Loto.supabaseClient; if(!client){ genStatus('Supabase non configuré.',false); return; }
-  const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true}));
-  const basicRows=generatedCards.map(c=>({numero:c.numero,serie:c.serie,lignes:c.lignes,actif:true}));
   try{
-    for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(fullRows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
-    genStatus(`${fullRows.length} carton(s) enregistré(s) dans Supabase avec métadonnées V3.`,true); refreshCartonCount();
-  }catch(e){
-    try{
-      for(let i=0;i<basicRows.length;i+=100){ const {error}=await client.from('loto_cartons').upsert(basicRows.slice(i,i+100),{onConflict:'numero'}); if(error) throw error; }
-      genStatus(`${basicRows.length} carton(s) enregistré(s). Base ancienne détectée : applique le SQL V3 pour stocker planche, QR et statut.`,true); refreshCartonCount();
-    }catch(e2){ genStatus('Erreur enregistrement : '+(e2.message||e2),false); }
-  }
+    await prepareGeneratedCards();
+    if(!generatedCards.length) throw new Error('Aucun carton préparé.');
+    await checkGeneratedDuplicates();
+    const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,card_order:c.cardOrder,numbers_signature:c.numbersSignature,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true,updated_at:new Date().toISOString()}));
+    for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').insert(fullRows.slice(i,i+100)); if(error) throw error; }
+    genStatus(`${fullRows.length} carton(s) enregistrés. Aucun doublon d'identifiant ou de grille. Création du PDF...`,true);
+    refreshCartonCount();
+    openGeneratedCardsPrintWindow(false);
+    generatedCards=[]; generatedKey='';
+  }catch(e){ genStatus('Erreur enregistrement : '+(e.message||e),false); }
 }
 function beep(ok=true){
   try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop(); ctx.close();}, ok?90:180); }catch(e){}
@@ -289,7 +349,8 @@ async function scanQrFrame(){
 }
 
 document.getElementById('genCardType')?.addEventListener('change',updateCardGeneratorUi);
-document.getElementById('generateCards')?.addEventListener('click',generateCardsUnified);
+document.getElementById('genCardModel')?.addEventListener('change',updateCardGeneratorUi);
+
 document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
 function getQrImageForCard(card){
   const box=[...document.querySelectorAll('[data-qr]')].find(el=>el.dataset.qr===card.qrPayload);
@@ -334,6 +395,44 @@ function drawPdfCard(doc, card, x, y){
   doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(50);
   doc.text('Loto by SdS', x+cardW/2, y+94, {align:'center'});
 }
+function drawPdfClassicCard(doc, card, x, y){
+  const cardW=148.5, cardH=105;
+  const marginX=6.75, headH=18, gridOffsetY=3, gridW=135, gridH=75, cellW=15, cellH=25;
+  const gridX=x+marginX, gridY=y+headH+gridOffsetY;
+  doc.setDrawColor(0); doc.setTextColor(0); doc.setLineWidth(0.25);
+  doc.setFillColor(255,255,255);
+  // fond blanc, sans cadre extérieur pour que la découpe reste invisible
+  doc.rect(x,y,cardW,cardH,'F');
+  // en-tete blanc : QR 13 x 13 mm, descendu de 1 mm, titre centre et code SDS agrandi
+  const qr=getQrImageForCard(card);
+  if(qr){ try{ doc.addImage(qr,'PNG',x+marginX,y+4,13,13); }catch(e){} }
+  else { doc.setTextColor(0); doc.setFontSize(4); doc.text(card.qrPayload,x+marginX,y+10); }
+  doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(7.2);
+  doc.text('Loto by SdS', x+cardW/2, y+10.2, {align:'center'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.9);
+  doc.text(card.code, x+cardW-marginX, y+11.2, {align:'right'});
+  // grille : 9 colonnes x 3 lignes, cases 15 x 25 mm
+  doc.setDrawColor(55); doc.setFillColor(255,255,255); doc.setLineWidth(0.22);
+  doc.rect(gridX,gridY,gridW,gridH,'S');
+  for(let c=1;c<9;c++) doc.line(gridX+c*cellW,gridY,gridX+c*cellW,gridY+gridH);
+  for(let r=1;r<3;r++) doc.line(gridX,gridY+r*cellH,gridX+gridW,gridY+r*cellH);
+  for(let r=0;r<3;r++){
+    for(let c=0;c<9;c++){
+      const n=card.grid[r][c];
+      const cx=gridX+c*cellW, cy=gridY+r*cellH;
+      if(n){
+        // V3.1.7 final : le PDF doit reprendre les numéros agrandis de l'aperçu HTML.
+        doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(0);
+        doc.text(String(n), cx+cellW/2, cy+15.2, {align:'center'});
+        doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(20);
+        doc.text(String(n), cx+cellW/2, cy+22.45, {align:'center'});
+      }else{
+        doc.setFillColor(190,190,185);
+        doc.rect(cx+1.2, cy+2, cellW-2.4, cellH-4, 'F');
+      }
+    }
+  }
+}
 function downloadCalibrationPdf(){
   const jspdf = window.jspdf || window.jsPDF;
   if(!jspdf || !jspdf.jsPDF){ genStatus('Générateur PDF non chargé. Vérifie la connexion Internet puis recharge la page.', false); return; }
@@ -360,32 +459,42 @@ function downloadCalibrationPdf(){
   genStatus('PDF calibration téléchargé.', true);
 }
 
-function openGeneratedCardsPrintWindow(){
-  if(!generatedCards.length) generateCardsUnified();
+function openGeneratedCardsPrintWindow(autoPrepare=true){
+  if(!generatedCards.length && autoPrepare){ genStatus('Clique sur Créer PDF à nouveau si le PDF ne se lance pas.', false); return; }
   if(!generatedCards.length){ genStatus('Aucun carton à télécharger.', false); return; }
   const jspdf = window.jspdf || window.jsPDF;
   if(!jspdf || !jspdf.jsPDF){ genStatus('Générateur PDF non chargé. Vérifie la connexion Internet puis recharge la page.', false); return; }
   const isSheets = generatedMode === 'sheets';
   const Doc = jspdf.jsPDF;
-  const doc = new Doc({orientation:isSheets?'landscape':'portrait', unit:'mm', format:isSheets?'a3':'a4'});
-  const per = isSheets ? 6 : 3;
-  const pageW = isSheets ? 420 : 210;
-  const pageH = isSheets ? 297 : 297;
-  const positions = isSheets
-    ? [[0,0],[213,0],[0,100],[213,100],[0,200],[213,200]]
-    : [[1.5,0],[1.5,100],[1.5,200]];
+  const isClassic = generatedModel === 'classic';
+  const doc = new Doc({orientation:isClassic ? (isSheets?'portrait':'landscape') : (isSheets?'landscape':'portrait'), unit:'mm', format:isSheets?'a3':'a4'});
+  let per, positions, drawFn;
+  if(isClassic){
+    per = isSheets ? 8 : 4;
+    drawFn = drawPdfClassicCard;
+    positions = isSheets
+      ? [[0,0],[148.5,0],[0,105],[148.5,105],[0,210],[148.5,210],[0,315],[148.5,315]]
+      : [[0,0],[148.5,0],[0,105],[148.5,105]];
+  }else{
+    per = isSheets ? 6 : 3;
+    drawFn = drawPdfCard;
+    positions = isSheets
+      ? [[0,0],[213,0],[0,100],[213,100],[0,200],[213,200]]
+      : [[1.5,0],[1.5,100],[1.5,200]];
+  }
   generatedCards.forEach((card,i)=>{
-    if(i>0 && i%per===0) doc.addPage(isSheets?'a3':'a4', isSheets?'landscape':'portrait');
+    if(i>0 && i%per===0) doc.addPage(isSheets?'a3':'a4', isClassic ? (isSheets?'portrait':'landscape') : (isSheets?'landscape':'portrait'));
     const [x,y]=positions[i%per];
-    drawPdfCard(doc, card, x, y);
+    drawFn(doc, card, x, y);
   });
   const first=generatedCards[0]?.code || 'cartons';
-  const name=(isSheets?'planches_a3_':'cartons_a4_')+first.replaceAll('-','_')+'.pdf';
+  const prefix = isClassic ? (isSheets?'planches_a3_portrait_classique_':'cartons_a4_paysage_a6_') : (isSheets?'planches_a3_premium_':'cartons_a4_premium_');
+  const name=prefix+first.replaceAll('-','_')+'.pdf';
   doc.save(name);
   genStatus('PDF téléchargé : '+name, true);
 }
 
-document.getElementById('printGeneratedCards')?.addEventListener('click', openGeneratedCardsPrintWindow);
+document.getElementById('printGeneratedCards')?.addEventListener('click', async()=>{ try{ await prepareGeneratedCards(); openGeneratedCardsPrintWindow(false); }catch(e){ genStatus('Erreur PDF : '+(e.message||e),false); } });
 document.getElementById('downloadCalibrationPdf')?.addEventListener('click', downloadCalibrationPdf);
 window.addEventListener('afterprint',()=>{ document.body.classList.remove('printing-cartons','print-mode-sheets'); });
 updateCardGeneratorUi();
@@ -397,3 +506,151 @@ document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click
 document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',saveGeneratedCards);
 document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); document.body.classList.add('printing-cartons'); document.body.classList.remove('print-mode-sheets'); setTimeout(()=>window.print(),300); });
 document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); document.body.classList.add('printing-cartons'); document.body.classList.add('print-mode-sheets'); setTimeout(()=>window.print(),300); });
+
+
+// V3.2.0 - gestion simple des cartons enregistrés et suivi des ventes optionnel
+function parseManualLines(value){
+  const lines=String(value||'').trim().split(/\n+/).map(line=>line.match(/\d+/g)?.map(Number)||[]).filter(Boolean);
+  if(lines.length!==3 || lines.some(l=>l.length!==5)) throw new Error('Il faut 3 lignes de 5 numéros.');
+  const all=lines.flat();
+  if(all.some(n=>n<1||n>90)) throw new Error('Les numéros doivent être entre 1 et 90.');
+  if(new Set(all).size!==15) throw new Error('Doublon détecté dans le carton.');
+  return lines;
+}
+function codeToNumero(code){
+  const s=String(code||'').trim();
+  const m=s.match(/SDS-(\d{1,2})-(\d{1,4})$/i);
+  if(m) return cardInternalNumero(m[1], Number(m[2]));
+  const tail=s.match(/(\d{1,6})\s*$/);
+  return tail ? Number(tail[1]) : Number(s||0);
+}
+function statusText(elId, text, good=true){
+  const el=document.getElementById(elId); if(!el) return;
+  el.textContent=text; el.className='notice '+(good?'ok-note':'bad-note'); el.style.display='block';
+}
+function emptyGrid3x9(){ return Array.from({length:3},()=>Array(9).fill(null)); }
+function normalizeGrid3x9(grid, lignes){
+  if(Array.isArray(grid) && grid.length===3 && grid.every(r=>Array.isArray(r) && r.length===9)) return grid.map(r=>r.map(n=>Number.isInteger(Number(n)) ? Number(n) : null));
+  const g=emptyGrid3x9();
+  if(Array.isArray(lignes) && lignes.length===3){
+    lignes.forEach((line,r)=>{ (line||[]).slice(0,5).forEach((n,i)=>{ g[r][i*2]=Number(n)||null; }); });
+  }
+  return g;
+}
+function renderGridEditor(elId, grid){
+  const el=document.getElementById(elId); if(!el) return;
+  const g=normalizeGrid3x9(grid);
+  el.innerHTML=g.map((row,r)=>row.map((n,c)=>`<input inputmode="numeric" min="1" max="90" maxlength="2" data-grid="${elId}" data-r="${r}" data-c="${c}" value="${n||''}">`).join('')).join('');
+}
+function readGridEditor(elId){
+  const grid=emptyGrid3x9();
+  document.querySelectorAll(`[data-grid="${elId}"]`).forEach(inp=>{
+    const r=Number(inp.dataset.r), c=Number(inp.dataset.c); const raw=String(inp.value||'').trim();
+    grid[r][c]=raw?Number(raw):null;
+  });
+  const all=grid.flat().filter(n=>n!==null);
+  if(all.length!==15) throw new Error('La grille doit contenir exactement 15 numéros.');
+  if(all.some(n=>!Number.isInteger(n)||n<1||n>90)) throw new Error('Les numéros doivent être entre 1 et 90.');
+  if(new Set(all).size!==15) throw new Error('Doublon détecté dans le carton.');
+  if(grid.some(row=>row.filter(n=>n!==null).length!==5)) throw new Error('Chaque ligne doit contenir 5 numéros.');
+  return grid;
+}
+function gridToLignes(grid){ return grid.map(row=>row.filter(n=>n!==null)); }
+let editingCardNumero=null;
+async function listManagedCards(){
+  const client=Loto.supabaseClient; const out=document.getElementById('managedCardsList'); if(!out) return;
+  if(!client){ out.innerHTML='<p class="bad">Supabase non configuré.</p>'; return; }
+  const q=String(document.getElementById('cardSearchText')?.value||'').trim();
+  const status=document.getElementById('cardStatusFilter')?.value||'all';
+  let req=client.from('loto_cartons').select('*').eq('actif',true).order('updated_at',{ascending:false}).limit(100);
+  if(status!=='all') req=req.eq('status',status);
+  if(q){ const n=codeToNumero(q); req = n ? req.eq('numero',n) : req.ilike('carton_code','%'+q+'%'); }
+  const {data,error}=await req;
+  if(error){ out.innerHTML='<p class="bad">Erreur : '+esc(error.message)+'</p>'; return; }
+  if(!data?.length){ out.innerHTML='<p>Aucun carton trouvé.</p>'; return; }
+  out.innerHTML=data.map(c=>{
+    const st=c.status||'disponible';
+    const badge=st==='a_enregistrer'?'🟡 À enregistrer':(st==='disponible'?'🟢 Validé / disponible':(st==='vendu'?'🔵 Vendu':esc(st)));
+    const q=Number.isFinite(Number(c.ocr_quality)) ? ' · lecture '+Number(c.ocr_quality)+' %' : '';
+    return `<div class="saved-row"><div><b>${esc(c.carton_code||('Carton '+c.numero))}</b><br><span class="muted">${esc(c.serie||'STANDARD')} · ${badge}${q} · origine : ${esc(c.origine||'')}</span></div><div class="toolbar"><button data-edit-card="${esc(c.numero)}">Modifier</button>${st==='a_enregistrer'?`<button class="green" data-validate-card="${esc(c.numero)}">Valider</button>`:''}<button data-sold-card="${esc(c.carton_code||c.numero)}">Vendu</button><button data-free-card="${esc(c.carton_code||c.numero)}">Disponible</button></div></div>`;
+  }).join('');
+  out.querySelectorAll('[data-edit-card]').forEach(b=>b.onclick=()=>openEditCard(Number(b.dataset.editCard)));
+  out.querySelectorAll('[data-validate-card]').forEach(b=>b.onclick=()=>quickValidateCard(Number(b.dataset.validateCard)));
+  out.querySelectorAll('[data-sold-card]').forEach(b=>b.onclick=()=>markCardSold(b.dataset.soldCard));
+  out.querySelectorAll('[data-free-card]').forEach(b=>b.onclick=()=>markCardAvailable(b.dataset.freeCard));
+}
+async function openEditCard(numero){
+  const client=Loto.supabaseClient; if(!client) return;
+  const {data,error}=await client.from('loto_cartons').select('*').eq('numero',numero).single();
+  if(error){ cartonStatus('Erreur lecture carton : '+error.message,false); return; }
+  editingCardNumero=numero;
+  document.getElementById('editCardCode').value=data.carton_code||'';
+  document.getElementById('editCardSerie').value=data.serie||'IMPORT';
+  document.getElementById('editCardQuality').value=data.ocr_quality??'';
+  document.getElementById('editCardStatus').value=data.status||'a_enregistrer';
+  renderGridEditor('editGridEditor', normalizeGrid3x9(data.grille,data.lignes));
+  document.getElementById('cardEditPanel').style.display='block';
+  document.getElementById('cardEditPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function saveEditedCard(statusOverride=null){
+  const client=Loto.supabaseClient; if(!client){ statusText('editCardStatusBox','Supabase non configuré.',false); return; }
+  try{
+    const code=document.getElementById('editCardCode')?.value.trim(); const numero=codeToNumero(code)||editingCardNumero;
+    if(!numero) throw new Error('Code carton ou numéro obligatoire.');
+    const grille=readGridEditor('editGridEditor');
+    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('editCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:code||String(numero),status:statusOverride||document.getElementById('editCardStatus')?.value||'a_enregistrer',ocr_quality:Number(document.getElementById('editCardQuality')?.value||100),origine:'Scan saisie cartons',actif:true,updated_at:new Date().toISOString()};
+    const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
+    statusText('editCardStatusBox', statusOverride==='disponible' ? 'Carton validé.' : 'Modifications enregistrées.', true);
+    cartonStatus(statusOverride==='disponible' ? 'Carton validé : '+row.carton_code : 'Carton mis à jour : '+row.carton_code, true);
+    listManagedCards(); refreshCartonCount();
+  }catch(e){ statusText('editCardStatusBox','Erreur : '+(e.message||e),false); }
+}
+async function quickValidateCard(numero){
+  const client=Loto.supabaseClient; if(!client){ cartonStatus('Supabase non configuré.',false); return; }
+  const {error}=await client.from('loto_cartons').update({status:'disponible',updated_at:new Date().toISOString()}).eq('numero',numero);
+  if(error) cartonStatus('Erreur validation : '+error.message,false); else cartonStatus('Carton validé.',true);
+  listManagedCards();
+}
+async function saveManualCard(){
+  const client=Loto.supabaseClient; if(!client){ statusText('generatedCardsStatus','Supabase non configuré.',false); return; }
+  try{
+    const code=document.getElementById('manualCardCode')?.value.trim();
+    const numero=codeToNumero(code); if(!numero) throw new Error('Code carton ou numéro obligatoire.');
+    const grille=readGridEditor('manualGridEditor');
+    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('manualCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:code||String(numero),status:document.getElementById('manualCardStatus')?.value||'a_enregistrer',ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
+    const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
+    cartonStatus('Carton enregistré : '+row.carton_code,true); refreshCartonCount(); listManagedCards();
+  }catch(e){ cartonStatus('Erreur : '+(e.message||e),false); }
+}
+async function markCardSold(value){
+  const client=Loto.supabaseClient; if(!client){ statusText('salesTrackingStatus','Supabase non configuré.',false); return; }
+  const v=value || document.getElementById('saleCardCode')?.value;
+  const numero=codeToNumero(v); if(!numero){ statusText('salesTrackingStatus','Code carton obligatoire.',false); return; }
+  const s=Loto.state();
+  const sale={loto_id:s.program?.id||s.sessionCode, loto_title:s.program?.title||s.lotoName||'', numero, carton_code:String(v||''), seller:document.getElementById('saleSeller')?.value||'', status:'vendu', sold_at:new Date().toISOString()};
+  const {error}=await client.from('loto_cartons').update({status:'vendu',updated_at:new Date().toISOString()}).eq('numero',numero);
+  if(error){ statusText('salesTrackingStatus','Erreur vente : '+error.message,false); return; }
+  try{ await client.from('loto_carton_sales').upsert(sale,{onConflict:'loto_id,numero'}); }catch(e){}
+  statusText('salesTrackingStatus','Carton marqué vendu pour le loto actif.',true);
+  listManagedCards();
+}
+async function markCardAvailable(value){
+  const client=Loto.supabaseClient; if(!client){ statusText('salesTrackingStatus','Supabase non configuré.',false); return; }
+  const v=value || document.getElementById('saleCardCode')?.value;
+  const numero=codeToNumero(v); if(!numero){ statusText('salesTrackingStatus','Code carton obligatoire.',false); return; }
+  const {error}=await client.from('loto_cartons').update({status:'disponible',updated_at:new Date().toISOString()}).eq('numero',numero);
+  if(error){ statusText('salesTrackingStatus','Erreur : '+error.message,false); return; }
+  const s=Loto.state(); try{ await client.from('loto_carton_sales').delete().eq('loto_id',s.program?.id||s.sessionCode).eq('numero',numero); }catch(e){}
+  statusText('salesTrackingStatus','Carton remis disponible.',true);
+  listManagedCards();
+}
+document.getElementById('listManagedCards')?.addEventListener('click',listManagedCards);
+document.getElementById('saveManualCard')?.addEventListener('click',saveManualCard);
+document.getElementById('markCardSold')?.addEventListener('click',()=>markCardSold());
+document.getElementById('markCardAvailable')?.addEventListener('click',()=>markCardAvailable());
+
+renderGridEditor('manualGridEditor', emptyGrid3x9());
+document.getElementById('clearManualGrid')?.addEventListener('click',()=>renderGridEditor('manualGridEditor', emptyGrid3x9()));
+document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEditedCard());
+document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
+document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });

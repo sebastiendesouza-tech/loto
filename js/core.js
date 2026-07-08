@@ -18,7 +18,7 @@
     miniBingoTakenParties: [],
     miniBingoReady: false,
     miniBingoActive: false,
-    program: { id: '', title: '', date: '', parties: [] },
+    program: { id: '', title: '', date: '', parties: [], sales_tracking_enabled: false },
     savedPrograms: [],
     updatedAt: new Date().toISOString()
   });
@@ -383,6 +383,27 @@
     const card = await fetchCard(numero);
     if(!card) return { found:false, numero };
     const result = checkCard(card);
+    result.salesTrackingEnabled = !!state.program?.sales_tracking_enabled;
+    result.soldForCurrentLoto = true;
+    result.salesStatus = 'non_controle';
+    if(result.salesTrackingEnabled && supabaseClient){
+      const lotoId = state.program?.id || state.sessionCode || code();
+      try{
+        const { data, error } = await supabaseClient.from('loto_carton_sales').select('*').eq('loto_id', lotoId).eq('numero', Number(card.numero)).eq('status','vendu').maybeSingle();
+        if(error) throw error;
+        result.soldForCurrentLoto = !!data;
+        result.salesStatus = data ? 'vendu' : 'non_vendu';
+        if(!data){
+          result.valid = false;
+          result.reason = 'Carton non vendu pour ce loto';
+          result.messages = ['Carton non vendu pour ce loto', ...(result.messages || [])];
+        }
+      }catch(e){
+        result.soldForCurrentLoto = true;
+        result.salesStatus = 'controle_indisponible';
+        result.messages = ['Suivi des ventes indisponible : contrôle non bloquant', ...(result.messages || [])];
+      }
+    }
     const checked = [{...result, at:new Date().toISOString()}, ...(state.checkedCards || [])].slice(0,50);
     await save({ checkedCards: checked, history:addLog('check','Contrôle carton ' + numero, result) });
     return { found:true, result };

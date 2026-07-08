@@ -63,7 +63,7 @@ function renderResult(payload){
         <div>
           <h2>Carton ${esc(r.numero)}</h2>
           <p><b>Contrôle :</b> ${esc(req.label || '')}</p>
-          <p><b>Dernier numéro :</b> ${r.lastNumber ? pad(r.lastNumber) : '--'} ${req.lastNumberRequired ? '(obligatoire)' : '(non obligatoire)'}</p>
+          <p><b>Dernier numéro :</b> ${r.lastNumber ? pad(r.lastNumber) : '--'} ${req.lastNumberRequired ? '(obligatoire)' : '(non obligatoire)'}</p>${r.salesTrackingEnabled ? `<p><b>Suivi vente :</b> ${r.soldForCurrentLoto ? 'carton vendu' : 'carton non vendu pour ce loto'}</p>` : `<p><b>Suivi vente :</b> désactivé pour ce loto</p>`}
         </div>
         ${status}
       </div>

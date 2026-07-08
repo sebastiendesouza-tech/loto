@@ -4,6 +4,12 @@
   let firstHeard = null;
   let lastVoiceNumber = null;
   let lastVoiceAt = 0;
+  let mutedUntil = 0;
+  let pauseTimer = null;
+  let restartingAfterPause = false;
+
+  const REECOUTE_DELAY_MS = 1000;
+  const SAME_NUMBER_GUARD_MS = 5000;
 
   const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
   const teens = {10:'dix',11:'onze',12:'douze',13:'treize',14:'quatorze',15:'quinze',16:'seize',17:'dix sept',18:'dix huit',19:'dix neuf'};
@@ -75,16 +81,32 @@
     return result;
   }
 
+  function pauseListening(ms){
+    mutedUntil = Date.now() + Number(ms || REECOUTE_DELAY_MS);
+    restartingAfterPause = true;
+    window.clearTimeout(pauseTimer);
+    try{ recognition && recognition.stop(); }catch{}
+    pauseTimer = window.setTimeout(() => {
+      restartingAfterPause = false;
+      if(active && recognition){
+        try{ recognition.start(); }catch{}
+      }
+    }, Math.max(250, Number(ms || REECOUTE_DELAY_MS)));
+  }
+
   async function validateVoiceNumber(n){
     const now = Date.now();
-    if(lastVoiceNumber === n && now - lastVoiceAt < 1400) return;
+    if(now < mutedUntil) return;
+    if(lastVoiceNumber === n && now - lastVoiceAt < SAME_NUMBER_GUARD_MS) return;
     lastVoiceNumber = n;
     lastVoiceAt = now;
     firstHeard = null;
+    pauseListening(REECOUTE_DELAY_MS);
     await Loto.setPendingNumber(n);
   }
 
   async function handle(text){
+    if(Date.now() < mutedUntil) return;
     const t = norm(text);
     if(!t) return;
     if(t.includes('fermer affichage') || t.includes('fermer carton')) return Loto.hidePublicCard();
@@ -119,13 +141,18 @@
     recognition.interimResults = true;
     recognition.onstart = () => { onStatus && onStatus(true, 'écoute active'); };
     recognition.onresult = e => {
+      if(Date.now() < mutedUntil) return;
       for(let i=e.resultIndex;i<e.results.length;i++){
         const transcript = e.results[i][0].transcript || '';
         // Traitement des resultats intermediaires : validation plus rapide des numeros repetes.
         handle(transcript);
       }
     };
-    recognition.onend = () => { if(active) { try{ recognition.start(); }catch{} } };
+    recognition.onend = () => {
+      if(!active) return;
+      if(restartingAfterPause || Date.now() < mutedUntil) return;
+      try{ recognition.start(); }catch{}
+    };
     recognition.onerror = (e) => {
       const msg = e && e.error ? e.error : 'erreur micro';
       if(msg === 'not-allowed' || msg === 'service-not-allowed'){
@@ -139,7 +166,7 @@
     try{ recognition.start(); }
     catch(e){ active=false; onStatus && onStatus(false, 'démarrage impossible'); }
   }
-  function stop(onStatus){ active = false; firstHeard = null; lastVoiceNumber = null; try{ recognition && recognition.stop(); }catch{} onStatus && onStatus(false, 'micro arrêté'); }
+  function stop(onStatus){ active = false; firstHeard = null; lastVoiceNumber = null; restartingAfterPause = false; mutedUntil = 0; window.clearTimeout(pauseTimer); try{ recognition && recognition.stop(); }catch{} onStatus && onStatus(false, 'micro arrêté'); }
   function toggle(onStatus){ active ? stop(onStatus) : start(onStatus); }
-  window.LotoVoice = { start, stop, toggle, isActive:()=>active, parseNumber:(text)=>extractNumbers(text)[0]||null, extractNumbers };
+  window.LotoVoice = { start, stop, toggle, isActive:()=>active, parseNumber:(text)=>extractNumbers(text)[0]||null, extractNumbers, REECOUTE_DELAY_MS, SAME_NUMBER_GUARD_MS };
 })();
