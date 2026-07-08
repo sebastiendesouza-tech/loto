@@ -1,3 +1,3 @@
-# Loto by SdS - v3.3.5
+Loto by SdS - v3.4.0
 
-Correction import cartons : brouillon visible côté administration, champ identifiant vide, synchronisation téléphone -> PC renforcée.
+Page Cartons epuree et nouveau module import par scan_queue.
