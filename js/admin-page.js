@@ -654,3 +654,39 @@ document.getElementById('clearManualGrid')?.addEventListener('click',()=>renderG
 document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEditedCard());
 document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
 document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });
+
+// v3.2.6 - QR d'ouverture du scan saisie cartons + pseudo carton retour scan
+function adminScanUrl(){
+  return new URL('scan.html?mode=saisie-cartons', location.href).href;
+}
+function renderAdminScanQr(){
+  const a=document.getElementById('openScanSaisie'); if(a) a.href=adminScanUrl();
+  const qr=document.getElementById('scanSaisieQr');
+  if(qr){ qr.innerHTML=''; if(window.QRCode) new QRCode(qr,{text:adminScanUrl(),width:170,height:170,correctLevel:QRCode.CorrectLevel.M}); else qr.textContent=adminScanUrl(); }
+}
+async function renderLastScannedPseudoCard(){
+  const gridBox=document.getElementById('adminScanPseudoGrid'); const status=document.getElementById('adminScanLastStatus');
+  if(!gridBox) return;
+  let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
+  if(!code){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Aucun carton scanné sur ce poste.'; return; }
+  const client=Loto.supabaseClient;
+  if(!client){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Dernier scan : '+code+' (Supabase non configuré).'; return; }
+  try{
+    const numero=codeToNumero(code);
+    const {data,error}=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
+    if(error||!data) throw error||new Error('carton introuvable');
+    renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
+    if(status) status.textContent='Dernier scan : '+(data.carton_code||code)+' · '+(data.status||'a_enregistrer')+' · lecture '+(data.ocr_quality??'-')+' %';
+    document.getElementById('cardStatusFilter').value='a_enregistrer';
+    listManagedCards();
+  }catch(e){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Dernier scan : '+code+' non relu dans Supabase.'; }
+}
+function openCartonsTabFromHash(){
+  if(location.hash==='#cartons'){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('cartons')?.classList.add('active');
+    renderLastScannedPseudoCard();
+  }
+}
+setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash();},300);
+window.addEventListener('hashchange',openCartonsTabFromHash);
