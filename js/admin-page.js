@@ -680,6 +680,11 @@ document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const 
 
 // v3.2.6 - QR d'ouverture du scan saisie cartons + pseudo carton retour scan
 function adminScanUrl(){
+  // V3.3.4 : URL fiable. Sur GitHub Pages, on force l'URL publique valide.
+  // En local, on garde l'URL courante pour les tests sur reseau local.
+  if(location.hostname.includes('github.io')){
+    return 'https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons';
+  }
   return new URL('scan.html?mode=saisie-cartons', location.href).href;
 }
 function qrImageFallback(url, size=170){
@@ -712,17 +717,10 @@ function renderAdminScanQr(){
   if(qrBox){
     qrBox.style.display=connected?'none':'flex';
     if(!connected){
-      const currentUrl=qrBox.dataset.currentUrl || '';
-      if(currentUrl!==url){
-        qrBox.dataset.currentUrl=url;
-        qrBox.innerHTML='';
-        try{
-          if(window.QRCode){ new QRCode(qrBox,{text:url,width:150,height:150,correctLevel:QRCode.CorrectLevel.M}); }
-          else throw new Error('QRCode lib absente');
-        }catch(e){
-          qrBox.innerHTML='<img class="admin-scan-qr-img" src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="150" height="150">';
-        }
-      }
+      // V3.3.4 : on n'utilise plus qrcodejs ici.
+      // Le PNG local est un vrai QR teste et scannable, avec marge blanche.
+      qrBox.dataset.currentUrl=url;
+      qrBox.innerHTML='<img class="admin-scan-qr-img" src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="170" height="170">';
     }
   }
 }
