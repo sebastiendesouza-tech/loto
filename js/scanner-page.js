@@ -12,6 +12,9 @@ let importDraftLocked=false;
 let gridCandidateSince=0;
 let gridReadAllowed=false;
 let lastFramePresence=false;
+let stableOcrCounts={};
+let stableOcrAccepted=[];
+let stableOcrLastSeenAt=0;
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 
 function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
@@ -73,7 +76,23 @@ function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudi
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function setNewCardButtonVisible(show){const b=document.getElementById('newImportCardBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetForNextCard(message='Place un carton dans le cadre puis démarre la caméra.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setNewCardButtonVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
+function resetStableOcr(){stableOcrCounts={}; stableOcrAccepted=[]; stableOcrLastSeenAt=0;}
+function normalizeOcrNumbers(nums){return (nums||[]).map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90);}
+function updateStableOcrNumbers(nums){
+  const clean=normalizeOcrNumbers(nums);
+  const now=Date.now();
+  if(stableOcrLastSeenAt && now-stableOcrLastSeenAt>5000){ stableOcrCounts={}; }
+  stableOcrLastSeenAt=now;
+  const seenThisPass=new Set();
+  for(const n of clean){
+    if(seenThisPass.has(n)) continue;
+    seenThisPass.add(n);
+    stableOcrCounts[n]=(stableOcrCounts[n]||0)+1;
+    if(stableOcrCounts[n]>=2 && !stableOcrAccepted.includes(n)){ stableOcrAccepted.push(n); }
+  }
+  return stableOcrAccepted.slice(0,15);
+}
+function resetForNextCard(message='Place un carton dans le cadre puis démarre la caméra.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; resetStableOcr(); saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setNewCardButtonVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
 function completeCurrentCard(message='✓ Carton terminé. Contrôle et valide sur le PC.'){importDraftLocked=true; scannerProcessing=false; setSkipVisible(false); setFrame('ok'); stopQrScanner(false); setStatus(message,'ok'); setNewCardButtonVisible(true); markImportScannerPresence(true);}
 function cleanAssociationId(v){const raw=String(v||'1').replace(/\D/g,''); return String(raw||'1').slice(-2).padStart(2,'0');}
 function cardInternalNumero(a,o){return Number(cleanAssociationId(a))*10000+Number(o||0);}
@@ -231,7 +250,7 @@ async function startSaisieCartonsLoop(){
           gridReadAllowed=false;
           lastFramePresence=false;
         }
-        if(!cardPresent || nowPresence-gridCandidateSince<700){
+        if(!cardPresent || nowPresence-gridCandidateSince<850){
           setReadTime(NaN);
           setFrame('warn');
           setStatus(cardPresent ? 'Carton détecté. Stabilisation du cadrage...' : 'Place tout le carton dans le grand cadre.','muted');
@@ -244,25 +263,26 @@ async function startSaisieCartonsLoop(){
         const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
         const ms=performance.now()-t0;
         setReadTime(ms);
-        const nums=parseOcrNumbers(result?.data?.text||'');
+        const rawNums=parseOcrNumbers(result?.data?.text||'');
+        const nums=updateStableOcrNumbers(rawNums);
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
-        if(nums.length>0){
+        if(rawNums.length>0){
           const grid=buildGridFromNumbers(nums);
           const sig=nums.join('-');
           const now=Date.now();
-          if(sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500){
+          if(nums.length>0 && (sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500)){
             await savePartialOcrDraft(grid,quality,result?.data?.text||'',nums.length);
             lastPartialGridSignature=sig;
             lastPartialGridSentAt=now;
             partialGridSent=true;
           }
           setFrame(nums.length>=15?'ok':'warn');
-          setStatus('Étape 1/2 : '+nums.length+'/15 numéros envoyés au PC. Les cases manquantes pourront être saisies à la main.','muted');
+          setStatus('Étape 1/2 : '+nums.length+'/15 numéros confirmés. Lecture brute : '+rawNums.length+'/15. Stabilisation OCR en cours.','muted');
           if(nums.length>=15){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             setFrame('ok');
             beep(true);
-            setStatus('✓ 15 numéros envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ 15 numéros confirmés et envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
             setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);
@@ -283,7 +303,7 @@ async function startSaisieCartonsLoop(){
   }, saisieStep==='grid'?1800:1100);
 }
 async function startQrScanner(){
-  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; setNewCardButtonVisible(false); saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
+  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; gridCandidateSince=0; gridReadAllowed=false; lastFramePresence=false; resetStableOcr(); setNewCardButtonVisible(false); saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
