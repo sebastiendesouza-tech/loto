@@ -1,3 +1,19 @@
-# Loto by SdS v3.4.19
+# Loto by SdS v3.4.3
 
-Version import cartons par capture contrôlée : cadrer le carton, capturer, OCR, envoi au PC, puis lecture de l'identifiant.
+Corrections :
+- QR import admin affiché en image intégrée base64 : plus de message “QR en préparation”.
+- QR GitHub fixe vers scan.html?mode=saisie-cartons.
+- Pseudo-carton forcé en 3 lignes x 9 colonnes.
+- Communication scan_queue conservée.
+
+Loto by SdS - v3.4.3
+
+Version de stabilisation du module import par scan_queue.
+
+
+## V3.4.3
+
+- Ajout du bouton téléphone **Envoyer GRILLE TEST**.
+- Envoi d’un message `draft_grid` dans `scan_queue`.
+- Le pseudo-carton de l’administration se remplit avec une grille 3 x 9.
+- Architecture `scan_queue` conservée.
