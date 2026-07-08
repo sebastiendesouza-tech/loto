@@ -1,0 +1,10 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scan Loto by SdS</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css"></head><body class="scan-page-body">
+<header class="topbar"><div><span class="brand" data-title></span><span class="version" data-version></span></div><a id="scanBackLink" class="btn small light" href="commissaire.html">Retour</a></header>
+<main class="scan-wrap"><div class="card scan-main-card"><h1 id="scanPageTitle">Scanner</h1><p id="scanPageHelp" class="muted">Démarre la caméra et place le carton dans le cadre.</p>
+<div class="toolbar scan-startbar"><button id="startQrScanner" class="green">Démarrer caméra</button><button id="stopQrScanner" class="red">Arrêter</button></div>
+<div class="scanner-camera scan-camera-large"><video id="qrScannerVideo" playsinline autoplay muted></video><div id="qrScannerRegion" class="qr-scanner-region"></div><div id="scanFrameOverlay" class="scan-frame-overlay"></div></div>
+<p class="scan-time scan-time-under">Temps décodage : <b id="scannerReadTime">-</b></p>
+<p id="scannerStatus" class="muted scan-minimal-status">Caméra arrêtée.</p><p class="scan-skip-line"><button id="skipIdentifierBtn" class="secondary" style="display:none">Ignorer / saisir plus tard</button></p>
+<div class="scan-dev-hidden"><b id="scannerReadCount">0</b><span id="scannerLastCode">Aucun scan</span><div id="scannerHistory"></div></div>
+</div></main>
+<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script src="js/scanner-page.js"></script><script src="js/import-queue-scan.js"></script></body></html>
