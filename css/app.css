@@ -410,3 +410,19 @@
 .classic-foot{display:none!important;}
 @media(max-width:850px){.sheet-a4-classic,.sheet-a3-classic{width:100%;height:auto;grid-template-columns:1fr}.classic-card{width:100%!important;height:auto!important;min-height:190px!important}.classic-card .classic-head,.classic-grid,.classic-foot{width:92%!important}.classic-grid{height:auto!important}.classic-grid td{height:54px!important}.classic-grid .big-num{font-size:34px!important;line-height:38px!important}.classic-grid .mini-num{font-size:11px!important;line-height:11px!important}.classic-title{font-size:11px}.classic-code-head{font-size:12px}.classic-foot{font-size:11px!important}}
 @media print{@page{margin:0}.sheet-a4-classic,.sheet-a3-classic{box-shadow:none!important;border:none!important;border-radius:0!important;margin:0!important;page-break-after:always!important}.sheet-a4-classic{width:297mm!important;height:210mm!important}.sheet-a3-classic{width:297mm!important;height:420mm!important}.classic-card{width:148.5mm!important;height:105mm!important;break-inside:avoid!important;page-break-inside:avoid!important}}
+
+/* v3.2.0 - gestion cartons */
+.managed-list{margin-top:10px}.managed-list .saved-row{align-items:center}.diagnostic-list li:first-child{font-weight:700}
+
+/* v3.2.1 - modes scanner */
+.scanner-mode-card{margin-bottom:12px!important}
+.scanner-mode-buttons button.secondary{background:#e5e7eb!important;color:#111!important;border:1px solid #cbd5e1!important}
+.scan-card-entry{margin-top:14px!important}
+.scan-card-entry textarea{font-size:16px!important;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace!important}
+
+/* v3.2.3 - saisie / validation cartons scannés */
+.loto-grid-editor{display:grid;grid-template-columns:repeat(9,minmax(34px,1fr));gap:6px;max-width:760px;margin:10px 0 14px;}
+.loto-grid-editor input{width:100%;text-align:center;font-weight:1000;font-size:20px;padding:9px 4px;border-radius:10px;border:1px solid var(--border);background:#fff;}
+.loto-grid-editor input:placeholder-shown{background:#f1f5f9;}
+.scan-grid-wrap{margin-top:10px;}
+@media(max-width:700px){.loto-grid-editor{gap:4px;grid-template-columns:repeat(9,minmax(24px,1fr));}.loto-grid-editor input{font-size:16px;padding:7px 2px;border-radius:7px;}}
