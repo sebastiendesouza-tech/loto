@@ -678,29 +678,19 @@ document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEdit
 document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
 document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });
 
-// v3.2.6 - QR d'ouverture du scan saisie cartons + pseudo carton retour scan
+// v3.3.6 - QR inline fiable + synchronisation import robuste
+const ADMIN_SCAN_QR_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcIAAAHCAQAAAABUY/ToAAADuklEQVR4nO2cW4qrShSGv3WqII8KPYAMRWewh3ToIfUMdCgZwAbrsUH590NVGU13c2CTkMtZ66E7Jn5owc+6lpr4Oxv/+UsQnHTSSSeddNJJJx+PtGIRs3YxSGZm7ZL/MJqZ9ame1d/5bp18LDLmf90AkN4QLBjNHEWKiHQQNBOQwgyA3e9unXxkMq3+JR9GGI8S4/HT7N+TZeGYWbzeNZ18TdLMDqKbguhOEbopSO8tWH+zazr5amQzw9gC43Hmi4O6zTWdfAWykTQAdCczDYD1LGZ2lDQ0yq1ISfP1runka5AlvRlzvhMAwmzd9Abdx0HWfcTZulOcgcWuc00nX4vMGtoNPBaD5tMEM4zHTxNpMWj2Y5HnWqeTtyatB6xPZkAQox1kPYtBOsh6QO9mZtau2fUzrtPJW5BIkjQ0MzUpCrkuk6aaAHUqv26J51qnk7cjsyKgmZGmoHPWrAEo4sqftDXXkJPVqibm7HOqVObtOZ0kaQqim9wPOfkDmQ6yPkWgJkVZTQNBwGKMLWy7jc+5TievT5ZY1k1kd1Na1JpLizo7qPVX1oDmfsjJYrW2TwCpJdfxY/s796l3HaElQrLaCHiudTp5a9J6guqYI0g6RTSkyKZF/d6SfZP1d75bJx+L3OTUOWEemlLM5yQaKDn1QK3VPJY5ubOSD60doCIkrUnRWVflO9eQk3urPcaSTmto5lVXpXF0ruhLle8acnJrZz9UK7SQe0FZTUVSc+1YTx7LnLywzdzeuo+W7HhgMZEitp5hAFo3xD7bOp28HbmddeSmYk2KgNofGqAMzTyWOfnVzhGMLJqJGrzqcKNO06Cc4hpy8gey04xZG8TYBkHzmSccdKeDrM/Z9boR7d536+SjkF/n9lP9pcthLOiiP1QOn2udTt6O3MzLavmlzbg1h7YBPB9y8kfb9anXsh62bmnbd3QNOXlpRRJTKEP5ddZRqvxGG12d5/uuISer5e6PQUAkg25CjBbE+CvISHHO2XUx7w85+S2ZY1neMZ0iWTTdKSJpLc5y7v3pdZmTF1bqsmw1oOVMehPazpvTPB9y8nsya2MC6RQxO0rlMel0WH3TDKNFrL/33Tr5UORuL+wUaqdot39o56p85urkf5AaUsR6gsyOZW7PaOUZfEnyfYxO7i1eftFN7ebIIGI0v6Plkiy9zb6f2slvyaZMM8iPBQEaUnlzlXQ65GzJenxe5uT35HjxMH1+cUMZpOVxKyzrS2Wuck0nX4Q0f8e5k0466aSTTjr5Pyf/AGWJJbLs72IeAAAAAElFTkSuQmCC";
+let adminImportFallbackState = null;
 function adminScanUrl(){
-  // V3.3.4 : URL fiable. Sur GitHub Pages, on force l'URL publique valide.
-  // En local, on garde l'URL courante pour les tests sur reseau local.
   if(location.hostname.includes('github.io')){
     return 'https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons';
   }
   return new URL('scan.html?mode=saisie-cartons', location.href).href;
 }
-function qrImageFallback(url, size=170){
-  return 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(url);
-}
-function renderQrInto(el, url, size=170){
-  if(!el) return;
-  const fallbackHtml='<img src="'+qrImageFallback(url,size)+'" alt="QR code scan saisie cartons" width="'+size+'" height="'+size+'">';
-  try{
-    el.innerHTML='';
-    if(window.QRCode){
-      new QRCode(el,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
-      if(el.children.length) return;
-    }
-  }catch(e){}
-  el.innerHTML=fallbackHtml;
+function latestImportState(){
+  const live=Loto.state()||{};
+  const fallback=adminImportFallbackState||{};
+  return {...fallback,...live, importScanner: live.importScanner||fallback.importScanner, lastImportDraft: live.lastImportDraft||fallback.lastImportDraft, importDrafts: live.importDrafts||fallback.importDrafts};
 }
 function renderAdminScanQr(){
   const url=adminScanUrl();
@@ -708,7 +698,7 @@ function renderAdminScanQr(){
   const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=url;
   const qrBox=document.getElementById('scanSaisieQr');
   const phoneBox=document.getElementById('scanSaisiePhoneStatus');
-  const st=Loto.state()?.importScanner || {};
+  const st=latestImportState().importScanner || {};
   const connected=!!st.connected && st.mode==='saisie_cartons' && (Date.now()-Number(st.lastSeen||0)<30000);
   if(phoneBox){
     phoneBox.style.display=connected?'block':'none';
@@ -717,12 +707,28 @@ function renderAdminScanQr(){
   if(qrBox){
     qrBox.style.display=connected?'none':'flex';
     if(!connected){
-      // V3.3.4 : on n'utilise plus qrcodejs ici.
-      // Le PNG local est un vrai QR teste et scannable, avec marge blanche.
       qrBox.dataset.currentUrl=url;
-      qrBox.innerHTML='<img class="admin-scan-qr-img" src="assets/qr-saisie-cartons-github.png" alt="QR code scan saisie cartons" width="170" height="170">';
+      qrBox.innerHTML='<img class="admin-scan-qr-img" src="'+ADMIN_SCAN_QR_DATA_URI+'" alt="QR code scan saisie cartons" width="170" height="170">';
     }
   }
+}
+function importDraftFromState(){
+  const st=latestImportState();
+  if(st.lastImportDraft?.numero) return st.lastImportDraft;
+  if(Array.isArray(st.importDrafts) && st.importDrafts.length) return st.importDrafts[0];
+  return null;
+}
+async function pollImportSessionState(){
+  const client=Loto.supabaseClient; if(!client) return;
+  try{
+    const code=(Loto.state()?.sessionCode)||localStorage.getItem('loto_session_code')||'SESSION_ACTIVE';
+    const {data,error}=await client.from('loto_app_sessions').select('state,updated_at').eq('code',code).maybeSingle();
+    if(!error && data?.state){
+      adminImportFallbackState=data.state;
+      renderAdminScanQr();
+      if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard();
+    }
+  }catch(e){ console.warn('Lecture session import impossible',e); }
 }
 
 async function renderLastScannedPseudoCard(){
@@ -738,34 +744,35 @@ async function renderLastScannedPseudoCard(){
   const client=Loto.supabaseClient;
   if(!client){ showBlank('Supabase non configuré.'); return; }
   try{
-    let data=null;
-    const sessionDraft=Loto.state()?.lastImportDraft || null;
-    if(sessionDraft?.numero){
-      data=sessionDraft;
+    let data=importDraftFromState();
+    if(data?.numero){
       try{
-        const res=await client.from('loto_cartons').select('*').eq('numero',sessionDraft.numero).maybeSingle();
-        if(!res.error && res.data) data=res.data;
-      }catch(e){}
+        const res=await client.from('loto_cartons').select('*').eq('numero',data.numero).maybeSingle();
+        if(!res.error && res.data) data={...data,...res.data};
+      }catch(e){ console.warn('Brouillon visible via session, table non relue',e); }
     }
     if(!data){
       let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
       if(code){
-        const numero=codeToNumero(code);
-        const res=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
-        if(!res.error && res.data) data=res.data;
+        try{
+          const numero=codeToNumero(code);
+          const res=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
+          if(!res.error && res.data) data=res.data;
+        }catch(e){}
       }
     }
     if(!data){
-      const res=await client.from('loto_cartons').select('*').eq('status','a_enregistrer').eq('serie','IMPORT').eq('actif',true).order('updated_at',{ascending:false}).limit(1);
-      if(res.error) throw res.error;
-      data=res.data?.[0]||null;
+      try{
+        const res=await client.from('loto_cartons').select('*').eq('status','a_enregistrer').eq('serie','IMPORT').eq('actif',true).order('updated_at',{ascending:false}).limit(1);
+        if(!res.error) data=res.data?.[0]||null;
+      }catch(e){ console.warn('Lecture table import impossible',e); }
     }
     if(!data){ showBlank('Aucun carton à enregistrer. Le champ identifiant se remplira après scan.'); return; }
     renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
     if(idInput) idInput.value=data.external_code||'';
     if(status){
       const ident=data.external_code ? ('identifiant '+data.external_code+' ('+(data.external_code_type||'lu')+')') : 'identifiant à compléter sur PC';
-      status.textContent='Dernier brouillon : '+(data.carton_code||data.numero)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · '+ident;
+      status.textContent='Dernier brouillon : '+(data.carton_code||data.numero)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · '+ident+(data.sync_error?' · ⚠ '+data.sync_error:'');
     }
     const f=document.getElementById('cardStatusFilter'); if(f) f.value='a_enregistrer';
     listManagedCards();
@@ -794,7 +801,8 @@ function initImportCardsRealtime(){
 
 setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash(); initImportCardsRealtime();},300);
 setInterval(renderAdminScanQr,5000);
-setInterval(()=>{ if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard(); },2500);
+setInterval(pollImportSessionState,2000);
+setInterval(()=>{ if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard(); },2000);
 document.getElementById('refreshImportDrafts')?.addEventListener('click',()=>{ renderLastScannedPseudoCard(); listManagedCards(); });
 window.addEventListener('hashchange',openCartonsTabFromHash);
 

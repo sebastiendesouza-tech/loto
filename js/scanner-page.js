@@ -63,9 +63,16 @@ async function saveOcrDraft(grid, quality, rawText){
   const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');
   const code=await nextImportCode(); const numero=codeToNumero(code); const m=code.match(/SDS-(\d{1,2})-(\d{1,4})$/i);
   const row={numero,carton_code:code,association_id:cleanAssociationId(m[1]),card_order:Number(m[2]),external_code:null,external_code_type:null,external_ocr_quality:null,numbers_signature:numbersSignatureFromGrid(grid),serie:'IMPORT',lignes:gridToLignes3x9(grid),grille:grid,qr_payload:code,status:'a_enregistrer',origine:'Scan OCR saisie cartons',ocr_quality:quality,ocr_text:String(rawText||'').slice(0,1000),actif:true,updated_at:new Date().toISOString()};
-  const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
   try{localStorage.setItem('loto_last_scanned_card_code',code);}catch(e){}
   await publishImportDraft(row,'grid_ok');
+  try{
+    const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'});
+    if(error) throw error;
+    await publishImportDraft({...row,sync_ok:true},'grid_ok');
+  }catch(e){
+    await publishImportDraft({...row,sync_error:'table loto_cartons non écrite: '+(e.message||e)},'grid_ok');
+    console.warn('Brouillon publié en session mais table loto_cartons non écrite',e);
+  }
   return row;
 }
 async function updateDraftIdentifier(identifier, type='ocr', quality=null){
@@ -76,9 +83,16 @@ async function updateDraftIdentifier(identifier, type='ocr', quality=null){
   if(checkErr) throw checkErr;
   if(existing&&existing.length) throw new Error('Identifiant déjà utilisé : '+ext);
   const patch={external_code:ext,external_code_type:type,external_ocr_quality:quality,qr_payload:ext,updated_at:new Date().toISOString()};
-  const {error}=await client.from('loto_cartons').update(patch).eq('numero',currentDraft.numero); if(error) throw error;
   currentDraft={...currentDraft,...patch};
   await publishImportDraft(currentDraft,'identifier_ok');
+  try{
+    const {error}=await client.from('loto_cartons').update(patch).eq('numero',currentDraft.numero);
+    if(error) throw error;
+    await publishImportDraft({...currentDraft,sync_ok:true},'identifier_ok');
+  }catch(e){
+    await publishImportDraft({...currentDraft,sync_error:'identifiant non écrit en table: '+(e.message||e)},'identifier_ok');
+    console.warn('Identifiant publié en session mais table loto_cartons non mise à jour',e);
+  }
   try{localStorage.setItem('loto_last_scanned_card_code',currentDraft.carton_code);}catch(e){}
   return currentDraft;
 }
