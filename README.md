@@ -1,10 +1,9 @@
-# Loto by SdS v3.3.3
+# Loto by SdS - v3.3.4
 
-Version de test centrée sur l'import de cartons existants.
+Correction ciblée du QR code dans Administration > Cartons.
 
-Points clés :
-- Administration > Cartons affiche un QR code lisible pour ouvrir le scan sur téléphone.
-- Le QR pointe automatiquement vers `scan.html?mode=saisie-cartons` selon l'URL utilisée.
-- Le téléphone scanne la grille puis l'identifiant du carton.
-- L'identifiant peut être ignoré puis complété sur le PC.
-- Les brouillons apparaissent dans les cartons à enregistrer.
+Le QR affiché encode directement :
+
+`https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons`
+
+Il est intégré en image locale et ne dépend plus d'un générateur JavaScript ou d'un service externe.
