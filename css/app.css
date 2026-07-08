@@ -439,3 +439,8 @@
 .scan-frame-small{inset:25% 18%!important;border-style:dashed!important;}
 .scan-admin-qr .btn{display:none!important;}
 #scanSaisieUrlText{font-size:11px;word-break:break-all;}
+
+/* v3.3.0 - import cartons */
+.qr-box{min-width:190px;min-height:190px;display:flex;align-items:center;justify-content:center}
+.scan-skip-line{text-align:center;margin:.7rem 0 0}
+.scan-saisie-mode .scan-camera-large{min-height:58vh}
