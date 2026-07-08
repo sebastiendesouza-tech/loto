@@ -471,3 +471,11 @@
 .scan-step-banner{margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef7ff;border:1px solid #b7defa;font-weight:700}
 .scan-step-banner.ok{background:#e8f8ee;border-color:#8ed1a8}
 .scan-step-banner.bad{background:#fff0f0;border-color:#f0aaaa}
+
+/* v3.4.1 - stabilisation import scan_queue */
+.admin-scan-qr-box canvas{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;background:#fff;display:block;}
+.admin-scan-qr-box a.btn{display:inline-flex!important;align-items:center;justify-content:center;text-decoration:none;}
+.pseudo-grid{display:grid!important;grid-template-columns:repeat(9,minmax(34px,1fr))!important;gap:6px!important;max-width:620px!important;}
+.pseudo-grid input{min-width:0;text-align:center;font-weight:1000;font-size:20px;padding:9px 4px;border-radius:10px;border:1px solid var(--border);background:#f8fafc;}
+.scan-admin-layout{grid-template-columns:minmax(0,1fr) 240px!important;}
+@media(max-width:750px){.scan-admin-layout{grid-template-columns:1fr!important}.scan-admin-qr{text-align:center!important}.pseudo-grid{grid-template-columns:repeat(9,minmax(24px,1fr))!important;gap:4px!important}.pseudo-grid input{font-size:16px;padding:7px 2px}}
