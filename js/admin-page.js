@@ -110,7 +110,7 @@ async function testCard(){
 document.getElementById('importDefaultCartons')?.addEventListener('click',importDefaultCartons);
 document.getElementById('deleteStandardCartons')?.addEventListener('click',deleteStandardCartons);
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
-document.getElementById('testCardBtn').onclick=testCard;
+document.getElementById('testCardBtn')?.addEventListener('click', testCard);
 
 Loto.onChange(s=>{Loto.pageHeader(); renderAdminScanQr(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);
