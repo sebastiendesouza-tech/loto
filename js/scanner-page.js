@@ -169,27 +169,56 @@ function clusterItemsIntoRows(items){
 }
 function numbersFromRowItems(rowItems){
   const row=rowItems.slice().sort((a,b)=>a.cx-b.cx);
-  const out=[];
+  const candidates=[];
   const used=new Set();
   const avgH=row.length ? row.reduce((s,it)=>s+it.h,0)/row.length : 18;
   for(let i=0;i<row.length;i++){
     if(used.has(i)) continue;
     const cur=row[i];
     let val=cur.n;
-    // Recompose 2 chiffres coupés en 2 mots seulement s'ils sont très proches.
+    let box={...cur};
+    // Recompose 2 chiffres coupes en 2 mots seulement s'ils sont tres proches.
     if(String(cur.text).length===1 && i+1<row.length && !used.has(i+1)){
       const next=row[i+1];
       const gap=next.x0-cur.x1;
       const combined=Number(String(cur.text)+String(next.text));
       if(String(next.text).length===1 && gap>=-2 && gap<Math.max(12,avgH*0.75) && combined>=10 && combined<=90){
         val=combined;
+        box={...cur,x1:next.x1,cx:(cur.x0+next.x1)/2,w:Math.max(1,next.x1-cur.x0),text:String(cur.text)+String(next.text)};
         used.add(i+1);
       }
     }
-    if(Number.isInteger(val)&&val>=1&&val<=90&&!out.includes(val)) out.push(val);
+    if(Number.isInteger(val)&&val>=1&&val<=90){ candidates.push({...box,n:val}); }
     used.add(i);
   }
-  return out.slice(0,5);
+
+  const cleaned=[];
+  const minGap=Math.max(7,avgH*0.38);
+  for(const cand of candidates){
+    if(cleaned.some(x=>x.n===cand.n)) continue;
+    const prev=cleaned[cleaned.length-1];
+    if(prev){
+      const gap=cand.x0-prev.x1;
+      // Sur une ligne de loto les numeros vont de gauche a droite en ordre croissant.
+      // Cela elimine les chiffres parasites du type 11 1 3 34.
+      if(cand.n<=prev.n) continue;
+      // Un chiffre seul apres un nombre a deux chiffres est presque toujours un parasite.
+      if(cand.n<10 && prev.n>=10) continue;
+      // Si deux blocs sont trop colles et n'ont pas ete recomposes, on garde le plus credible.
+      if(gap>=-3 && gap<minGap){
+        const prevScore=String(prev.text||prev.n).length + Math.min(prev.w,40)/40;
+        const candScore=String(cand.text||cand.n).length + Math.min(cand.w,40)/40;
+        if(candScore>prevScore && cand.n>prev.n){ cleaned[cleaned.length-1]=cand; }
+        continue;
+      }
+    }else if(cand.n<10){
+      // Un numero de 1 a 9 est autorise seulement en premiere position de ligne.
+      cleaned.push(cand);
+      continue;
+    }
+    cleaned.push(cand);
+  }
+  return cleaned.map(x=>x.n).slice(0,5);
 }
 function parseOcrNumbersByRows(result){
   const items=ocrWordsToNumberItems(result);
@@ -217,26 +246,23 @@ function normalizeRowNumbers(row){
   }
   return out.slice(0,5);
 }
+function rowIsStrictlyIncreasing(row){
+  const clean=normalizeRowNumbers(row);
+  if(clean.length!==5) return false;
+  for(let i=1;i<clean.length;i++){ if(clean[i]<=clean[i-1]) return false; }
+  return true;
+}
 function updateLockedRows(rows){
   for(let i=0;i<3;i++){
     if(lockedGridRows[i]) continue;
     const row=normalizeRowNumbers((rows||[])[i]);
-    if(row.length<5){
-      // On ne remet pas tout le moteur a zero : on attend simplement
-      // une nouvelle lecture complete. Cela evite les validations folles
-      // quand un nombre est coupe en deux ou lu trop vite.
-      continue;
-    }
-    const sig=row.join(',');
-    if(sig===rowLockSignatures[i]) rowLockCounts[i]++;
-    else { rowLockSignatures[i]=sig; rowLockCounts[i]=1; }
-
-    // Compromis retenu : une ligne doit etre lue deux fois identique.
-    // C'est plus fiable que le verrouillage immediat, mais beaucoup plus
-    // rapide que l'ancien verrouillage trop strict.
-    if(row.length===5 && rowLockCounts[i]>=2){
+    // Nouvelle regle V3.4.18 : plus de double lecture.
+    // Une ligne est verrouillee des qu'elle contient 5 numeros propres,
+    // strictement croissants de gauche a droite.
+    if(rowIsStrictlyIncreasing(row)){
       lockedGridRows[i]=row.slice(0,5);
-      rowLockSignatures[i]=sig;
+      rowLockSignatures[i]=row.join(',');
+      rowLockCounts[i]=1;
       beep(true);
     }
   }
@@ -311,7 +337,7 @@ async function saveOcrDraft(grid, quality, rawText){
 async function savePartialOcrDraft(grid, quality, rawText, count){
   if(importDraftLocked) return currentDraft;
   const payload={
-    source:'ocr_camera_partial_v346',
+    source:'ocr_camera_lignes_metier_v3418',
     confidence:quality,
     grid:grid,
     detected_count:count,
@@ -431,7 +457,7 @@ async function startSaisieCartonsLoop(){
           const currentCount=Math.max(lockedCount, normalizeOcrNumbers(displayRows.flat()).length);
           const confirmed=allRowsLocked();
           setFrame(confirmed?'ok':'warn');
-          setStatus('Étape 1/2 : lecture par lignes. '+lineStatusText(rows)+'. Total '+currentCount+'/15. Une ligne est verrouillée après 2 lectures identiques.','muted');
+          setStatus('Étape 1/2 : lecture par lignes. '+lineStatusText(rows)+'. Total '+currentCount+'/15. Une ligne est verrouillée si elle contient 5 numéros croissants.','muted');
           if(confirmed){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             partialGridSent=true;
