@@ -1,3 +1,10 @@
+# Loto by SdS v3.3.1
+
+- Affichage public : lot affiché en orange, puis type de jeu en dessous.
+- Joueur, commissaire, animateur et public : grille homogénéisée.
+- Numéros non sortis en bleu clair.
+- Suppression de l’effet clignotant sur le numéro en attente.
+
 # Loto by SdS
 
 Application web PWA pour l'animation d'un loto associatif.

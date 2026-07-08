@@ -1,3 +1,10 @@
+# Loto by SdS v3.3.1
+
+- Affichage public : lot affiché en orange, puis type de jeu en dessous.
+- Joueur, commissaire, animateur et public : grille homogénéisée.
+- Numéros non sortis en bleu clair.
+- Suppression de l’effet clignotant sur le numéro en attente.
+
 # v3.3.0 - Import cartons corrigé
 
 - QR d’accès scan saisie cartons généré dynamiquement dans Administration > Cartons.
