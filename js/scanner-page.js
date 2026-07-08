@@ -229,8 +229,13 @@ function updateLockedRows(rows){
     const sig=row.join(',');
     if(sig===rowLockSignatures[i]) rowLockCounts[i]++;
     else { rowLockSignatures[i]=sig; rowLockCounts[i]=1; }
-    if(rowLockCounts[i]>=2){
+    if(row.length===5){
+      // Verrouillage immediat : des qu'une ligne atteint 5 numeros,
+      // on la fige et on ne la relit plus. Cela evite l'attente
+      // inutile quand les lignes repassent ensuite a 4/5 sur l'image suivante.
       lockedGridRows[i]=row.slice(0,5);
+      rowLockSignatures[i]=sig;
+      rowLockCounts[i]=1;
       beep(true);
     }
   }
@@ -432,7 +437,7 @@ async function startSaisieCartonsLoop(){
             importDraftLocked=false;
             setFrame('ok');
             beep(true);
-            setStatus('✓ 3 lignes verrouillées. Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ 3 lignes verrouillees. Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
             setTimeout(()=>{scannerProcessing=false; setFrame('warn');},900);
