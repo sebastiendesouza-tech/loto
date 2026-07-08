@@ -5,6 +5,9 @@ if(scannerUsageMode!=='saisie_cartons') scannerUsageMode='commissaire';
 let saisieStep='grid';
 let currentDraft=null;
 let barcodeDetector=null;
+let lastPartialGridSignature='';
+let lastPartialGridSentAt=0;
+let partialGridSent=false;
 const IMPORT_INBOX_CODE='IMPORT_CARTONS_INBOX';
 
 function queueSessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
@@ -65,7 +68,7 @@ function setReadTime(ms){const el=document.getElementById('scannerReadTime'); if
 function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop();ctx.close();},ok?90:180);}catch(e){}}
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
-function resetForNextCard(message='Carton envoyé. Place un autre carton dans le cadre.'){currentDraft=null; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
+function resetForNextCard(message='Carton envoyé. Place un autre carton dans le cadre.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
 function cleanAssociationId(v){const raw=String(v||'1').replace(/\D/g,''); return String(raw||'1').slice(-2).padStart(2,'0');}
 function cardInternalNumero(a,o){return Number(cleanAssociationId(a))*10000+Number(o||0);}
 function codeToNumero(code){const s=String(code||'').trim(); const m=s.match(/SDS-(\d{1,2})-(\d{1,4})$/i); if(m) return cardInternalNumero(m[1],Number(m[2])); const tail=s.match(/(\d{1,6})\s*$/); return tail?Number(tail[1]):Number(s||0);}
@@ -111,6 +114,20 @@ async function saveOcrDraft(grid, quality, rawText){
   };
   await insertScanQueue('draft_grid', payload);
   currentDraft={grid, quality, rawText:String(rawText||''), sentAt:new Date().toISOString()};
+  return currentDraft;
+}
+
+async function savePartialOcrDraft(grid, quality, rawText, count){
+  const payload={
+    source:'ocr_camera_partial_v345',
+    confidence:quality,
+    grid:grid,
+    detected_count:count,
+    rawText:String(rawText||'').slice(0,1000),
+    at:new Date().toISOString()
+  };
+  await insertScanQueue('draft_grid_partial', payload);
+  currentDraft={...(currentDraft||{}), grid, quality, rawText:String(rawText||''), partial:true, sentAt:new Date().toISOString()};
   return currentDraft;
 }
 async function updateDraftIdentifier(identifier, type='ocr', quality=null){
@@ -162,9 +179,41 @@ async function startSaisieCartonsLoop(){
     if(scannerProcessing||!video||video.readyState<2||!window.Tesseract) return; scannerProcessing=true;
     try{
       if(saisieStep==='grid'){
-        drawRoi(video,canvas,ctx,false); const t0=performance.now(); const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}}); const ms=performance.now()-t0; setReadTime(ms); const nums=parseOcrNumbers(result?.data?.text||'');
-        if(nums.length>=15){const grid=buildGridFromNumbers(nums); const quality=Math.round(Math.min(100,Math.max(60,result?.data?.confidence||90))); currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||''); setFrame('ok'); beep(true); setStatus('✓ Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok'); saisieStep='identifier'; setSkipVisible(true); setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);}
-        else{setFrame('warn'); setStatus('Étape 1/2 : '+nums.length+'/15 numéros détectés. Continue à cadrer.','muted'); scannerProcessing=false;}
+        drawRoi(video,canvas,ctx,false);
+        const t0=performance.now();
+        const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
+        const ms=performance.now()-t0;
+        setReadTime(ms);
+        const nums=parseOcrNumbers(result?.data?.text||'');
+        const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
+        if(nums.length>0){
+          const grid=buildGridFromNumbers(nums);
+          const sig=nums.join('-');
+          const now=Date.now();
+          if(sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500){
+            await savePartialOcrDraft(grid,quality,result?.data?.text||'',nums.length);
+            lastPartialGridSignature=sig;
+            lastPartialGridSentAt=now;
+            partialGridSent=true;
+          }
+          setFrame(nums.length>=15?'ok':'warn');
+          setStatus('Étape 1/2 : '+nums.length+'/15 numéros envoyés au PC. Les cases manquantes pourront être saisies à la main.','muted');
+          if(nums.length>=15){
+            currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
+            setFrame('ok');
+            beep(true);
+            setStatus('✓ 15 numéros envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            saisieStep='identifier';
+            setSkipVisible(true);
+            setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);
+          }else{
+            scannerProcessing=false;
+          }
+        }else{
+          setFrame('warn');
+          setStatus('Étape 1/2 : 0/15 numéro détecté. Continue à cadrer.','muted');
+          scannerProcessing=false;
+        }
       }else{
         setStatus('Étape 2/2 : scanne le QR code, le code-barres ou le numéro d’identification imprimé.','muted'); const found=await readIdentifierFromFrame(video,canvas,ctx);
         if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); setSkipVisible(false); setStatus('✓ Identifiant envoyé : '+found.value+'. Le brouillon doit apparaître sur le PC. Prêt pour le carton suivant.','ok'); setTimeout(()=>resetForNextCard(),900);}
@@ -174,19 +223,28 @@ async function startSaisieCartonsLoop(){
   }, saisieStep==='grid'?1800:1100);
 }
 async function startQrScanner(){
-  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
+  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
   try{ await insertScanQueue('draft_identifier_skipped',{message:'identifiant à saisir sur PC',at:new Date().toISOString()}); }catch(e){console.warn('Message skip non envoyé',e);}
   setStatus('Brouillon envoyé sans identifiant. Complète le numéro sur le PC avant validation.','ok');
   setTimeout(()=>resetForNextCard('Brouillon envoyé. Place un autre carton dans le cadre.'),1100);
+}
+async function finishGridManually(){
+  if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='grid' || !partialGridSent) return;
+  saisieStep='identifier';
+  scannerProcessing=false;
+  setSkipVisible(true);
+  setFrame('warn');
+  beep(true);
+  setStatus('Grille partielle conservée sur le PC. Étape 2/2 : scanne l’identifiant ou clique sur Ignorer / saisir plus tard.','ok');
 }
 document.getElementById('skipIdentifierBtn')?.addEventListener('click',skipIdentifier);
 document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);

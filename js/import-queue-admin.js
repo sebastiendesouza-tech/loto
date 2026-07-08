@@ -77,7 +77,7 @@
       const input=el('adminScanExternalCode'); if(input) input.value=p.message||'';
       return true;
     }
-    if(row.type==='draft_grid' && Array.isArray(p.grid)){
+    if((row.type==='draft_grid' || row.type==='draft_grid_partial') && Array.isArray(p.grid)){
       renderGrid(p.grid);
       return true;
     }
@@ -102,7 +102,7 @@
     const {data,error}=await client.from('scan_queue').select('*').eq('session_code',sessionCode()).eq('mode',MODE).order('created_at',{ascending:false}).limit(12);
     if(error){setStatus('Erreur lecture scan_queue : '+error.message,false); return;}
     const messages=(data||[]).filter(x=>x.type!=='presence');
-    const latestGrid=messages.find(x=>x.type==='draft_grid' || x.type==='draft_full');
+    const latestGrid=messages.find(x=>x.type==='draft_grid' || x.type==='draft_grid_partial' || x.type==='draft_full');
     const latestIdentifier=messages.find(x=>x.type==='draft_identifier');
     const latestTest=messages.find(x=>x.type==='test' || x.type==='pc_test');
     if(latestGrid) applyPayload(latestGrid);

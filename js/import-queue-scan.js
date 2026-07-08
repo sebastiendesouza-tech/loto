@@ -32,10 +32,11 @@
     if(s){s.textContent=text; s.className=(ok?'ok-note':'bad-note')+' scan-minimal-status';}
   }
 
+  let presenceOkShown=false;
   async function sendPresence(){
     try{
       await insertQueue('presence',{status:'connected',url:location.href,at:new Date().toISOString()});
-      setStatus('🟢 Connecté au PC.');
+      if(!presenceOkShown){ setStatus('🟢 Connecté au PC.'); presenceOkShown=true; }
     }catch(e){
       setStatus('Erreur connexion Supabase : '+(e.message||e),false);
     }
@@ -75,8 +76,8 @@
   }
 
   function init(){
-    el('scanPageTitle').textContent='Import cartons - OCR réel';
-    el('scanPageHelp').textContent='Démarre la caméra. Étape 1 : lire les 15 numéros. Étape 2 : lire le QR, le code-barres ou le numéro du carton.';
+    el('scanPageTitle').textContent='Import cartons - OCR partiel';
+    el('scanPageHelp').textContent='Démarre la caméra. Les numéros détectés sont envoyés au PC au fur et à mesure. Les cases manquantes pourront être complétées à la main.';
     el('scanBackLink').href='administration.html#cartons';
 
     const bar=document.querySelector('.scan-startbar');
