@@ -1,4 +1,4 @@
-# v3.4.14 - OCR par lignes
+# v3.4.15 - OCR par lignes
 
 - Lecture de la grille triée par coordonnées.
 - Regroupement en 3 lignes horizontales.
@@ -60,3 +60,8 @@ Corrections :
 - Etat telephone connecte via scan_queue.
 - Test HELLO conserve.
 - Pseudo-carton corrige en 3 lignes x 9 colonnes.
+
+## V3.4.15
+- OCR import : verrouillage ligne par ligne.
+- Une ligne est verrouillée dès que 5 numéros identiques sont confirmés sur 2 lectures.
+- La grille est envoyée au PC uniquement lorsque les 3 lignes sont verrouillées.
