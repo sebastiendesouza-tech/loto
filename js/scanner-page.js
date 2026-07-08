@@ -67,7 +67,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function setStatus(msg,type='muted'){const el=document.getElementById('scannerStatus'); if(el){el.className=type+' scan-minimal-status'; el.textContent=msg;}}
 function setReadTime(ms){const el=document.getElementById('scannerReadTime'); if(el) el.textContent=Number.isFinite(ms)?Math.round(ms)+' ms':'-';}
 function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop();ctx.close();},ok?90:180);}catch(e){}}
-function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small','scan-frame-grid-large'); if(saisieStep==='identifier'){ el.classList.add('scan-frame-small'); } else { el.classList.add('scan-frame-grid-large'); } if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
+function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
 function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function setNewCardButtonVisible(show){const b=document.getElementById('newImportCardBtn'); if(b) b.style.display=show?'inline-block':'none';}
 function resetForNextCard(message='Place un carton dans le cadre puis démarre la caméra.'){currentDraft=null; lastPartialGridSignature=''; lastPartialGridSentAt=0; partialGridSent=false; importDraftLocked=false; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setNewCardButtonVisible(false); setFrame('warn'); setStatus(message,'ok'); markImportScannerPresence(true);}
@@ -78,19 +78,18 @@ function codeToNumero(code){const s=String(code||'').trim(); const m=s.match(/SD
 function numbersSignatureFromGrid(grid){const nums=(grid||[]).flat().filter(n=>Number.isInteger(Number(n))).map(Number).sort((a,b)=>a-b); return nums.map(n=>String(n).padStart(2,'0')).join('-');}
 function gridToLignes3x9(grid){return grid.map(r=>r.filter(n=>n!==null));}
 function emptyGrid3x9(){return Array.from({length:3},()=>Array(9).fill(null));}
-function emptyImportGrid5x3(){return Array.from({length:3},()=>Array(5).fill(null));}
-function buildGridFromNumbers(nums){const g=emptyImportGrid5x3(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=i%5; g[r][c]=n;}); return g;}
+function buildGridFromNumbers(nums){const g=emptyGrid3x9(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=(i%5)*2; g[r][c]=n;}); return g;}
 function parseOcrNumbers(text){const found=(String(text||'').match(/\b\d{1,2}\b/g)||[]).map(Number).filter(n=>n>=1&&n<=90); const uniq=[]; for(const n of found){ if(!uniq.includes(n)) uniq.push(n); } return uniq.slice(0,15);}
 function parseIdentifierText(text){
-  const cleaned=String(text||'').toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9\/-]/g,'');
-  const candidates=(cleaned.match(/[A-Z0-9][A-Z0-9\/-]{2,24}/g)||[]).map(x=>x.replace(/-{2,}/g,'-').replace(/\/{2,}/g,'/'));
+  const raw=String(text||'')
+    .toUpperCase()
+    .replace(/[\s_]+/g,'')
+    .replace(/[^A-Z0-9\/-]/g,' ');
+  const candidates=(raw.match(/[A-Z0-9][A-Z0-9\/-]{2,19}/g)||[])
+    .map(x=>x.replace(/-{2,}/g,'-').replace(/\/{2,}/g,'/').trim())
+    .filter(x=>/[0-9]/.test(x));
   return candidates.sort((a,b)=>b.length-a.length)[0]||'';
 }
-function buildGridFromOcrWords(result,w,h){
-  // Désactivé : on ne cherche plus les cases vides réelles. OCR fiable = lecture des 15 numéros puis affichage import en 5 x 3.
-  return null;
-}
-
 
 async function nextImportCode(){
   const client=Loto.supabaseClient; const aid='99';
@@ -119,7 +118,7 @@ async function publishImportDraft(row, stage='grid'){
 
 async function saveOcrDraft(grid, quality, rawText){
   const payload={
-    source:'ocr_camera_v349_ocr_fiable_5x3',
+    source:'ocr_camera_v344',
     confidence:quality,
     grid:grid,
     rawText:String(rawText||'').slice(0,1000),
@@ -133,7 +132,7 @@ async function saveOcrDraft(grid, quality, rawText){
 async function savePartialOcrDraft(grid, quality, rawText, count){
   if(importDraftLocked) return currentDraft;
   const payload={
-    source:'ocr_camera_partial_v349_ocr_fiable_5x3',
+    source:'ocr_camera_partial_v346',
     confidence:quality,
     grid:grid,
     detected_count:count,
@@ -180,15 +179,6 @@ function drawRoi(video, canvas, ctx, small=false){
   if(small){sw=Math.floor(vw*.52); sh=Math.floor(vh*.42); sx=Math.floor((vw-sw)/2); sy=Math.floor((vh-sh)/2);}
   const outW=small?640:Math.min(vw,1100); const outH=Math.round(outW*sh/sw); canvas.width=outW; canvas.height=outH; ctx.drawImage(video,sx,sy,sw,sh,0,0,outW,outH); return {w:outW,h:outH};
 }
-function drawGridFullFrame(video, canvas, ctx){
-  // IMPORTANT : OCR grille = image complète, jamais la petite zone identifiant.
-  const vw=video.videoWidth||1280, vh=video.videoHeight||720;
-  const outW=Math.min(vw,1280);
-  const outH=Math.round(outW*vh/vw);
-  canvas.width=outW; canvas.height=outH;
-  ctx.drawImage(video,0,0,vw,vh,0,0,outW,outH);
-  return {w:outW,h:outH};
-}
 async function readIdentifierFromFrame(video, canvas, ctx){
   const {w,h}=drawRoi(video,canvas,ctx,true); const t0=performance.now();
   try{ if(window.jsQR){const img=ctx.getImageData(0,0,w,h); const qr=window.jsQR(img.data,w,h,{inversionAttempts:'attemptBoth'}); if(qr?.data) return {value:qr.data,type:'qr',quality:100,ms:performance.now()-t0};} }catch(e){}
@@ -197,38 +187,35 @@ async function readIdentifierFromFrame(video, canvas, ctx){
   return null;
 }
 async function startSaisieCartonsLoop(){
-  const video=document.getElementById('qrScannerVideo'); const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{willReadFrequently:true}); saisieStep='grid'; setStatus('Étape 1/2 : GRANDE ZONE grille active. Cadre tout le carton en paysage.','muted'); setFrame('warn');
+  const video=document.getElementById('qrScannerVideo'); const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{willReadFrequently:true}); saisieStep='grid'; setStatus('Étape 1/2 : téléphone en paysage, cadre tout le carton. Scan continu.','muted'); setFrame('warn');
   scannerTimer=setInterval(async()=>{
     if(importDraftLocked || scannerProcessing||!video||video.readyState<2||!window.Tesseract) return; scannerProcessing=true;
     try{
       if(saisieStep==='grid'){
-        saisieStep='grid';
-        setFrame('warn');
-        drawGridFullFrame(video,canvas,ctx);
+        drawRoi(video,canvas,ctx,false);
         const t0=performance.now();
         const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}});
         const ms=performance.now()-t0;
         setReadTime(ms);
         const nums=parseOcrNumbers(result?.data?.text||'');
-        const grid=buildGridFromNumbers(nums);
-        const count=nums.length;
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
-        if(count>0){
-          const sig=JSON.stringify(grid);
+        if(nums.length>0){
+          const grid=buildGridFromNumbers(nums);
+          const sig=nums.join('-');
           const now=Date.now();
           if(sig!==lastPartialGridSignature || now-lastPartialGridSentAt>3500){
-            await savePartialOcrDraft(grid,quality,result?.data?.text||'',count);
+            await savePartialOcrDraft(grid,quality,result?.data?.text||'',nums.length);
             lastPartialGridSignature=sig;
             lastPartialGridSentAt=now;
             partialGridSent=true;
           }
-          setFrame(count>=15?'ok':'warn');
-          setStatus('Étape 1/2 : '+count+'/15 numéros envoyés au PC. Format import 5 x 3 côté PC.','muted');
-          if(count>=15){
+          setFrame(nums.length>=15?'ok':'warn');
+          setStatus('Étape 1/2 : '+nums.length+'/15 numéros envoyés au PC. Les cases manquantes pourront être saisies à la main.','muted');
+          if(nums.length>=15){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             setFrame('ok');
             beep(true);
-            setStatus('✓ Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
+            setStatus('✓ 15 numéros envoyés au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok');
             saisieStep='identifier';
             setSkipVisible(true);
             setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);
@@ -241,8 +228,6 @@ async function startSaisieCartonsLoop(){
           scannerProcessing=false;
         }
       }else{
-        saisieStep='identifier';
-        setFrame('warn');
         setStatus('Étape 2/2 : scanne le QR code, le code-barres ou le numéro d’identification imprimé.','muted'); const found=await readIdentifierFromFrame(video,canvas,ctx);
         if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); setSkipVisible(false); completeCurrentCard('✓ Identifiant envoyé : '+found.value+'. Carton terminé. Contrôle et valide sur le PC.');}
         else{setFrame('warn'); setStatus('Étape 2/2 : identifiant non lu. Approche le QR, le code-barres ou le numéro imprimé. Tu pourras aussi le saisir côté PC.','muted'); scannerProcessing=false;}
@@ -257,7 +242,7 @@ async function startQrScanner(){
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grande zone, cadre tout le carton. Étape 2 : petite zone pour QR, code-barres ou numéro imprimé.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);
