@@ -11,6 +11,8 @@ function setStatus(msg,type='muted'){const el=document.getElementById('scannerSt
 function setReadTime(ms){const el=document.getElementById('scannerReadTime'); if(el) el.textContent=Number.isFinite(ms)?Math.round(ms)+' ms':'-';}
 function beep(ok=true){try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop();ctx.close();},ok?90:180);}catch(e){}}
 function setFrame(state){const el=document.getElementById('scanFrameOverlay'); if(!el) return; el.classList.remove('scan-frame-ok','scan-frame-warn','scan-frame-small'); if(saisieStep==='identifier') el.classList.add('scan-frame-small'); if(state==='ok') el.classList.add('scan-frame-ok'); if(state==='warn') el.classList.add('scan-frame-warn');}
+function setSkipVisible(show){const b=document.getElementById('skipIdentifierBtn'); if(b) b.style.display=show?'inline-block':'none';}
+function resetForNextCard(message='Carton envoyé. Place un autre carton dans le cadre.'){currentDraft=null; saisieStep='grid'; scannerProcessing=false; setSkipVisible(false); setFrame('warn'); setStatus(message,'ok');}
 function cleanAssociationId(v){const raw=String(v||'1').replace(/\D/g,''); return String(raw||'1').slice(-2).padStart(2,'0');}
 function cardInternalNumero(a,o){return Number(cleanAssociationId(a))*10000+Number(o||0);}
 function codeToNumero(code){const s=String(code||'').trim(); const m=s.match(/SDS-(\d{1,2})-(\d{1,4})$/i); if(m) return cardInternalNumero(m[1],Number(m[2])); const tail=s.match(/(\d{1,6})\s*$/); return tail?Number(tail[1]):Number(s||0);}
@@ -85,24 +87,30 @@ async function startSaisieCartonsLoop(){
     try{
       if(saisieStep==='grid'){
         drawRoi(video,canvas,ctx,false); const t0=performance.now(); const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}}); const ms=performance.now()-t0; setReadTime(ms); const nums=parseOcrNumbers(result?.data?.text||'');
-        if(nums.length>=15){const grid=buildGridFromNumbers(nums); const quality=Math.round(Math.min(100,Math.max(60,result?.data?.confidence||90))); currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||''); setFrame('ok'); beep(true); setStatus('Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé du carton.','ok'); saisieStep='identifier'; setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);}
+        if(nums.length>=15){const grid=buildGridFromNumbers(nums); const quality=Math.round(Math.min(100,Math.max(60,result?.data?.confidence||90))); currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||''); setFrame('ok'); beep(true); setStatus('Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé du carton. Tu peux aussi ignorer et saisir plus tard sur le PC.','ok'); saisieStep='identifier'; setSkipVisible(true); setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);}
         else{setFrame('warn'); setStatus('Étape 1/2 : '+nums.length+'/15 numéros détectés. Continue à cadrer.','muted'); scannerProcessing=false;}
       }else{
         setStatus('Étape 2/2 : scanne le QR code, le code-barres ou le numéro d’identification imprimé.','muted'); const found=await readIdentifierFromFrame(video,canvas,ctx);
-        if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); stopQrScanner(false); setStatus('Identifiant envoyé : '+found.value+'. Retour administration.','ok'); setTimeout(()=>{location.href='administration.html#cartons';},700);}
+        if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); setSkipVisible(false); setStatus('Identifiant envoyé : '+found.value+'. Le brouillon apparaît sur le PC.','ok'); setTimeout(()=>resetForNextCard(),900);}
         else{setFrame('warn'); setStatus('Étape 2/2 : identifiant non lu. Approche le QR, le code-barres ou le numéro imprimé. Tu pourras aussi le saisir côté PC.','muted'); scannerProcessing=false;}
       }
     }catch(e){setFrame('warn'); setStatus('Analyse impossible : '+(e.message||e),'red'); scannerProcessing=false;}
   }, saisieStep==='grid'?1800:1100);
 }
 async function startQrScanner(){
-  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setFrame('');
+  stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setSkipVisible(false); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons') await startSaisieCartonsLoop(); else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
-function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setFrame('');}
+function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
 function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+async function skipIdentifier(){
+  if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
+  setSkipVisible(false); setFrame('ok'); beep(true); setStatus('Identifiant ignoré. À compléter sur le PC avant validation.','ok');
+  setTimeout(()=>resetForNextCard('Brouillon envoyé sans identifiant. Place un autre carton dans le cadre.'),900);
+}
+document.getElementById('skipIdentifierBtn')?.addEventListener('click',skipIdentifier);
 document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
 document.getElementById('stopQrScanner')?.addEventListener('click',()=>stopQrScanner(true));
 window.addEventListener('pagehide',()=>stopQrScanner(false));
