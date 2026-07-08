@@ -680,11 +680,31 @@ document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const 
 function adminScanUrl(){
   return new URL('scan.html?mode=saisie-cartons', location.href).href;
 }
+function qrImageFallback(url, size=170){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(url);
+}
+function renderQrInto(el, url, size=170){
+  if(!el) return;
+  el.innerHTML='';
+  try{
+    if(window.QRCode){
+      new QRCode(el,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+      return;
+    }
+  }catch(e){}
+  const img=document.createElement('img');
+  img.alt='QR code';
+  img.width=size;
+  img.height=size;
+  img.src=qrImageFallback(url,size);
+  img.onerror=()=>{ el.textContent=url; };
+  el.appendChild(img);
+}
 function renderAdminScanQr(){
-  const a=document.getElementById('openScanSaisie'); if(a) a.href=adminScanUrl();
-  const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=adminScanUrl();
-  const qr=document.getElementById('scanSaisieQr');
-  if(qr){ qr.innerHTML=''; if(window.QRCode) new QRCode(qr,{text:adminScanUrl(),width:170,height:170,correctLevel:QRCode.CorrectLevel.M}); else qr.textContent=adminScanUrl(); }
+  const url=adminScanUrl();
+  const a=document.getElementById('openScanSaisie'); if(a) a.href=url;
+  const urlText=document.getElementById('scanSaisieUrlText'); if(urlText) urlText.textContent=url;
+  renderQrInto(document.getElementById('scanSaisieQr'), url, 190);
 }
 async function renderLastScannedPseudoCard(){
   const gridBox=document.getElementById('adminScanPseudoGrid'); const status=document.getElementById('adminScanLastStatus');
@@ -712,3 +732,9 @@ function openCartonsTabFromHash(){
 }
 setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash();},300);
 window.addEventListener('hashchange',openCartonsTabFromHash);
+
+
+// v3.2.8 - les QR sont recalcules a chaque affichage de l'onglet Cartons
+document.querySelector('[data-tab="cartons"]')?.addEventListener('click',()=>{
+  setTimeout(()=>{ renderAdminScanQr(); renderLastScannedPseudoCard(); },80);
+});
