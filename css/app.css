@@ -485,3 +485,11 @@
 .admin-scan-qr-img,.admin-scan-qr-box img{width:170px!important;height:170px!important;max-width:170px!important;max-height:170px!important;display:block!important;image-rendering:pixelated!important;}
 #adminScanPseudoGrid.pseudo-grid{display:grid!important;grid-template-columns:repeat(9,48px)!important;grid-auto-rows:42px!important;gap:6px!important;max-width:520px!important;width:max-content!important;}
 #adminScanPseudoGrid.pseudo-grid input{width:48px!important;height:42px!important;box-sizing:border-box!important;text-align:center!important;padding:4px!important;}
+
+/* V20 scanner carton : capture + redressement uniquement */
+.scan-v20-panel{margin-top:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:12px}
+.scan-v20-actions{text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.scan-v20-preview{margin-top:12px;background:#f8fafc;border:1px solid var(--border,#e5e7eb);border-radius:14px;padding:12px;text-align:center}
+.scan-v20-preview h2{margin:0 0 10px;font-size:1.1rem}
+#cardWarpCanvas{width:100%;max-width:900px;background:#fff;border:2px solid #111;border-radius:8px;display:block;margin:0 auto 8px}
+.scan-saisie-mode .scan-frame-overlay:before{content:'CADRER TOUT LE CARTON';position:absolute;left:50%;top:-34px;transform:translateX(-50%);background:rgba(0,0,0,.72);color:#fff;font-weight:900;font-size:14px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;white-space:nowrap}
