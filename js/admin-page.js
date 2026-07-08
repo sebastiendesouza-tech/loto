@@ -726,29 +726,50 @@ function renderAdminScanQr(){
 }
 
 async function renderLastScannedPseudoCard(){
-  const gridBox=document.getElementById('adminScanPseudoGrid'); const status=document.getElementById('adminScanLastStatus');
+  const gridBox=document.getElementById('adminScanPseudoGrid');
+  const status=document.getElementById('adminScanLastStatus');
+  const idInput=document.getElementById('adminScanExternalCode');
   if(!gridBox) return;
+  const showBlank=(msg)=>{
+    renderGridEditor('adminScanPseudoGrid', emptyGrid3x9());
+    if(idInput) idInput.value='';
+    if(status) status.textContent=msg || 'En attente d’un carton scanné.';
+  };
   const client=Loto.supabaseClient;
-  if(!client){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Supabase non configuré.'; return; }
+  if(!client){ showBlank('Supabase non configuré.'); return; }
   try{
     let data=null;
-    let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
-    if(code){
-      const numero=codeToNumero(code);
-      const res=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
-      if(!res.error && res.data) data=res.data;
+    const sessionDraft=Loto.state()?.lastImportDraft || null;
+    if(sessionDraft?.numero){
+      data=sessionDraft;
+      try{
+        const res=await client.from('loto_cartons').select('*').eq('numero',sessionDraft.numero).maybeSingle();
+        if(!res.error && res.data) data=res.data;
+      }catch(e){}
+    }
+    if(!data){
+      let code=''; try{code=localStorage.getItem('loto_last_scanned_card_code')||'';}catch(e){}
+      if(code){
+        const numero=codeToNumero(code);
+        const res=await client.from('loto_cartons').select('*').eq('numero',numero).maybeSingle();
+        if(!res.error && res.data) data=res.data;
+      }
     }
     if(!data){
       const res=await client.from('loto_cartons').select('*').eq('status','a_enregistrer').eq('serie','IMPORT').eq('actif',true).order('updated_at',{ascending:false}).limit(1);
       if(res.error) throw res.error;
       data=res.data?.[0]||null;
     }
-    if(!data){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Aucun carton à enregistrer.'; return; }
+    if(!data){ showBlank('Aucun carton à enregistrer. Le champ identifiant se remplira après scan.'); return; }
     renderGridEditor('adminScanPseudoGrid', normalizeGrid3x9(data.grille,data.lignes));
-    if(status) status.textContent='Dernier brouillon : '+(data.external_code||data.carton_code||data.numero)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · identifiant '+(data.external_code_type||'à saisir sur PC');
+    if(idInput) idInput.value=data.external_code||'';
+    if(status){
+      const ident=data.external_code ? ('identifiant '+data.external_code+' ('+(data.external_code_type||'lu')+')') : 'identifiant à compléter sur PC';
+      status.textContent='Dernier brouillon : '+(data.carton_code||data.numero)+' · '+(data.status||'a_enregistrer')+' · grille '+(data.ocr_quality??'-')+' % · '+ident;
+    }
     const f=document.getElementById('cardStatusFilter'); if(f) f.value='a_enregistrer';
     listManagedCards();
-  }catch(e){ renderGridEditor('adminScanPseudoGrid', emptyGrid3x9()); if(status) status.textContent='Impossible de relire le dernier brouillon : '+(e.message||e); }
+  }catch(e){ showBlank('Impossible de relire le dernier brouillon : '+(e.message||e)); }
 }
 function openCartonsTabFromHash(){
   if(location.hash==='#cartons'){
@@ -773,7 +794,17 @@ function initImportCardsRealtime(){
 
 setTimeout(()=>{renderAdminScanQr(); renderLastScannedPseudoCard(); openCartonsTabFromHash(); initImportCardsRealtime();},300);
 setInterval(renderAdminScanQr,5000);
+setInterval(()=>{ if(document.getElementById('cartons')?.classList.contains('active')) renderLastScannedPseudoCard(); },2500);
+document.getElementById('refreshImportDrafts')?.addEventListener('click',()=>{ renderLastScannedPseudoCard(); listManagedCards(); });
 window.addEventListener('hashchange',openCartonsTabFromHash);
+
+try{
+  Loto.onChange((st)=>{
+    if(document.getElementById('cartons')?.classList.contains('active') && st?.lastImportDraft){
+      renderLastScannedPseudoCard();
+    }
+  });
+}catch(e){}
 
 
 // v3.2.8 - les QR sont recalcules a chaque affichage de l'onglet Cartons

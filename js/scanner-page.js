@@ -49,12 +49,23 @@ async function nextImportCode(){
   try{const {data}=await client.from('loto_cartons').select('card_order,carton_code,numero').eq('association_id',aid).order('card_order',{ascending:false}).limit(1); if(data&&data[0]) maxOrder=Number(data[0].card_order||String(data[0].carton_code||'').match(/(\d{1,4})$/)?.[1]||0);}catch(e){}
   return 'SDS-99-'+String(maxOrder+1).padStart(4,'0');
 }
+
+async function publishImportDraft(row, stage='grid'){
+  try{
+    const draft={...row, import_stage:stage, scan_updated_at:new Date().toISOString()};
+    const existing=Array.isArray(Loto.state()?.importDrafts) ? Loto.state().importDrafts : [];
+    const without=existing.filter(x=>String(x.numero)!==String(draft.numero));
+    await Loto.save({lastImportDraft:draft, importDrafts:[draft,...without].slice(0,20), importScanner:{connected:true,mode:'saisie_cartons',lastSeen:Date.now(),status:stage}});
+  }catch(e){console.warn('Publication brouillon import impossible',e);}
+}
+
 async function saveOcrDraft(grid, quality, rawText){
   const client=Loto.supabaseClient; if(!client) throw new Error('Supabase non configuré.');
   const code=await nextImportCode(); const numero=codeToNumero(code); const m=code.match(/SDS-(\d{1,2})-(\d{1,4})$/i);
   const row={numero,carton_code:code,association_id:cleanAssociationId(m[1]),card_order:Number(m[2]),external_code:null,external_code_type:null,external_ocr_quality:null,numbers_signature:numbersSignatureFromGrid(grid),serie:'IMPORT',lignes:gridToLignes3x9(grid),grille:grid,qr_payload:code,status:'a_enregistrer',origine:'Scan OCR saisie cartons',ocr_quality:quality,ocr_text:String(rawText||'').slice(0,1000),actif:true,updated_at:new Date().toISOString()};
   const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
   try{localStorage.setItem('loto_last_scanned_card_code',code);}catch(e){}
+  await publishImportDraft(row,'grid_ok');
   return row;
 }
 async function updateDraftIdentifier(identifier, type='ocr', quality=null){
@@ -67,6 +78,7 @@ async function updateDraftIdentifier(identifier, type='ocr', quality=null){
   const patch={external_code:ext,external_code_type:type,external_ocr_quality:quality,qr_payload:ext,updated_at:new Date().toISOString()};
   const {error}=await client.from('loto_cartons').update(patch).eq('numero',currentDraft.numero); if(error) throw error;
   currentDraft={...currentDraft,...patch};
+  await publishImportDraft(currentDraft,'identifier_ok');
   try{localStorage.setItem('loto_last_scanned_card_code',currentDraft.carton_code);}catch(e){}
   return currentDraft;
 }
@@ -106,11 +118,11 @@ async function startSaisieCartonsLoop(){
     try{
       if(saisieStep==='grid'){
         drawRoi(video,canvas,ctx,false); const t0=performance.now(); const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}}); const ms=performance.now()-t0; setReadTime(ms); const nums=parseOcrNumbers(result?.data?.text||'');
-        if(nums.length>=15){const grid=buildGridFromNumbers(nums); const quality=Math.round(Math.min(100,Math.max(60,result?.data?.confidence||90))); currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||''); setFrame('ok'); beep(true); setStatus('Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé du carton. Tu peux aussi ignorer et saisir plus tard sur le PC.','ok'); saisieStep='identifier'; setSkipVisible(true); setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);}
+        if(nums.length>=15){const grid=buildGridFromNumbers(nums); const quality=Math.round(Math.min(100,Math.max(60,result?.data?.confidence||90))); currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||''); setFrame('ok'); beep(true); setStatus('✓ Grille envoyée au PC. Étape 2/2 : scanne le QR code, le code-barres ou le numéro imprimé. Sinon appuie sur Ignorer / saisir plus tard.','ok'); saisieStep='identifier'; setSkipVisible(true); setTimeout(()=>{scannerProcessing=false; setFrame('warn');},650);}
         else{setFrame('warn'); setStatus('Étape 1/2 : '+nums.length+'/15 numéros détectés. Continue à cadrer.','muted'); scannerProcessing=false;}
       }else{
         setStatus('Étape 2/2 : scanne le QR code, le code-barres ou le numéro d’identification imprimé.','muted'); const found=await readIdentifierFromFrame(video,canvas,ctx);
-        if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); setSkipVisible(false); setStatus('Identifiant envoyé : '+found.value+'. Le brouillon apparaît sur le PC.','ok'); setTimeout(()=>resetForNextCard(),900);}
+        if(found?.value){setReadTime(found.ms); await updateDraftIdentifier(found.value,found.type,found.quality); setFrame('ok'); beep(true); setSkipVisible(false); setStatus('✓ Identifiant envoyé : '+found.value+'. Le brouillon doit apparaître sur le PC. Prêt pour le carton suivant.','ok'); setTimeout(()=>resetForNextCard(),900);}
         else{setFrame('warn'); setStatus('Étape 2/2 : identifiant non lu. Approche le QR, le code-barres ou le numéro imprimé. Tu pourras aussi le saisir côté PC.','muted'); scannerProcessing=false;}
       }
     }catch(e){setFrame('warn'); setStatus('Analyse impossible : '+(e.message||e),'red'); scannerProcessing=false;}
@@ -126,8 +138,10 @@ function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerT
 function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
-  setSkipVisible(false); setFrame('ok'); beep(true); setStatus('Identifiant ignoré. À compléter sur le PC avant validation.','ok');
-  setTimeout(()=>resetForNextCard('Brouillon envoyé sans identifiant. Place un autre carton dans le cadre.'),900);
+  setSkipVisible(false); setFrame('ok'); beep(true);
+  await publishImportDraft(currentDraft,'identifier_skipped');
+  setStatus('Brouillon envoyé sans identifiant. Complète le numéro sur le PC avant validation.','ok');
+  setTimeout(()=>resetForNextCard('Brouillon envoyé. Place un autre carton dans le cadre.'),1100);
 }
 document.getElementById('skipIdentifierBtn')?.addEventListener('click',skipIdentifier);
 document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
