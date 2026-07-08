@@ -222,20 +222,21 @@ function updateLockedRows(rows){
     if(lockedGridRows[i]) continue;
     const row=normalizeRowNumbers((rows||[])[i]);
     if(row.length<5){
-      rowLockSignatures[i]='';
-      rowLockCounts[i]=0;
+      // On ne remet pas tout le moteur a zero : on attend simplement
+      // une nouvelle lecture complete. Cela evite les validations folles
+      // quand un nombre est coupe en deux ou lu trop vite.
       continue;
     }
     const sig=row.join(',');
     if(sig===rowLockSignatures[i]) rowLockCounts[i]++;
     else { rowLockSignatures[i]=sig; rowLockCounts[i]=1; }
-    if(row.length===5){
-      // Verrouillage immediat : des qu'une ligne atteint 5 numeros,
-      // on la fige et on ne la relit plus. Cela evite l'attente
-      // inutile quand les lignes repassent ensuite a 4/5 sur l'image suivante.
+
+    // Compromis retenu : une ligne doit etre lue deux fois identique.
+    // C'est plus fiable que le verrouillage immediat, mais beaucoup plus
+    // rapide que l'ancien verrouillage trop strict.
+    if(row.length===5 && rowLockCounts[i]>=2){
       lockedGridRows[i]=row.slice(0,5);
       rowLockSignatures[i]=sig;
-      rowLockCounts[i]=1;
       beep(true);
     }
   }
@@ -296,7 +297,7 @@ async function publishImportDraft(row, stage='grid'){
 
 async function saveOcrDraft(grid, quality, rawText){
   const payload={
-    source:'ocr_camera_v344',
+    source:'ocr_camera_v347',
     confidence:quality,
     grid:grid,
     rawText:String(rawText||'').slice(0,1000),
@@ -430,7 +431,7 @@ async function startSaisieCartonsLoop(){
           const currentCount=Math.max(lockedCount, normalizeOcrNumbers(displayRows.flat()).length);
           const confirmed=allRowsLocked();
           setFrame(confirmed?'ok':'warn');
-          setStatus('Étape 1/2 : lecture par lignes. '+lineStatusText(rows)+'. Total '+currentCount+'/15. Une ligne validée est verrouillée.','muted');
+          setStatus('Étape 1/2 : lecture par lignes. '+lineStatusText(rows)+'. Total '+currentCount+'/15. Une ligne est verrouillée après 2 lectures identiques.','muted');
           if(confirmed){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             partialGridSent=true;
