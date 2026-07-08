@@ -78,7 +78,8 @@ function codeToNumero(code){const s=String(code||'').trim(); const m=s.match(/SD
 function numbersSignatureFromGrid(grid){const nums=(grid||[]).flat().filter(n=>Number.isInteger(Number(n))).map(Number).sort((a,b)=>a-b); return nums.map(n=>String(n).padStart(2,'0')).join('-');}
 function gridToLignes3x9(grid){return grid.map(r=>r.filter(n=>n!==null));}
 function emptyGrid3x9(){return Array.from({length:3},()=>Array(9).fill(null));}
-function buildGridFromNumbers(nums){const g=emptyGrid3x9(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=(i%5)*2; g[r][c]=n;}); return g;}
+function emptyImportGrid5x3(){return Array.from({length:3},()=>Array(5).fill(null));}
+function buildGridFromNumbers(nums){const g=emptyImportGrid5x3(); nums.slice(0,15).forEach((n,i)=>{const r=Math.floor(i/5); const c=i%5; g[r][c]=n;}); return g;}
 function parseOcrNumbers(text){const found=(String(text||'').match(/\b\d{1,2}\b/g)||[]).map(Number).filter(n=>n>=1&&n<=90); const uniq=[]; for(const n of found){ if(!uniq.includes(n)) uniq.push(n); } return uniq.slice(0,15);}
 function parseIdentifierText(text){
   const cleaned=String(text||'').toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9\/-]/g,'');
@@ -86,23 +87,10 @@ function parseIdentifierText(text){
   return candidates.sort((a,b)=>b.length-a.length)[0]||'';
 }
 function buildGridFromOcrWords(result,w,h){
-  const grid=emptyGrid3x9();
-  const words=(result?.data?.words||[]).filter(Boolean);
-  let placed=0;
-  for(const word of words){
-    const txt=String(word.text||'').replace(/[^0-9]/g,'');
-    if(!txt) continue;
-    const n=Number(txt);
-    if(!Number.isInteger(n)||n<1||n>90) continue;
-    const box=word.bbox||{};
-    const x=((box.x0||0)+(box.x1||0))/2;
-    const y=((box.y0||0)+(box.y1||0))/2;
-    const r=Math.max(0,Math.min(2,Math.floor(y/(h/3))));
-    const c=Math.max(0,Math.min(8,Math.floor(x/(w/9))));
-    if(!grid[r][c]){grid[r][c]=n; placed++;}
-  }
-  return placed>=3 ? {grid,count:placed} : null;
+  // V3.4.8 : désactivé pour les imports. Les cartons importés sont affichés en 5 x 3 avec les 15 numéros lus, sans chercher les cases vides réelles.
+  return null;
 }
+
 
 async function nextImportCode(){
   const client=Loto.supabaseClient; const aid='99';
@@ -131,7 +119,7 @@ async function publishImportDraft(row, stage='grid'){
 
 async function saveOcrDraft(grid, quality, rawText){
   const payload={
-    source:'ocr_camera_v344',
+    source:'ocr_camera_v348_import_5x3',
     confidence:quality,
     grid:grid,
     rawText:String(rawText||'').slice(0,1000),
@@ -145,7 +133,7 @@ async function saveOcrDraft(grid, quality, rawText){
 async function savePartialOcrDraft(grid, quality, rawText, count){
   if(importDraftLocked) return currentDraft;
   const payload={
-    source:'ocr_camera_partial_v346',
+    source:'ocr_camera_partial_v348_import_5x3',
     confidence:quality,
     grid:grid,
     detected_count:count,
@@ -210,10 +198,9 @@ async function startSaisieCartonsLoop(){
         const result=await Tesseract.recognize(canvas,'eng',{logger:()=>{}, tessedit_char_whitelist:'0123456789'});
         const ms=performance.now()-t0;
         setReadTime(ms);
-        const positional=buildGridFromOcrWords(result, canvas.width, canvas.height);
         const nums=parseOcrNumbers(result?.data?.text||'');
-        const grid=positional?.grid || buildGridFromNumbers(nums);
-        const count=positional?.count || nums.length;
+        const grid=buildGridFromNumbers(nums);
+        const count=nums.length;
         const quality=Math.round(Math.min(100,Math.max(45,result?.data?.confidence||75)));
         if(count>0){
           const sig=JSON.stringify(grid);
@@ -225,7 +212,7 @@ async function startSaisieCartonsLoop(){
             partialGridSent=true;
           }
           setFrame(count>=15?'ok':'warn');
-          setStatus('Étape 1/2 : '+count+'/15 numéros envoyés au PC. Les cases vides sont conservées si elles sont reconnues.','muted');
+          setStatus('Étape 1/2 : '+count+'/15 numéros envoyés au PC. Format import 5 x 3.','muted');
           if(count>=15){
             currentDraft=await saveOcrDraft(grid,quality,result?.data?.text||'');
             setFrame('ok');
@@ -257,7 +244,7 @@ async function startQrScanner(){
   try{await startCamera(); if(scannerUsageMode==='saisie_cartons'){startImportScannerPresence(); await startSaisieCartonsLoop();} else await startCommissaireLoop();}catch(e){setStatus('Erreur caméra : '+readableCameraError(e),'red'); beep(false);}
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setSkipVisible(false); setFrame('');}
-function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : lecture des 15 numéros en 5 x 3. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode'); const bar=document.querySelector('.scan-startbar'); if(bar && !document.getElementById('finishGridManualBtn')){const btn=document.createElement('button'); btn.id='finishGridManualBtn'; btn.type='button'; btn.className='secondary'; btn.textContent='Passer à l’identifiant'; btn.addEventListener('click',finishGridManually); bar.appendChild(btn); const next=document.createElement('button'); next.id='newImportCardBtn'; next.type='button'; next.className='green'; next.textContent='Scanner un autre carton'; next.style.display='none'; next.addEventListener('click',startQrScanner); bar.appendChild(next);}} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
 async function skipIdentifier(){
   if(scannerUsageMode!=='saisie_cartons' || saisieStep!=='identifier' || !currentDraft) return;
   setSkipVisible(false); setFrame('ok'); beep(true);

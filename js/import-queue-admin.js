@@ -2,7 +2,7 @@
   const MODE='saisie_cartons';
   const STATIC_GITHUB_SCAN_URL='https://sebastiendesouza-tech.github.io/loto/scan.html?mode=saisie-cartons';
   const STATIC_QR_DATA_URI='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcIAAAHCAQAAAABUY/ToAAADuklEQVR4nO2cW4qrShSGv3WqII8KPYAMRWewh3ToIfUMdCgZwAbrsUH590NVGU13c2CTkMtZ66E7Jn5owc+6lpr4Oxv/+UsQnHTSSSeddNJJJx+PtGIRs3YxSGZm7ZL/MJqZ9ame1d/5bp18LDLmf90AkN4QLBjNHEWKiHQQNBOQwgyA3e9unXxkMq3+JR9GGI8S4/HT7N+TZeGYWbzeNZ18TdLMDqKbguhOEbopSO8tWH+zazr5amQzw9gC43Hmi4O6zTWdfAWykTQAdCczDYD1LGZ2lDQ0yq1ISfP1runka5AlvRlzvhMAwmzd9Abdx0HWfcTZulOcgcWuc00nX4vMGtoNPBaD5tMEM4zHTxNpMWj2Y5HnWqeTtyatB6xPZkAQox1kPYtBOsh6QO9mZtau2fUzrtPJW5BIkjQ0MzUpCrkuk6aaAHUqv26J51qnk7cjsyKgmZGmoHPWrAEo4sqftDXXkJPVqibm7HOqVObtOZ0kaQqim9wPOfkDmQ6yPkWgJkVZTQNBwGKMLWy7jc+5TievT5ZY1k1kd1Na1JpLizo7qPVX1oDmfsjJYrW2TwCpJdfxY/s796l3HaElQrLaCHiudTp5a9J6guqYI0g6RTSkyKZF/d6SfZP1d75bJx+L3OTUOWEemlLM5yQaKDn1QK3VPJY5ubOSD60doCIkrUnRWVflO9eQk3urPcaSTmto5lVXpXF0ruhLle8acnJrZz9UK7SQe0FZTUVSc+1YTx7LnLywzdzeuo+W7HhgMZEitp5hAFo3xD7bOp28HbmddeSmYk2KgNofGqAMzTyWOfnVzhGMLJqJGrzqcKNO06Cc4hpy8gey04xZG8TYBkHzmSccdKeDrM/Z9boR7d536+SjkF/n9lP9pcthLOiiP1QOn2udTt6O3MzLavmlzbg1h7YBPB9y8kfb9anXsh62bmnbd3QNOXlpRRJTKEP5ddZRqvxGG12d5/uuISer5e6PQUAkg25CjBbE+CvISHHO2XUx7w85+S2ZY1neMZ0iWTTdKSJpLc5y7v3pdZmTF1bqsmw1oOVMehPazpvTPB9y8nsya2MC6RQxO0rlMel0WH3TDKNFrL/33Tr5UORuL+wUaqdot39o56p85urkf5AaUsR6gsyOZW7PaOUZfEnyfYxO7i1eftFN7ebIIGI0v6Plkiy9zb6f2slvyaZMM8iPBQEaUnlzlXQ65GzJenxe5uT35HjxMH1+cUMZpOVxKyzrS2Wuck0nX4Q0f8e5k0466aSTTjr5Pyf/AGWJJbLs72IeAAAAAElFTkSuQmCC';
-  let currentGrid=emptyGrid();
+  let currentGrid=emptyImportGrid();
   let currentIdentifier='';
   let currentIdentifierType='manuel';
   let currentQuality=0;
@@ -11,8 +11,17 @@
   function sessionCode(){return Loto?.state?.()?.sessionCode || new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || window.LOTO_CONFIG?.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';}
   function scanUrl(){ if(location.hostname.includes('github.io')) return STATIC_GITHUB_SCAN_URL; const url=new URL('scan.html', window.location.href); url.searchParams.set('mode','saisie-cartons'); url.searchParams.set('s',sessionCode()); return url.href; }
   function emptyGrid(){return Array.from({length:3},()=>Array(9).fill(''));}
-  function normalizeGrid(grid){const g=Array.isArray(grid)?grid:emptyGrid(); return Array.from({length:3},(_,r)=>Array.from({length:9},(_,c)=>{const v=g?.[r]?.[c]; return v===null||v===undefined?'':String(v);}));}
-  function readGrid(){const g=emptyGrid(); el('adminScanPseudoGrid')?.querySelectorAll('input').forEach(inp=>{const r=Number(inp.dataset.row), c=Number(inp.dataset.col); const v=String(inp.value||'').replace(/\D/g,''); g[r][c]=v?Number(v):'';}); return g;}
+  function emptyImportGrid(){return Array.from({length:3},()=>Array(5).fill(''));}
+  function normalizeGrid(grid){
+    const g=Array.isArray(grid)?grid:emptyImportGrid();
+    const rows=Array.from({length:3},(_,r)=>Array.isArray(g?.[r])?g[r]:[]);
+    const width=Math.max(...rows.map(r=>r.length),0);
+    if(width>5){
+      return rows.map(row=>row.filter(v=>v!==null&&v!==undefined&&String(v).trim()!=='').slice(0,5).map(v=>String(v)));
+    }
+    return Array.from({length:3},(_,r)=>Array.from({length:5},(_,c)=>{const v=rows[r]?.[c]; return v===null||v===undefined?'':String(v);}));
+  }
+  function readGrid(){const g=emptyImportGrid(); el('adminScanPseudoGrid')?.querySelectorAll('input').forEach(inp=>{const r=Number(inp.dataset.row), c=Number(inp.dataset.col); const v=String(inp.value||'').replace(/\D/g,''); g[r][c]=v?Number(v):'';}); return g;}
   function gridNumbers(grid){return normalizeGrid(grid).flat().filter(v=>String(v).trim()!=='').map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90);}
   function numbersSignature(grid){return gridNumbers(grid).sort((a,b)=>a-b).map(n=>String(n).padStart(2,'0')).join('-');}
   function gridToLignes(grid){return normalizeGrid(grid).map(row=>row.filter(v=>String(v).trim()!=='').map(Number));}
@@ -20,12 +29,12 @@
     currentGrid=normalizeGrid(grid);
     const box=el('adminScanPseudoGrid'); if(!box) return;
     box.style.setProperty('display','grid','important');
-    box.style.setProperty('grid-template-columns','repeat(9,48px)','important');
-    box.style.setProperty('grid-auto-rows','42px','important');
-    box.style.setProperty('gap','6px','important');
-    box.style.setProperty('max-width','520px','important');
+    box.style.setProperty('grid-template-columns','repeat(5,54px)','important');
+    box.style.setProperty('grid-auto-rows','44px','important');
+    box.style.setProperty('gap','7px','important');
+    box.style.setProperty('max-width','330px','important');
     box.style.setProperty('width','max-content','important');
-    box.innerHTML=currentGrid.map((row,r)=>row.map((v,c)=>`<input value="${esc(v)}" inputmode="numeric" maxlength="2" data-row="${r}" data-col="${c}" style="width:48px!important;height:42px!important;box-sizing:border-box!important;text-align:center!important;">`).join('')).join('');
+    box.innerHTML=currentGrid.map((row,r)=>row.map((v,c)=>`<input value="${esc(v)}" inputmode="numeric" maxlength="2" data-row="${r}" data-col="${c}" style="width:54px!important;height:44px!important;box-sizing:border-box!important;text-align:center!important;">`).join('')).join('');
   }
   function setStatus(text,ok=true){const s=el('adminScanLastStatus'); if(s){s.textContent=text; s.className=ok?'ok-note':'bad-note';}}
   function renderQr(){const url=scanUrl(); const t=el('scanSaisieUrlText'); if(t) t.textContent=url; const box=el('scanSaisieQr'); if(!box) return; box.style.display='flex'; box.style.setProperty('width','190px','important'); box.style.setProperty('height','190px','important'); box.innerHTML='<img class="admin-scan-qr-img" src="'+STATIC_QR_DATA_URI+'" alt="QR code scan saisie cartons" style="width:170px!important;height:170px!important;display:block!important;image-rendering:pixelated!important;">';}
@@ -73,8 +82,8 @@
       clearDraft(false);
     }catch(e){setStatus('Erreur enregistrement : '+(e.message||e),false);}
   }
-  function clearDraft(message=true){currentGrid=emptyGrid(); currentIdentifier=''; currentQuality=0; currentIdentifierType='manuel'; const input=el('adminScanExternalCode'); if(input) input.value=''; renderGrid(currentGrid); if(message) setStatus('Carton vidé. Prêt pour un nouveau scan.',true);}
+  function clearDraft(message=true){currentGrid=emptyImportGrid(); currentIdentifier=''; currentQuality=0; currentIdentifierType='manuel'; const input=el('adminScanExternalCode'); if(input) input.value=''; renderGrid(currentGrid); if(message) setStatus('Carton vidé. Prêt pour un nouveau scan.',true);}
   function startRealtime(){const client=Loto.supabaseClient; if(!client) return; try{const ch=client.channel('scan_queue_admin_v347_'+sessionCode()).on('postgres_changes',{event:'INSERT',schema:'public',table:'scan_queue',filter:'session_code=eq.'+sessionCode()},()=>refreshQueue()).subscribe(); window.__scanQueueAdminChannel=ch;}catch(e){console.warn('Realtime scan_queue indisponible',e);}}
-  function init(){if(!el('cartons')) return; renderGrid(emptyGrid()); renderQr(); el('queueRefresh')?.addEventListener('click',refreshQueue); el('saveImportedCard')?.addEventListener('click',saveImportedCard); el('clearImportedDraft')?.addEventListener('click',()=>clearDraft(true)); document.querySelector('[data-tab="cartons"]')?.addEventListener('click',()=>setTimeout(refreshQueue,100)); startRealtime(); refreshQueue(); setInterval(()=>{if(el('cartons')?.classList.contains('active')) refreshQueue();},2000);}
+  function init(){if(!el('cartons')) return; renderGrid(emptyImportGrid()); renderQr(); el('queueRefresh')?.addEventListener('click',refreshQueue); el('saveImportedCard')?.addEventListener('click',saveImportedCard); el('clearImportedDraft')?.addEventListener('click',()=>clearDraft(true)); document.querySelector('[data-tab="cartons"]')?.addEventListener('click',()=>setTimeout(refreshQueue,100)); startRealtime(); refreshQueue(); setInterval(()=>{if(el('cartons')?.classList.contains('active')) refreshQueue();},2000);}
   Loto.ensureSession().then(init).catch(init);
 })();
