@@ -1,8 +1,7 @@
-# v3.4.0
+# v3.4.1
 
-- Page Administration > Cartons epuree.
-- Conservation du module Generation de cartons.
-- Nouveau module Import par scan base sur scan_queue.
-- Telephone : connexion + bouton Envoyer TEST.
-- PC : etat telephone + derniers messages recus.
-- SQL : creation table scan_queue + policies + Realtime.
+- QR scan_queue genere en JavaScript, compatible local et GitHub Pages.
+- URL du scanner affichee sous le QR.
+- Etat telephone connecte via scan_queue.
+- Test HELLO conserve.
+- Pseudo-carton corrige en 3 lignes x 9 colonnes.

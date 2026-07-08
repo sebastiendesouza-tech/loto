@@ -1,3 +1,3 @@
-Loto by SdS - v3.4.0
+Loto by SdS - v3.4.1
 
-Page Cartons epuree et nouveau module import par scan_queue.
+Version de stabilisation du module import par scan_queue.
