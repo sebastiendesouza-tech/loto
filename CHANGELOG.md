@@ -1,3 +1,20 @@
+# v3.6.1
+
+- Remise de la section Ajout d’un carton existant dans Administration > Cartons.
+- Organisation finale : création, ajout unitaire, ajout planche de 6.
+- Version affichée passée en v3.6.1.
+
+# Changelog
+
+## v3.6.0 - Saisie planche de 6 cartons
+
+- Ajout d'une saisie par planche de 6 cartons dans Administration > Cartons.
+- Un identifiant est saisi pour chaque carton.
+- Chaque carton est saisi sur une ligne avec ses 15 numéros.
+- Contrôle renforcé : une planche doit contenir les 90 numéros une seule fois.
+- Aperçu des 6 cartons en 3 x 9, 2 cartons par ligne.
+- Enregistrement groupé des 6 cartons dans Supabase.
+
 # Changelog
 
 ## v3.5.5 - Règles cartons corrigées
