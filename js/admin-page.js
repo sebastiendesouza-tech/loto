@@ -778,6 +778,95 @@ document.getElementById('saveEditedCard')?.addEventListener('click',()=>saveEdit
 document.getElementById('validateEditedCard')?.addEventListener('click',()=>saveEditedCard('disponible'));
 document.getElementById('cancelEditCard')?.addEventListener('click',()=>{ const p=document.getElementById('cardEditPanel'); if(p) p.style.display='none'; });
 
+
+// V3.6.0 - saisie d'une planche de 6 cartons existants
+let preparedManualSheet=null;
+function sheetStatus(text, good=true){ statusText('manualSheetStatus', text, good); }
+function renderManualSheetCard(grid, label){
+  const rows=normalizeGrid3x9(grid).map(row=>'<tr>'+row.map(n=>n?'<td>'+esc(n)+'</td>':'<td class="empty">0</td>').join('')+'</tr>').join('');
+  return '<div class="manual-card-preview"><h4>'+esc(label)+'</h4><table><tbody>'+rows+'</tbody></table></div>';
+}
+function readManualSheetInputs(){
+  const cards=[];
+  for(let i=1;i<=6;i++){
+    const externalCode=String(document.getElementById('sheetCardCode'+i)?.value||'').trim();
+    const raw=String(document.getElementById('sheetCardNumbers'+i)?.value||'').trim();
+    if(!externalCode) throw new Error('Carton '+i+' : identifiant obligatoire.');
+    if(!raw) throw new Error('Carton '+i+' : numéros obligatoires.');
+    const grid=buildGridFromQuickLines(parseQuickCardInput(raw));
+    const signature=numbersSignatureFromGrid(grid);
+    cards.push({position:i, externalCode, grid, lignes:gridToLignes(grid), signature});
+  }
+  const ids=cards.map(c=>c.externalCode.toUpperCase());
+  if(new Set(ids).size!==6) throw new Error('Doublon d’identifiant dans la planche.');
+  const sigs=cards.map(c=>c.signature);
+  if(new Set(sigs).size!==6) throw new Error('Deux cartons de la planche ont les mêmes 15 numéros.');
+  const all=cards.flatMap(c=>c.grid.flat().filter(n=>n>0));
+  if(all.length!==90) throw new Error('La planche doit contenir exactement 90 numéros.');
+  const seen=new Set(all);
+  if(seen.size!==90){
+    const dups=all.filter((n,i)=>all.indexOf(n)!==i);
+    throw new Error('La planche contient des doublons : '+[...new Set(dups)].join(', '));
+  }
+  const missing=[]; for(let n=1;n<=90;n++){ if(!seen.has(n)) missing.push(n); }
+  if(missing.length) throw new Error('Numéros absents de la planche : '+missing.join(', '));
+  return cards;
+}
+function controlManualSheet(){
+  try{
+    preparedManualSheet=readManualSheetInputs();
+    const out=document.getElementById('manualSheetCards');
+    if(out) out.innerHTML=preparedManualSheet.map(c=>renderManualSheetCard(c.grid, 'Carton '+c.position+' · '+c.externalCode)).join('');
+    const block=document.getElementById('manualSheetPreview'); if(block) block.style.display='block';
+    sheetStatus('Contrôle OK : 6 cartons valides et 90 numéros présents une seule fois.', true);
+  }catch(e){
+    preparedManualSheet=null;
+    const block=document.getElementById('manualSheetPreview'); if(block) block.style.display='none';
+    sheetStatus('Erreur : '+(e.message||e), false);
+  }
+}
+async function nextManualCardInternalBatch(client, count){
+  const first=await nextManualCardInternal(client);
+  const startOrder=Number(first.numero)%10000;
+  const rows=[];
+  for(let i=0;i<count;i++){
+    const order=startOrder+i;
+    rows.push({numero:cardInternalNumero('99',order), code:'SDS-99-'+String(order).padStart(4,'0')});
+  }
+  return rows;
+}
+async function saveManualSheet(){
+  const client=Loto.supabaseClient; if(!client){ sheetStatus('Supabase non configuré.',false); return; }
+  try{
+    const cards=readManualSheetInputs();
+    const ids=cards.map(c=>c.externalCode);
+    const sigs=cards.map(c=>c.signature);
+    const {data:dupIds,error:dupIdErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').in('external_code', ids);
+    if(dupIdErr) throw dupIdErr;
+    if(dupIds&&dupIds.length) throw new Error('Identifiant déjà utilisé : '+(dupIds[0].external_code||dupIds[0].carton_code||dupIds[0].numero));
+    const {data:dupGrids,error:dupGridErr}=await client.from('loto_cartons').select('numero,carton_code,external_code,numbers_signature').in('numbers_signature', sigs);
+    if(dupGridErr) throw dupGridErr;
+    if(dupGrids&&dupGrids.length) throw new Error('Carton déjà existant avec les mêmes 15 numéros : '+(dupGrids[0].external_code||dupGrids[0].carton_code||dupGrids[0].numero));
+    const internals=await nextManualCardInternalBatch(client, cards.length);
+    const now=new Date().toISOString();
+    const rows=cards.map((c,i)=>({numero:internals[i].numero,carton_code:internals[i].code,association_id:cleanAssociationId('99'),card_order:internals[i].numero%10000,external_code:c.externalCode,external_code_type:'manuel',numbers_signature:c.signature,serie:'IMPORT_PLANCHE_6',lignes:c.lignes,grille:c.grid,qr_payload:c.externalCode,status:'disponible',ocr_quality:100,origine:'Saisie planche 6 cartons',actif:true,updated_at:now}));
+    const {error}=await client.from('loto_cartons').insert(rows); if(error) throw error;
+    sheetStatus('Planche enregistrée : 6 cartons ajoutés.', true); cartonStatus('Planche enregistrée : 6 cartons.', true); refreshCartonCount();
+    for(let i=1;i<=6;i++){ const id=document.getElementById('sheetCardCode'+i); const nums=document.getElementById('sheetCardNumbers'+i); if(id) id.value=''; if(nums) nums.value=''; }
+    const out=document.getElementById('manualSheetCards'); if(out) out.innerHTML='';
+    const block=document.getElementById('manualSheetPreview'); if(block) block.style.display='none';
+    preparedManualSheet=null;
+    document.getElementById('sheetCardCode1')?.focus();
+  }catch(e){ sheetStatus('Erreur : '+(e.message||e), false); }
+}
+window.controlManualSheet=controlManualSheet;
+window.saveManualSheet=saveManualSheet;
+document.getElementById('controlManualSheet')?.addEventListener('click',controlManualSheet);
+document.getElementById('saveManualSheet')?.addEventListener('click',saveManualSheet);
+for(let i=1;i<=6;i++){
+  document.getElementById('sheetCardNumbers'+i)?.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); controlManualSheet(); } });
+}
+
 // v3.2.6 - QR d'ouverture du scan saisie cartons + pseudo carton retour scan
 function adminScanUrl(){
   return new URL('scan.html?mode=saisie-cartons', location.href).href;
