@@ -439,3 +439,6 @@
 .scan-frame-small{inset:25% 18%!important;border-style:dashed!important;}
 .scan-admin-qr .btn{display:none!important;}
 #scanSaisieUrlText{font-size:11px;word-break:break-all;}
+
+/* v3.6.0 - saisie planche de 6 cartons */
+.planche-entry{display:grid;gap:8px}.planche-head,.planche-row{display:grid;grid-template-columns:70px 220px 1fr;gap:8px;align-items:center}.planche-head{font-weight:900;color:var(--muted);font-size:13px}.manual-sheet-cards{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:12px}.manual-card-preview{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fff}.manual-card-preview h4{margin:0 0 8px}.manual-card-preview table{width:100%;border-collapse:collapse;table-layout:fixed}.manual-card-preview td{border:1px solid var(--border);height:38px;text-align:center;font-weight:900;font-size:18px}.manual-card-preview td.empty{background:#f7f9fc;color:transparent}@media(max-width:850px){.planche-head{display:none}.planche-row{grid-template-columns:1fr}.manual-sheet-cards{grid-template-columns:1fr}}
