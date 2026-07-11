@@ -455,3 +455,13 @@
 
 /* v4.0.0 : tableau de bord, validation PDF et contrôle d'intégrité */
 .dashboard-wrap{display:flex;flex-direction:column;gap:14px}.dashboard-header{display:flex;align-items:center;justify-content:space-between;gap:16px}.dashboard-header h1{margin:0 0 6px}.dashboard-header p{margin:0;color:var(--muted)}.dashboard-status{display:inline-block;border-radius:999px;padding:8px 13px;font-weight:900;margin-right:8px}.dashboard-status.good{background:#e8f7ef;color:var(--green)}.dashboard-status.neutral{background:#eef1f5;color:#566273}.dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.dashboard-panel h2{margin-top:0}.dashboard-values{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.dashboard-values.three{grid-template-columns:repeat(3,1fr)}.dashboard-values div{background:#f5f8fb;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}.dashboard-values b{display:block;font-size:30px;color:var(--blue)}.dashboard-values span{font-size:13px;color:var(--muted)}.spread{justify-content:space-between}.integrity-row{display:flex;justify-content:space-between;gap:14px;border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:10px 12px;margin:8px 0}.integrity-row.ok{border-left-color:var(--green);background:#f2fbf6}.integrity-row.warn{border-left-color:var(--orange);background:#fff9e8}.integrity-row.error{border-left-color:var(--red);background:#fff0f0}.integrity-row.info{border-left-color:var(--blue2);background:#f1f7fd}.generation-validation{background:#fff9e8;border-color:#efd27a}.generation-validation p{font-weight:normal}.small{padding:8px 10px;font-size:13px}@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.dashboard-header{align-items:flex-start;flex-direction:column}.dashboard-values.three{grid-template-columns:1fr 1fr}.integrity-row{flex-direction:column}}
+
+/* V4.1.0 - bon de validation */
+.sale-voucher-panel{margin:10px 0;width:100%;box-sizing:border-box}
+.sale-voucher-panel h2{margin:0 0 8px;font-size:1.1rem}
+.voucher-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.voucher-grid>div{display:flex;justify-content:space-between;gap:8px;padding:10px;border:1px solid #d7dbe2;border-radius:10px;background:#fff}
+.voucher-grid span{font-weight:800}
+.basket-ok{color:#147a3a}.basket-error{color:#b42318}
+.voucher-actions{margin-top:10px}.voucher-actions button{flex:1}
+@media(max-width:520px){.voucher-grid{grid-template-columns:1fr}.sale-voucher-panel{padding:10px}}
