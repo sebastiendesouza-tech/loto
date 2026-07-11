@@ -1,3 +1,10 @@
+## v3.8.1 - Mode commissaire et suivi des ventes
+- Affichage permanent du statut du suivi des ventes sur la page Commissaire.
+- Lorsque le suivi est activé, un carton gagnant doit aussi être enregistré comme vendu pour le loto actif.
+- Lorsque le suivi est désactivé, le contrôle porte uniquement sur le gain et ne bloque jamais pour absence de vente.
+- Rappel de la saisie manuelle du numéro pour les cartons existants sans QR code.
+- Le scan QR et la saisie manuelle restent tous les deux disponibles.
+
 # v3.8.0 - Scanner vente sur téléphone
 
 - L'onglet Vente devient un tableau de suivi PC/tablette sans caméra.
