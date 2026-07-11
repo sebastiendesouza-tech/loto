@@ -340,3 +340,8 @@
 - Refus d’un carton inconnu, importé ou déjà vendu pour le même loto.
 - Compteur, historique récent et annulation d’une vente.
 - Le contrôle commissaire existant bloque désormais naturellement les gains des cartons non vendus quand le suivi est activé.
+
+## v4.0.1
+- Les boutons d'accès équipe sont replacés en haut de la page d'accueil.
+- Le tableau de bord est affiché sous les boutons.
+- Le contrôle d'intégrité reste en bas de page.
