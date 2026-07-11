@@ -1,6 +1,22 @@
 Loto.pageHeader();Loto.protectPage();
 const grid=document.getElementById('grid'),last=document.getElementById('last'),count=document.getElementById('count'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList');
+
+const animMicBtn=document.getElementById('animMicBtn');
+function updateAnimMic(on,message){
+  if(!animMicBtn)return;
+  animMicBtn.textContent=on?'Micro activé':'Micro coupé';
+  animMicBtn.classList.toggle('red',!!on);
+  animMicBtn.classList.toggle('secondary',!on);
+  animMicBtn.title=message|| (on?'Reconnaissance vocale active':'Reconnaissance vocale arrêtée');
+}
+if(animMicBtn){
+  updateAnimMic(false);
+  animMicBtn.onclick=()=>{
+    if(!window.LotoVoice){updateAnimMic(false,'Reconnaissance vocale indisponible');return;}
+    LotoVoice.toggle((on,message)=>updateAnimMic(on,message));
+  };
+}
 let lastCardClosedAt = 0;
 function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
