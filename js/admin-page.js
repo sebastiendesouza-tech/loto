@@ -122,6 +122,7 @@ let generatedMode = 'individual';
 let generatedModel = 'classic';
 let generatedPerPage = 4;
 let generatedKey = '';
+let generationAwaitingValidation = false;
 let scannerStream = null;
 let scannerTimer = null;
 let scannerDetector = null;
@@ -301,20 +302,27 @@ async function checkGeneratedDuplicates(){
     if(data?.length) throw new Error('Grille déjà existante avec les mêmes 15 numéros : '+(data[0].carton_code||data[0].numero));
   }
 }
-async function saveGeneratedCards(){
+async function confirmGeneratedCards(){
   const client=Loto.supabaseClient; if(!client){ genStatus('Supabase non configuré.',false); return; }
   try{
-    await prepareGeneratedCards();
-    if(!generatedCards.length) throw new Error('Aucun carton préparé.');
+    if(!generationAwaitingValidation || !generatedCards.length) throw new Error('Aucune génération en attente de validation.');
     await checkGeneratedDuplicates();
     const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,card_order:c.cardOrder,numbers_signature:c.numbersSignature,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true,updated_at:new Date().toISOString()}));
     for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').insert(fullRows.slice(i,i+100)); if(error) throw error; }
-    genStatus(`${fullRows.length} carton(s) enregistrés. Aucun doublon d'identifiant ou de grille. Création du PDF...`,true);
+    genStatus(`${fullRows.length} carton(s) validé(s) et enregistré(s) dans Supabase.`,true);
     refreshCartonCount();
-    openGeneratedCardsPrintWindow(false);
+    generationAwaitingValidation=false;
+    const box=document.getElementById('generationValidation'); if(box) box.style.display='none';
     generatedCards=[]; generatedKey='';
-  }catch(e){ genStatus('Erreur enregistrement : '+(e.message||e),false); }
+  }catch(e){ genStatus('Erreur validation : '+(e.message||e),false); }
 }
+function cancelGeneratedCards(){
+  generationAwaitingValidation=false;
+  generatedCards=[]; generatedKey='';
+  const box=document.getElementById('generationValidation'); if(box) box.style.display='none';
+  genStatus('Génération annulée. Aucun carton n’a été enregistré.',true);
+}
+
 function beep(ok=true){
   try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=ok?880:220; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{o.stop(); ctx.close();}, ok?90:180); }catch(e){}
 }
@@ -359,7 +367,8 @@ async function scanQrFrame(){
 document.getElementById('genCardType')?.addEventListener('change',updateCardGeneratorUi);
 document.getElementById('genCardModel')?.addEventListener('change',updateCardGeneratorUi);
 
-document.getElementById('saveGeneratedCards')?.addEventListener('click',saveGeneratedCards);
+document.getElementById('confirmGeneratedCards')?.addEventListener('click',confirmGeneratedCards);
+document.getElementById('cancelGeneratedCards')?.addEventListener('click',cancelGeneratedCards);
 function getQrImageForCard(card){
   const box=[...document.querySelectorAll('[data-qr]')].find(el=>el.dataset.qr===card.qrPayload);
   if(!box) return null;
@@ -502,7 +511,7 @@ function openGeneratedCardsPrintWindow(autoPrepare=true){
   genStatus('PDF téléchargé : '+name, true);
 }
 
-document.getElementById('printGeneratedCards')?.addEventListener('click', async()=>{ try{ await prepareGeneratedCards(); openGeneratedCardsPrintWindow(false); }catch(e){ genStatus('Erreur PDF : '+(e.message||e),false); } });
+document.getElementById('printGeneratedCards')?.addEventListener('click', async()=>{ try{ await prepareGeneratedCards(); await checkGeneratedDuplicates(); openGeneratedCardsPrintWindow(false); generationAwaitingValidation=true; const box=document.getElementById('generationValidation'); if(box) box.style.display='block'; genStatus('PDF généré. Vérifie-le puis clique sur Valider la génération.',true); }catch(e){ generationAwaitingValidation=false; const box=document.getElementById('generationValidation'); if(box) box.style.display='none'; genStatus('Erreur PDF : '+(e.message||e),false); } });
 document.getElementById('downloadCalibrationPdf')?.addEventListener('click', downloadCalibrationPdf);
 window.addEventListener('afterprint',()=>{ document.body.classList.remove('printing-cartons','print-mode-sheets'); });
 updateCardGeneratorUi();
@@ -510,8 +519,8 @@ updateCardGeneratorUi();
 /* Compatibilité avec l'ancien écran si présent */
 document.getElementById('generateIndividualCards')?.addEventListener('click',generateIndividualCards);
 document.getElementById('generateSheetCards')?.addEventListener('click',generateSheetCards);
-document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click',saveGeneratedCards);
-document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',saveGeneratedCards);
+document.getElementById('saveGeneratedIndividualCards')?.addEventListener('click',confirmGeneratedCards);
+document.getElementById('saveGeneratedSheetCards')?.addEventListener('click',confirmGeneratedCards);
 document.getElementById('printGeneratedIndividualCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='individual') generateIndividualCards(); document.body.classList.add('printing-cartons'); document.body.classList.remove('print-mode-sheets'); setTimeout(()=>window.print(),300); });
 document.getElementById('printGeneratedSheetCards')?.addEventListener('click',()=>{ if(!generatedCards.length || generatedMode!=='sheets') generateSheetCards(); document.body.classList.add('printing-cartons'); document.body.classList.add('print-mode-sheets'); setTimeout(()=>window.print(),300); });
 
