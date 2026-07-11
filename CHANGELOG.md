@@ -1,3 +1,12 @@
+# v3.8.0 - Scanner vente sur téléphone
+
+- L'onglet Vente devient un tableau de suivi PC/tablette sans caméra.
+- QR code d'accès au scanner de vente mobile.
+- Scanner mobile avec modes Vente et Retour.
+- Bordure verte après réussite, rouge en cas d'anomalie.
+- Statistiques, liste des cartons vendus et historique permanent.
+- Bouton de fin de loto pour libérer tous les cartons sans supprimer l'historique.
+
 # v3.6.1
 
 - Remise de la section Ajout d’un carton existant dans Administration > Cartons.
@@ -294,3 +303,12 @@
 - Suppression des champs code interne, serie et statut pour l utilisateur.
 - Ajout existant : identifiant + numeros + bouton Controler + aperçu 3x9 + bouton Enregistrer.
 - Apres enregistrement, les champs sont vides et le focus revient sur l identifiant.
+
+## v3.7.0 - Module vente des cartons
+- Nouvelle page `vente.html` accessible depuis l’accueil et l’administration.
+- Vente par scan du QR code ou saisie manuelle.
+- Vente réservée aux cartons créés par l’application (`origine = Loto by SdS`).
+- Vente enregistrée pour le loto actif dans `loto_carton_sales`.
+- Refus d’un carton inconnu, importé ou déjà vendu pour le même loto.
+- Compteur, historique récent et annulation d’une vente.
+- Le contrôle commissaire existant bloque désormais naturellement les gains des cartons non vendus quand le suivi est activé.
