@@ -1,3 +1,9 @@
+# v4.1.0
+- Bon de validation caisse facultatif par loto.
+- Contrôle de panier C/P4/P6/P8 avant enregistrement des ventes.
+- Enregistrement automatique de support_type lors de la création.
+- Mode vente directe conservé lorsque l’option est désactivée.
+
 # v3.9.3 - Origine des cartons
 
 - Suppression de toute dépendance au champ `generated_by_app`.
