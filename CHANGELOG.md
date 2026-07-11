@@ -1,9 +1,10 @@
-# v3.9.2
+# v3.9.3 - Origine des cartons
 
-- Bouton Micro activé / Micro coupé sur la page Animateur.
-- Scanner Vente réorganisé : caméra en haut, modes Vente/Retour en bas.
-- Ajout du champ Supabase `generated_by_app` pour distinguer les cartons générés par l’application des cartons importés, même lorsque leur code commence par SDS.
-- Statistiques de vente et contrôle du scanner basés sur ce champ dédié.
+- Suppression de toute dépendance au champ `generated_by_app`.
+- Le scanner Vente accepte uniquement les cartons dont `origine = Loto by SdS`.
+- Les statistiques Vente comptent uniquement cette même origine.
+- La création, la réimpression et l’archivage utilisent également le champ `origine`.
+- Compatible avec la base Supabase actuelle, sans nouvelle colonne.
 
 # v3.9.1
 - Correction du scanner de vente pour les cartons generes par les versions precedentes.
