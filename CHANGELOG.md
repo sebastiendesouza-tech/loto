@@ -1,3 +1,10 @@
+# v3.9.0
+- Création par nombre de pages.
+- Formats A4 individuel x4, planche A4 x4, planche A3 x6 + 2 individuels et planche A3 x8.
+- QR unique et vente groupée des planches.
+- Réimpression de cartons existants.
+- Archivage et restauration sans réutilisation des numéros.
+
 ## v3.8.1 - Mode commissaire et suivi des ventes
 - Affichage permanent du statut du suivi des ventes sur la page Commissaire.
 - Lorsque le suivi est activé, un carton gagnant doit aussi être enregistré comme vendu pour le loto actif.
