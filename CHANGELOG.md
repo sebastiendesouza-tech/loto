@@ -1,3 +1,10 @@
+# v3.9.2
+
+- Bouton Micro activé / Micro coupé sur la page Animateur.
+- Scanner Vente réorganisé : caméra en haut, modes Vente/Retour en bas.
+- Ajout du champ Supabase `generated_by_app` pour distinguer les cartons générés par l’application des cartons importés, même lorsque leur code commence par SDS.
+- Statistiques de vente et contrôle du scanner basés sur ce champ dédié.
+
 # v3.9.1
 - Correction du scanner de vente pour les cartons generes par les versions precedentes.
 - Recherche d'un carton par son code QR reel plutot que par un numero interne calcule.

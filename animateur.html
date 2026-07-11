@@ -5,6 +5,7 @@
     <button id="launchLoto" class="green">Lancer loto</button>
     <button id="newGame" class="secondary">Partie simple</button>
     <button id="winner" class="green">Gagnant</button>
+    <button id="animMicBtn" class="secondary" title="Activer la reconnaissance vocale">Micro coupé</button>
     <button id="startMiniBingo" class="orange" style="display:none">Lancer Mini-bingo</button>
     <button id="undo" class="secondary">Annuler dernier</button><input id="animCancelNumber" type="number" min="1" max="90" placeholder="Annuler n°" class="small-number"><button id="animCancelBtn" class="secondary">Annuler</button><input id="animOldNumber" type="number" min="1" max="90" placeholder="Mauvais" class="small-number"><input id="animNewNumber" type="number" min="1" max="90" placeholder="Bon" class="small-number"><button id="animReplaceBtn">Corriger</button>
     <span>Sortis : <b id="count">0</b></span>
@@ -33,4 +34,4 @@
   </div>
   <div class="card history-card"><h3>Historique</h3><div id="history" class="history"></div></div>
 </main><div id="launchModal" class="modal-soft" style="display:none"><div class="modal-panel"><h2>Lancer un loto</h2><p>Choisis un loto enregistré ou démarre une partie simple.</p><div id="launchList"></div><p class="toolbar"><button id="closeLaunch" class="secondary">Fermer</button><button id="modalBlankGame">Nouvelle partie simple</button></p></div></div>
-<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="js/animateur-page.js"></script></body></html>
+<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="js/voice.js"></script><script src="js/animateur-page.js"></script></body></html>
