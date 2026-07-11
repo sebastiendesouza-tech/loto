@@ -1,3 +1,9 @@
+# v3.9.1
+- Correction du scanner de vente pour les cartons generes par les versions precedentes.
+- Recherche d'un carton par son code QR reel plutot que par un numero interne calcule.
+- Distinction entre carton introuvable et carton importe.
+- Compatibilite preparee avec les codes sur 5 chiffres.
+
 # v3.9.0
 - Création par nombre de pages.
 - Formats A4 individuel x4, planche A4 x4, planche A3 x6 + 2 individuels et planche A3 x8.
