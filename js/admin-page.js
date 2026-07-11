@@ -307,7 +307,7 @@ async function saveGeneratedCards(){
     await prepareGeneratedCards();
     if(!generatedCards.length) throw new Error('Aucun carton préparé.');
     await checkGeneratedDuplicates();
-    const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,card_order:c.cardOrder,numbers_signature:c.numbersSignature,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,generated_by_app:true,actif:true,updated_at:new Date().toISOString()}));
+    const fullRows=generatedCards.map(c=>({numero:c.numero,carton_code:c.code,association_id:c.associationId,card_order:c.cardOrder,numbers_signature:c.numbersSignature,serie:c.serie,lignes:c.lignes,grille:c.grid,sheet_code:c.sheetCode,sheet_position:c.sheetPosition,qr_payload:c.qrPayload,status:c.status,origine:c.origin,actif:true,updated_at:new Date().toISOString()}));
     for(let i=0;i<fullRows.length;i+=100){ const {error}=await client.from('loto_cartons').insert(fullRows.slice(i,i+100)); if(error) throw error; }
     genStatus(`${fullRows.length} carton(s) enregistrés. Aucun doublon d'identifiant ou de grille. Création du PDF...`,true);
     refreshCartonCount();
@@ -672,7 +672,7 @@ async function saveEditedCard(statusOverride=null){
     if(finalStatus==='disponible' && !externalCode) throw new Error('Identifiant du carton obligatoire avant validation.');
     if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('external_code',externalCode).neq('numero',numero).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
     const grille=readGridEditor('editGridEditor');
-    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,external_code:externalCode||null,external_code_type:externalType,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('editCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode||code||String(numero),status:finalStatus,ocr_quality:Number(document.getElementById('editCardQuality')?.value||100),origine:'Scan saisie cartons',generated_by_app:false,actif:true,updated_at:new Date().toISOString()};
+    const m=String(code||'').match(/SDS-(\d{1,2})-(\d{1,4})$/i); const row={numero,carton_code:code||('SDS-00-'+String(numero).padStart(4,'0')),association_id:m?cleanAssociationId(m[1]):null,card_order:m?Number(m[2]):null,external_code:externalCode||null,external_code_type:externalType,numbers_signature:numbersSignatureFromGrid(grille),serie:document.getElementById('editCardSerie')?.value||'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode||code||String(numero),status:finalStatus,ocr_quality:Number(document.getElementById('editCardQuality')?.value||100),origine:'Scan saisie cartons',actif:true,updated_at:new Date().toISOString()};
     const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
     statusText('editCardStatusBox', statusOverride==='disponible' ? 'Carton validé.' : 'Modifications enregistrées.', true);
     cartonStatus(statusOverride==='disponible' ? 'Carton validé : '+row.carton_code : 'Carton mis à jour : '+row.carton_code, true);
@@ -711,7 +711,7 @@ async function saveManualCard(){
     if(externalCode){ const {data:dup,error:dupErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('external_code',externalCode).limit(1); if(dupErr) throw dupErr; if(dup&&dup.length) throw new Error('Identifiant déjà utilisé : '+externalCode); }
     if(signature){ const {data:dupGrid,error:dupGridErr}=await client.from('loto_cartons').select('numero,carton_code,external_code').eq('numbers_signature',signature).limit(1); if(dupGridErr) throw dupGridErr; if(dupGrid&&dupGrid.length){ const d=dupGrid[0]; throw new Error('Carton déjà existant avec les mêmes 15 numéros : '+(d.external_code||d.carton_code||d.numero)); } }
     const internal=await nextManualCardInternal(client);
-    const row={numero:internal.numero,carton_code:internal.code,association_id:cleanAssociationId('99'),card_order:internal.numero%10000,external_code:externalCode,external_code_type:'manuel',numbers_signature:signature,serie:'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode,status:'disponible',ocr_quality:100,origine:'Saisie manuelle',generated_by_app:false,actif:true,updated_at:new Date().toISOString()};
+    const row={numero:internal.numero,carton_code:internal.code,association_id:cleanAssociationId('99'),card_order:internal.numero%10000,external_code:externalCode,external_code_type:'manuel',numbers_signature:signature,serie:'IMPORT',lignes:gridToLignes(grille),grille,qr_payload:externalCode,status:'disponible',ocr_quality:100,origine:'Saisie manuelle',actif:true,updated_at:new Date().toISOString()};
     const {error}=await client.from('loto_cartons').upsert(row,{onConflict:'numero'}); if(error) throw error;
     cartonStatus('Carton enregistré : '+row.external_code,true); refreshCartonCount();
     const idEl=document.getElementById('manualCardExternalCode'); const inputEl=document.getElementById('quickCardInput');
@@ -849,7 +849,7 @@ async function saveManualSheet(){
     if(dupGrids&&dupGrids.length) throw new Error('Carton déjà existant avec les mêmes 15 numéros : '+(dupGrids[0].external_code||dupGrids[0].carton_code||dupGrids[0].numero));
     const internals=await nextManualCardInternalBatch(client, cards.length);
     const now=new Date().toISOString();
-    const rows=cards.map((c,i)=>({numero:internals[i].numero,carton_code:internals[i].code,association_id:cleanAssociationId('99'),card_order:internals[i].numero%10000,external_code:c.externalCode,external_code_type:'manuel',numbers_signature:c.signature,serie:'IMPORT_PLANCHE_6',lignes:c.lignes,grille:c.grid,qr_payload:c.externalCode,status:'disponible',ocr_quality:100,origine:'Saisie planche 6 cartons',generated_by_app:false,actif:true,updated_at:now}));
+    const rows=cards.map((c,i)=>({numero:internals[i].numero,carton_code:internals[i].code,association_id:cleanAssociationId('99'),card_order:internals[i].numero%10000,external_code:c.externalCode,external_code_type:'manuel',numbers_signature:c.signature,serie:'IMPORT_PLANCHE_6',lignes:c.lignes,grille:c.grid,qr_payload:c.externalCode,status:'disponible',ocr_quality:100,origine:'Saisie planche 6 cartons',actif:true,updated_at:now}));
     const {error}=await client.from('loto_cartons').insert(rows); if(error) throw error;
     sheetStatus('Planche enregistrée : 6 cartons ajoutés.', true); cartonStatus('Planche enregistrée : 6 cartons.', true); refreshCartonCount();
     for(let i=1;i<=6;i++){ const id=document.getElementById('sheetCardCode'+i); const nums=document.getElementById('sheetCardNumbers'+i); if(id) id.value=''; if(nums) nums.value=''; }
@@ -990,7 +990,7 @@ function setBoxStatus(id,text,good=true){const el=document.getElementById(id);if
 async function findCardRange(fromValue,toValue,includeArchived=true){
   const client=Loto.supabaseClient;if(!client)throw new Error('Supabase non configuré.');
   const from=codeToNumero(fromValue),to=codeToNumero(toValue||fromValue);if(!from||!to)throw new Error('Numéro de carton invalide.');
-  let req=client.from('loto_cartons').select('*').gte('numero',Math.min(from,to)).lte('numero',Math.max(from,to)).eq('generated_by_app',true).order('numero');
+  let req=client.from('loto_cartons').select('*').gte('numero',Math.min(from,to)).lte('numero',Math.max(from,to)).eq('origine','Loto by SdS').order('numero');
   if(!includeArchived)req=req.eq('actif',true);
   const {data,error}=await req;if(error)throw error;if(!data?.length)throw new Error('Aucun carton trouvé dans cette plage.');return data;
 }

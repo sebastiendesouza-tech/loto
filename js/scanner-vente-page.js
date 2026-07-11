@@ -3,18 +3,18 @@ function context(){const s=Loto.state();return{id:s.program?.id||s.sessionCode||
 function setMode(next){mode=next;$('modeSale').classList.toggle('active',mode==='vente');$('modeReturn').classList.toggle('active',mode==='retour');$('scannerStatus').textContent=mode==='vente'?'Mode vente actif.':'Mode retour actif.';clearResult();}
 function clearResult(){$('saleScannerScreen').classList.remove('result-ok','result-error');}
 function feedback(ok,text){const screen=$('saleScannerScreen');screen.classList.remove('result-ok','result-error');void screen.offsetWidth;screen.classList.add(ok?'result-ok':'result-error');$('scannerStatus').textContent=text;try{navigator.vibrate?.(ok?80:[120,80,120]);const ctx=new(window.AudioContext||window.webkitAudioContext)(),o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=ok?920:210;g.gain.value=.12;o.connect(g);g.connect(ctx.destination);o.start();setTimeout(()=>{o.stop();ctx.close();},ok?100:280);}catch(e){}setTimeout(()=>{clearResult();$('scannerStatus').textContent=mode==='vente'?'Prêt pour une vente.':'Prêt pour un retour.';},1500);}
-function isGeneratedByApp(card){return card?.generated_by_app===true;}
+function isGeneratedByApp(card){return String(card?.origine||'').trim().toLowerCase()==='loto by sds';}
 async function findCards(raw){
   const client=Loto.supabaseClient,value=String(raw||'').trim().toUpperCase();
   if(!client)throw new Error('Connexion à la base indisponible.');
   let req;
   if(/^SDSP-\d{2}-\d{4,5}$/i.test(value)){
-    req=client.from('loto_cartons').select('numero,carton_code,sheet_code,origine,external_code,generated_by_app,actif').eq('sheet_code',value).eq('actif',true).order('sheet_position');
+    req=client.from('loto_cartons').select('numero,carton_code,sheet_code,origine,external_code,actif').eq('sheet_code',value).eq('actif',true).order('sheet_position');
   }else{
     if(!/^SDS-\d{1,2}-\d{4,5}$/i.test(value))throw new Error('ANOMALIE : QR code non reconnu.');
     // Recherche par le code imprime dans le QR. Cela reste compatible avec
     // les anciennes numerotations internes de la base.
-    req=client.from('loto_cartons').select('numero,carton_code,sheet_code,origine,external_code,generated_by_app,actif').eq('carton_code',value).eq('actif',true);
+    req=client.from('loto_cartons').select('numero,carton_code,sheet_code,origine,external_code,actif').eq('carton_code',value).eq('actif',true);
   }
   const {data,error}=await req;
   if(error)throw error;
