@@ -1,3 +1,8 @@
+# v4.1.8
+
+- Stabilisation création des lotos, numérotation et contrôle d’intégrité.
+- Voir README_V4_1_8.md.
+
 # v4.1.7
 
 - Correction du controle du dernier numero : le numero en attente/deja synchronise est bien compte comme sorti.
