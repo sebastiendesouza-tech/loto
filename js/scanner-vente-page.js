@@ -39,18 +39,27 @@ function feedback(ok,text,delay=1500){
 }
 function isGeneratedByApp(card){return String(card?.origine||'').trim().toLowerCase()==='loto by sds';}
 function normalizeSupport(value){const v=String(value||'C').toUpperCase();return ['C','P4','P6','P8'].includes(v)?v:'C';}
+function normalizeVoucherText(raw){
+  let text=String(raw||'').replace(/^\uFEFF/,'').trim();
+  try{text=decodeURIComponent(text);}catch(e){}
+  return text
+    .toUpperCase()
+    .replace(/[：﹕]/g,':')
+    .replace(/[；﹔]/g,';')
+    .replace(/[=]/g,':')
+    .replace(/[\r\n\t]+/g,';')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 function parseVoucher(raw){
-  const text=String(raw||'').trim().toUpperCase().replace(/\s+/g,'');
-  const parts=text.split(';').filter(Boolean);
-  if(!parts.length)return null;
+  const text=normalizeVoucherText(raw);
+  if(!text)return null;
   const out={C:0,P4:0,P6:0,P8:0};
-  let recognized=0;
-  for(const part of parts){
-    const m=part.match(/^(C|P4|P6|P8):(\d+)$/);
-    if(!m)return null;
-    out[m[1]]=Number(m[2]);recognized++;
-  }
-  if(!recognized||Object.values(out).every(v=>v===0))return null;
+  const found=new Set();
+  const re=/(?:^|[;,|\s])(?:BON(?:\s+DE\s+VALIDATION)?[:;\s-]*)?(C|P4|P6|P8)\s*:\s*(\d+)(?=$|[;,|\s])/g;
+  let m;
+  while((m=re.exec(text))!==null){out[m[1]]=Number(m[2]);found.add(m[1]);}
+  if(!found.size||Object.values(out).every(v=>v===0))return null;
   return out;
 }
 function voucherTotal(v){return (v.C||0)+(v.P4||0)*4+(v.P6||0)*6+(v.P8||0)*8;}
@@ -139,7 +148,7 @@ async function processCode(raw){
   try{
     const c=context();if(!c.enabled)throw new Error('ANOMALIE : suivi des ventes désactivé.');
     if(mode==='vente'&&c.voucherEnabled){
-      if(!voucherExpected){const parsed=parseVoucher(raw);if(!parsed)throw new Error('ANOMALIE : scannez d’abord un bon de validation valide.');voucherExpected=parsed;voucherScans=[];voucherKeys=new Set();renderVoucherMode();feedback(true,`BON RECONNU · ${voucherSummary(parsed)}`,2200);}
+      if(!voucherExpected){const parsed=parseVoucher(raw);if(!parsed){const lu=normalizeVoucherText(raw).slice(0,120)||'(vide)';throw new Error(`ANOMALIE : bon non reconnu. Contenu lu : ${lu}`);}voucherExpected=parsed;voucherScans=[];voucherKeys=new Set();renderVoucherMode();feedback(true,`BON RECONNU · ${voucherSummary(parsed)}`,2200);}
       else await processVoucherSupport(raw);
     }else{
       const cards=await findCards(raw);
