@@ -1,4 +1,14 @@
-## v4.1.4
+## v4.1.6
+- Fluidification du scanner vendeur : sons, vibrations, validation automatique et ecran Joueur termine.
+
+# v4.1.6
+
+- Contrôle commissaire simplifié : uniquement VALIDE ou NON VALIDE.
+- Grille du carton conservée avec numéros sortis en vert, non sortis en gris et dernier numéro en orange.
+- Barre Animateur limitée à Lancer loto, Partie simple, Gagnant et Menu.
+- Suppression des commandes Annuler, Corriger et du compteur Sortis sur la page Animateur.
+
+## v4.1.6
 - Correction de l’affichage du bon de validation : libellés et quantités visibles.
 - Présentation des quatre types de supports en grille 2 x 2, y compris sur téléphone.
 - Remplacement du terme « panier » par « joueur » dans le scanner de vente.
