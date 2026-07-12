@@ -390,3 +390,9 @@
 - Les boutons d'accès équipe sont replacés en haut de la page d'accueil.
 - Le tableau de bord est affiché sous les boutons.
 - Le contrôle d'intégrité reste en bas de page.
+
+## v4.1.9
+- Affichage public des lots simplifié.
+- Mode carton plein : uniquement 1er LOT, 2e LOT et 3e LOT.
+- Mode à la ligne : indication 1 LIGNE, 2 LIGNES et CARTON PLEIN sur chaque lot.
+- Libellés en blanc et contenu des lots en orange.
