@@ -1,3 +1,10 @@
+# v4.1.1
+
+- Reconnaissance explicite du bon de validation caisse au format `C:1;P4:0;P6:2;P8:0`.
+- Tolérance des espaces et minuscules.
+- Rejet des segments inconnus ou mal formés.
+- Affichage du détail du bon et du total de cartons après le scan.
+
 # v4.1.0
 - Bon de validation caisse facultatif par loto.
 - Contrôle de panier C/P4/P6/P8 avant enregistrement des ventes.
