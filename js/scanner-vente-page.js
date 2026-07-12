@@ -3,6 +3,7 @@ let mode='vente',stream=null,timer=null,busy=false,lastCode='',lastAt=0;
 let voucherExpected=null;
 let voucherScans=[];
 let voucherKeys=new Set();
+let autoValidationTimer=null;
 
 function context(){
   const s=Loto.state();
@@ -30,12 +31,32 @@ function readyText(){
   return 'Prêt pour une vente.';
 }
 function clearResult(){$('saleScannerScreen').classList.remove('result-ok','result-error');}
+function playSignal(kind='ok'){
+  try{
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AudioCtx();
+    const pattern=kind==='complete'?[{f:740,d:130},{f:940,d:150},{f:1180,d:320}]:kind==='error'?[{f:210,d:220},{f:170,d:260}]:[{f:920,d:110}];
+    let t=ctx.currentTime;
+    for(const note of pattern){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=note.f;g.gain.value=.13;o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+note.d/1000);t+=note.d/1000+.045;}
+    setTimeout(()=>ctx.close(),Math.ceil((t-ctx.currentTime)*1000)+150);
+  }catch(e){}
+}
 function feedback(ok,text,delay=1500){
   const screen=$('saleScannerScreen');
   screen.classList.remove('result-ok','result-error'); void screen.offsetWidth;
   screen.classList.add(ok?'result-ok':'result-error'); $('scannerStatus').textContent=text;
-  try{navigator.vibrate?.(ok?80:[120,80,120]);const ctx=new(window.AudioContext||window.webkitAudioContext)(),o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=ok?920:210;g.gain.value=.12;o.connect(g);g.connect(ctx.destination);o.start();setTimeout(()=>{o.stop();ctx.close();},ok?100:280);}catch(e){}
+  try{navigator.vibrate?.(ok?80:[120,80,120]);}catch(e){}
+  playSignal(ok?'ok':'error');
   setTimeout(()=>{clearResult();$('scannerStatus').textContent=readyText();},delay);
+}
+function showPlayerComplete(cardCount){
+  const overlay=$('playerCompleteOverlay');
+  if(!overlay)return;
+  overlay.querySelector('span').textContent=`${cardCount} carton${cardCount>1?'s':''} enregistré${cardCount>1?'s':''}`;
+  overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');
+  try{navigator.vibrate?.([120,70,120,70,260]);}catch(e){}
+  playSignal('complete');
+  setTimeout(()=>{overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');$('scannerStatus').textContent='Scannez le bon de validation du joueur suivant.';busy=false;},2000);
 }
 function isGeneratedByApp(card){return String(card?.origine||'').trim().toLowerCase()==='loto by sds';}
 function normalizeSupport(value){const v=String(value||'C').toUpperCase();return ['C','P4','P6','P8'].includes(v)?v:'C';}
@@ -78,7 +99,7 @@ function renderBasket(){
   for(const k of ['C','P4','P6','P8']){$('basket'+k).textContent=`${got[k]} / ${expected[k]}`;$('basket'+k).className=got[k]===expected[k]?'basket-ok':got[k]>expected[k]?'basket-error':'';}
   $('validateVoucher').disabled=!basketComplete();
 }
-function resetVoucher(showMessage=true){voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();if(showMessage)feedback(true,'Bon annulé.');}
+function resetVoucher(showMessage=true){if(autoValidationTimer){clearTimeout(autoValidationTimer);autoValidationTimer=null;}voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();if(showMessage)feedback(true,'Bon annulé.');}
 function renderVoucherMode(){
   const c=context(),active=c.voucherEnabled&&mode==='vente';
   const modeLabel=$('scannerModeLabel');if(modeLabel)modeLabel.textContent=!c.enabled?'Suivi des ventes désactivé':(c.voucherEnabled?'Mode bon de validation':'Mode vente directe');
@@ -134,14 +155,22 @@ async function processVoucherSupport(raw){
   if(voucherKeys.has(key))throw new Error('ANOMALIE : ce carton ou cette planche a déjà été scanné pour ce joueur.');
   await ensureNotSold(cards);
   voucherKeys.add(key);voucherScans.push({key,support,cards});renderBasket();
-  feedback(true,basketComplete()?'JOUEUR COMPLET · appuyez sur Valider les cartons du joueur.':`${support} AJOUTÉ POUR LE JOUEUR`,1100);
+  if(basketComplete()){
+    feedback(true,'JOUEUR COMPLET · validation automatique…',700);
+    if(autoValidationTimer)clearTimeout(autoValidationTimer);
+    autoValidationTimer=setTimeout(()=>{autoValidationTimer=null;validateVoucher(true);},750);
+  }else feedback(true,`${support} AJOUTÉ POUR LE JOUEUR`,900);
 }
-async function validateVoucher(){
+async function validateVoucher(isAutomatic=false){
   if(!basketComplete()){feedback(false,'ANOMALIE : les cartons du joueur ne correspondent pas encore au bon.');return;}
   busy=true;
-  try{const cards=voucherScans.flatMap(x=>x.cards);await recordSale(cards,'bon_validation');feedback(true,`BON VALIDÉ · ${cards.length} carton(s) enregistré(s).`,2200);voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();}
-  catch(e){feedback(false,e.message||'ANOMALIE : validation impossible.');}
-  finally{setTimeout(()=>busy=false,900);}
+  try{
+    const cards=voucherScans.flatMap(x=>x.cards);
+    await recordSale(cards,'bon_validation');
+    voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();
+    showPlayerComplete(cards.length);
+  }
+  catch(e){feedback(false,e.message||'ANOMALIE : validation impossible.');setTimeout(()=>busy=false,900);}
 }
 async function processCode(raw){
   if(busy)return;busy=true;

@@ -63,32 +63,20 @@ function renderLot(s){
 
 function renderResult(payload){
   if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; lastResult = null; return; }
+
   if(!payload.found){
-    result.innerHTML = `<p class="bad">Carton ${esc(payload.numero)} non enregistré dans la base.</p><p>Vérifiez le numéro saisi.</p>`;
+    lastResult = null;
+    result.innerHTML = '<div class="simple-control-result invalid"><div class="simple-control-status bad">NON VALIDE</div></div>';
     showBtn.style.display = 'none';
     return;
   }
 
   const r = payload.result;
   lastResult = r;
-  const req = r.requirement || Loto.currentRequirement();
-  const status = r.valid ? '<span class="control-status ok">GAIN VALIDE</span>' : '<span class="control-status bad">NON VALIDE</span>';
-
   result.innerHTML = `
-    <div class="control-card-result ${r.valid ? 'valid' : 'invalid'}">
-      <div class="control-head">
-        <div>
-          <h2>Carton ${esc(r.numero)}</h2>
-          <p><b>Contrôle :</b> ${esc(req.label || '')}</p>
-          <p><b>Dernier numéro :</b> ${r.lastNumber ? pad(r.lastNumber) : '--'} ${req.lastNumberRequired ? '(obligatoire)' : '(non obligatoire)'}</p>${r.salesTrackingEnabled ? `<p><b>Suivi des ventes :</b> ${r.soldForCurrentLoto ? '<span class=\"ok\">vente confirmée</span>' : '<span class=\"bad\">carton non vendu pour ce loto</span>'}</p>` : `<p><b>Suivi des ventes :</b> désactivé — contrôle du gain uniquement</p>`}
-        </div>
-        ${status}
-      </div>
+    <div class="simple-control-result ${r.valid ? 'valid' : 'invalid'}">
+      <div class="simple-control-status ${r.valid ? 'ok' : 'bad'}">${r.valid ? 'VALIDE' : 'NON VALIDE'}</div>
       ${cardGridHtml(r)}
-      <div class="control-summary">
-        <p><b>Lignes complètes :</b> ${r.okLines}/3</p>
-        ${diagnosticHtml(r)}
-      </div>
     </div>`;
   showBtn.style.display = 'inline-flex';
 }

@@ -1,22 +1,7 @@
 Loto.pageHeader();Loto.protectPage();
-const grid=document.getElementById('grid'),last=document.getElementById('last'),count=document.getElementById('count'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
+const grid=document.getElementById('grid'),last=document.getElementById('last'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList');
 
-const animMicBtn=document.getElementById('animMicBtn');
-function updateAnimMic(on,message){
-  if(!animMicBtn)return;
-  animMicBtn.textContent=on?'Micro activé':'Micro coupé';
-  animMicBtn.classList.toggle('red',!!on);
-  animMicBtn.classList.toggle('secondary',!on);
-  animMicBtn.title=message|| (on?'Reconnaissance vocale active':'Reconnaissance vocale arrêtée');
-}
-if(animMicBtn){
-  updateAnimMic(false);
-  animMicBtn.onclick=()=>{
-    if(!window.LotoVoice){updateAnimMic(false,'Reconnaissance vocale indisponible');return;}
-    LotoVoice.toggle((on,message)=>updateAnimMic(on,message));
-  };
-}
 let lastCardClosedAt = 0;
 function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
@@ -35,13 +20,6 @@ document.getElementById('launchLoto').onclick=()=>{drawLaunchList();launchModal.
 document.getElementById('closeLaunch').onclick=()=>launchModal.style.display='none';
 document.getElementById('modalBlankGame').onclick=()=>{ if(confirm('Créer une nouvelle partie simple ?')){ Loto.newGame(); launchModal.style.display='none'; } };
 document.getElementById('newGame').onclick=()=>{ if(confirm('Créer une nouvelle partie simple ?')) Loto.newGame(); };
-document.getElementById('undo').onclick=()=>{ if(confirm('Annuler le dernier numéro ?')) Loto.undoLast(); };
-function numberValue(id){return Number(document.getElementById(id)?.value||0);}
-const animCancelBtn=document.getElementById('animCancelBtn');
-if(animCancelBtn) animCancelBtn.onclick=async()=>{const n=numberValue('animCancelNumber'); if(!n) return; if(confirm('Annuler le numéro '+n+' ?')){await Loto.cancelNumber(n,'animateur'); document.getElementById('animCancelNumber').value='';}};
-const animReplaceBtn=document.getElementById('animReplaceBtn');
-if(animReplaceBtn) animReplaceBtn.onclick=async()=>{const oldN=numberValue('animOldNumber'), newN=numberValue('animNewNumber'); if(!oldN||!newN) return; if(confirm('Remplacer '+oldN+' par '+newN+' ?')){await Loto.replaceNumber(oldN,newN,'animateur'); document.getElementById('animOldNumber').value=''; document.getElementById('animNewNumber').value='';}};
-
 const cancelPendingBtn=document.getElementById('cancelPending'); if(cancelPendingBtn) cancelPendingBtn.onclick=()=>Loto.cancelPending();
 document.getElementById('animHidePublic').onclick=()=>Loto.hidePublicCard();
 function pad(n){return String(n).padStart(2,'0');}
@@ -59,7 +37,6 @@ Loto.onChange(s=>{
   Loto.pageHeader();
   Loto.renderNumbers(grid,{button:true});
   last.textContent=Loto.lastNumber();
-  count.textContent=(s.drawnNumbers||[]).length;
   history.innerHTML=(s.drawnNumbers||[]).slice().reverse().map(n=>`<span class="pill">${String(n).padStart(2,'0')}</span>`).join('');
   renderLot(s);
   if(s.publicCard){
