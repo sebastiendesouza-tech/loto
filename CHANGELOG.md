@@ -1,3 +1,9 @@
+# v4.1.7
+
+- Correction du controle du dernier numero : le numero en attente/deja synchronise est bien compte comme sorti.
+- Le dernier numero a maintenant un fond orange dans la grille.
+- Suppression des textes explicatifs sous le titre Controle carton.
+
 ## v4.1.6
 - Fluidification du scanner vendeur : sons, vibrations, validation automatique et ecran Joueur termine.
 
