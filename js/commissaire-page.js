@@ -39,7 +39,7 @@ function diagnosticHtml(r){
 
 function renderSalesTrackingMode(s){
   if(!salesTrackingBanner) return;
-  const enabled = !!s.program?.sales_tracking_enabled;
+  const enabled = Loto.programSettings().salesTrackingEnabled;
   if(enabled){
     salesTrackingBanner.className = 'notice success';
     salesTrackingBanner.innerHTML = '<b>Suivi des ventes activé</b><br>Un gain ne sera validé que si le carton a été enregistré comme vendu pour ce loto.';

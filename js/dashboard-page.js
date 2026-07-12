@@ -10,7 +10,7 @@
     set('dashParties',(p.parties||[]).length||0);
     set('dashDrawn',(s.drawnNumbers||[]).length);
     set('dashCurrent',Loto.lastNumber?.()||'—');
-    set('dashSalesMode',p.sales_tracking_enabled?'Activé':'Désactivé');
+    set('dashSalesMode',Loto.programSettings(p).salesTrackingEnabled?'Activé':'Désactivé');
     const status=$('dashLotoStatus'); if(status){status.textContent=p.id?'Loto actif':'Aucun loto actif';status.className='dashboard-status '+(p.id?'good':'neutral');}
     set('dashSync',s.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fr-FR'):'—');
   }

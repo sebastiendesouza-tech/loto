@@ -48,7 +48,7 @@ function readProgram(){
   return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,createdAt:new Date().toISOString()};
 }
 function normalizedProgramForSave(){const p=readProgram(); const current=Loto.state().program || {}; p.id=current.id || p.id; p.createdAt=current.createdAt || p.createdAt; p.updatedAt=new Date().toISOString(); return p;}
-async function saveProgramToList({start=false}={}){const s=Loto.state(); const program=normalizedProgramForSave(); program.sales_tracking_enabled=!!salesTrackingEnabled?.checked; program.validation_voucher_enabled=!!document.getElementById('validationVoucherEnabled')?.checked; const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked}; const saved=[...(s.savedPrograms||[])]; const idx=saved.findIndex(x=>x.id===program.id); if(idx>=0) saved[idx]=program; else saved.unshift(program); const emptyProgram={id:'',title:'',date:'',parties:[]}; const patch={savedPrograms:saved.slice(0,80),options,program:emptyProgram}; if(start){Object.assign(patch,Loto.freshGamePatch(program)); patch.lotoName=program.title||'Loto by SdS'; patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];} await Loto.save(patch); showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré. Les champs sont prêts pour une nouvelle saisie.');}
+async function saveProgramToList({start=false}={}){const s=Loto.state(); const program=normalizedProgramForSave(); program.sales_tracking_enabled=!!salesTrackingEnabled?.checked; program.validation_voucher_enabled=!!document.getElementById('validationVoucherEnabled')?.checked; const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked}; const saved=[...(s.savedPrograms||[])]; const idx=saved.findIndex(x=>x.id===program.id); if(idx>=0) saved[idx]=program; else saved.unshift(program); const patch={savedPrograms:saved.slice(0,80),options,program}; patch.lotoName=program.title||s.lotoName||'Loto by SdS'; if(start){Object.assign(patch,Loto.freshGamePatch(program)); patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];} await Loto.save(patch); showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré. Les champs sont prêts pour une nouvelle saisie.');}
 function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){ savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>'; return; } savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s) · ${p.sales_tracking_enabled ? 'suivi ventes actif' : 'suivi ventes inactif'}${p.validation_voucher_enabled ? ' · bon de validation' : ''}</span></div><div class="toolbar"><button data-load="${i}">Modifier</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load)));}
 async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p) return; await Loto.save({program:p,lotoName:p.title||'Loto by SdS'}); document.querySelector('[data-tab="loto"]').click(); showSavedMessage('Loto chargé pour modification.');}
 
@@ -111,6 +111,19 @@ document.getElementById('importDefaultCartons')?.addEventListener('click',import
 document.getElementById('deleteStandardCartons')?.addEventListener('click',deleteStandardCartons);
 document.getElementById('refreshCartons')?.addEventListener('click',refreshCartonCount);
 document.getElementById('testCardBtn')?.addEventListener('click', testCard);
+
+
+async function persistActiveSaleOptions(){
+  const s=Loto.state();
+  if(!s.program?.id) return;
+  const program={...s.program,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,updatedAt:new Date().toISOString()};
+  const saved=(s.savedPrograms||[]).map(p=>p.id===program.id?program:p);
+  await Loto.save({program,savedPrograms:saved});
+  showSavedMessage('Paramètres de vente appliqués au loto actif.');
+}
+if(salesTrackingEnabled) salesTrackingEnabled.addEventListener('change',persistActiveSaleOptions);
+const validationVoucherToggle=document.getElementById('validationVoucherEnabled');
+if(validationVoucherToggle) validationVoucherToggle.addEventListener('change',persistActiveSaleOptions);
 
 Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; const voucherToggle=document.getElementById('validationVoucherEnabled'); if(voucherToggle) voucherToggle.checked=!!s.program?.validation_voucher_enabled; bingoEnabled.checked=!!s.options?.bingoEnabled; showBingo.checked=!!s.options?.showBingo; const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
 Loto.ensureSession().then(refreshCartonCount);

@@ -30,7 +30,19 @@
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
   function onChange(fn){ listeners.push(fn); fn(state); return () => listeners = listeners.filter(x => x !== fn); }
-  function mergeState(next){ state = Object.assign(defaultState(), next || {}); state.sessionCode = code(); notify(); }
+  function normalizeProgram(program){
+    const p = Object.assign({}, program || {});
+    const sales = p.sales_tracking_enabled ?? p.suivi_ventes ?? p.track_sales ?? false;
+    const voucher = p.validation_voucher_enabled ?? p.bon_validation ?? p.use_validation_ticket ?? false;
+    p.sales_tracking_enabled = !!sales;
+    p.validation_voucher_enabled = !!voucher;
+    return p;
+  }
+  function programSettings(program=state.program){
+    const p=normalizeProgram(program);
+    return { salesTrackingEnabled:!!p.sales_tracking_enabled, validationVoucherEnabled:!!p.validation_voucher_enabled };
+  }
+  function mergeState(next){ state = Object.assign(defaultState(), next || {}); state.program = normalizeProgram(state.program); state.savedPrograms=(state.savedPrograms||[]).map(normalizeProgram); state.sessionCode = code(); notify(); }
   async function ensureSession(){
     if(!supabaseClient) { mergeState(safeJson(localStorage.getItem('loto_state'), defaultState())); return; }
     const sessionCode = code(); localStorage.setItem('loto_session_code', sessionCode);
@@ -401,7 +413,7 @@
     const card = await fetchCard(numero);
     if(!card) return { found:false, numero };
     const result = checkCard(card);
-    result.salesTrackingEnabled = !!state.program?.sales_tracking_enabled;
+    result.salesTrackingEnabled = programSettings().salesTrackingEnabled;
     result.soldForCurrentLoto = true;
     result.salesStatus = 'non_controle';
     if(result.salesTrackingEnabled && supabaseClient){
@@ -451,5 +463,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
 })();

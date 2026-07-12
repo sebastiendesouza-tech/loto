@@ -9,8 +9,8 @@ function context(){
   return {
     id:s.program?.id||s.sessionCode||Loto.code(),
     title:s.program?.title||s.lotoName||'Loto actif',
-    enabled:!!s.program?.sales_tracking_enabled,
-    voucherEnabled:!!s.program?.validation_voucher_enabled
+    enabled:Loto.programSettings().salesTrackingEnabled,
+    voucherEnabled:Loto.programSettings().validationVoucherEnabled
   };
 }
 function setMode(next){
@@ -71,7 +71,8 @@ function renderBasket(){
 }
 function resetVoucher(showMessage=true){voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();if(showMessage)feedback(true,'Bon annulé.');}
 function renderVoucherMode(){
-  const active=context().voucherEnabled&&mode==='vente';
+  const c=context(),active=c.voucherEnabled&&mode==='vente';
+  const modeLabel=$('scannerModeLabel');if(modeLabel)modeLabel.textContent=!c.enabled?'Suivi des ventes désactivé':(c.voucherEnabled?'Mode bon de validation':'Mode vente directe');
   $('voucherPanel').style.display=active?'block':'none';
   $('voucherPrompt').style.display=active&&!voucherExpected?'block':'none';
   $('voucherBasket').style.display=active&&voucherExpected?'block':'none';
