@@ -357,12 +357,19 @@
     return null;
   }
   function checkCard(card){
-    const allDrawn = [...(state.drawnNumbers || [])];
-    const last = state.pendingNumber || allDrawn.slice(-1)[0] || null;
-    const afterList = [...allDrawn, ...(state.pendingNumber ? [state.pendingNumber] : [])];
-    const after = new Set(afterList.map(Number));
-    const beforeList = last ? afterList.filter((n, idx) => !(Number(n) === Number(last) && idx === afterList.map(Number).lastIndexOf(Number(last)))) : afterList;
-    const before = new Set(beforeList.map(Number));
+    const allDrawn = [...(state.drawnNumbers || [])].map(Number);
+    const pending = state.pendingNumber ? Number(state.pendingNumber) : null;
+    const last = pending || allDrawn.slice(-1)[0] || null;
+
+    // Pendant l'annonce, le numero en attente est le dernier numero.
+    // S'il est deja present dans drawnNumbers (synchronisation rapide), ne pas le doubler.
+    const afterList = pending && !allDrawn.includes(pending) ? [...allDrawn, pending] : [...allDrawn];
+    const after = new Set(afterList);
+
+    // Etat juste avant le dernier tirage : on retire toutes les occurrences du dernier numero.
+    // Cela evite un faux NON VALIDE lorsque le numero en attente a deja ete synchronise.
+    const beforeList = last ? afterList.filter(n => Number(n) !== Number(last)) : afterList;
+    const before = new Set(beforeList);
     const lignes = card?.lignes || [];
     const req = currentRequirement();
     const buildLines = (drawnSet) => lignes.map(l => ({
