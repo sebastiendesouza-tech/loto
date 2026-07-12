@@ -26,7 +26,7 @@ function readyText(){
   const c=context();
   if(mode==='retour') return 'Prêt pour un retour.';
   if(c.voucherEnabled && !voucherExpected) return 'Scannez le bon de validation.';
-  if(c.voucherEnabled) return 'Scannez les cartons et planches du panier.';
+  if(c.voucherEnabled) return 'Scannez les cartons et planches du joueur.';
   return 'Prêt pour une vente.';
 }
 function clearResult(){$('saleScannerScreen').classList.remove('result-ok','result-error');}
@@ -131,13 +131,13 @@ async function processVoucherSupport(raw){
   const cards=await findCards(raw),support=supportForCards(cards),expected=voucherExpected[support]||0,got=scanCounts()[support]||0;
   if(got>=expected)throw new Error(`ANOMALIE : aucun support ${support} supplémentaire n’est prévu sur le bon.`);
   const key=cards[0]?.sheet_code||cards[0]?.carton_code;
-  if(voucherKeys.has(key))throw new Error('ANOMALIE : ce carton ou cette planche a déjà été scanné dans ce panier.');
+  if(voucherKeys.has(key))throw new Error('ANOMALIE : ce carton ou cette planche a déjà été scanné pour ce joueur.');
   await ensureNotSold(cards);
   voucherKeys.add(key);voucherScans.push({key,support,cards});renderBasket();
-  feedback(true,basketComplete()?'PANIER COMPLET · appuyez sur Valider le panier.':`${support} AJOUTÉ AU PANIER`,1100);
+  feedback(true,basketComplete()?'JOUEUR COMPLET · appuyez sur Valider les cartons du joueur.':`${support} AJOUTÉ POUR LE JOUEUR`,1100);
 }
 async function validateVoucher(){
-  if(!basketComplete()){feedback(false,'ANOMALIE : le panier ne correspond pas encore au bon.');return;}
+  if(!basketComplete()){feedback(false,'ANOMALIE : les cartons du joueur ne correspondent pas encore au bon.');return;}
   busy=true;
   try{const cards=voucherScans.flatMap(x=>x.cards);await recordSale(cards,'bon_validation');feedback(true,`BON VALIDÉ · ${cards.length} carton(s) enregistré(s).`,2200);voucherExpected=null;voucherScans=[];voucherKeys=new Set();renderVoucherMode();}
   catch(e){feedback(false,e.message||'ANOMALIE : validation impossible.');}
