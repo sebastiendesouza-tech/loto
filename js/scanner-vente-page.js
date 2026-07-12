@@ -41,11 +41,26 @@ function isGeneratedByApp(card){return String(card?.origine||'').trim().toLowerC
 function normalizeSupport(value){const v=String(value||'C').toUpperCase();return ['C','P4','P6','P8'].includes(v)?v:'C';}
 function parseVoucher(raw){
   const text=String(raw||'').trim().toUpperCase().replace(/\s+/g,'');
-  if(!/(^|;)C:\d+|(^|;)P4:\d+|(^|;)P6:\d+|(^|;)P8:\d+/.test(text)) return null;
+  const parts=text.split(';').filter(Boolean);
+  if(!parts.length)return null;
   const out={C:0,P4:0,P6:0,P8:0};
-  for(const part of text.split(';')){const m=part.match(/^(C|P4|P6|P8):(\d+)$/);if(m)out[m[1]]=Number(m[2]);}
-  if(Object.values(out).every(v=>v===0)) return null;
+  let recognized=0;
+  for(const part of parts){
+    const m=part.match(/^(C|P4|P6|P8):(\d+)$/);
+    if(!m)return null;
+    out[m[1]]=Number(m[2]);recognized++;
+  }
+  if(!recognized||Object.values(out).every(v=>v===0))return null;
   return out;
+}
+function voucherTotal(v){return (v.C||0)+(v.P4||0)*4+(v.P6||0)*6+(v.P8||0)*8;}
+function voucherSummary(v){
+  const parts=[];
+  if(v.C)parts.push(`${v.C} carton${v.C>1?'s':''}`);
+  if(v.P4)parts.push(`${v.P4} planche${v.P4>1?'s':''} de 4`);
+  if(v.P6)parts.push(`${v.P6} planche${v.P6>1?'s':''} de 6`);
+  if(v.P8)parts.push(`${v.P8} planche${v.P8>1?'s':''} de 8`);
+  return `${parts.join(' · ')} · ${voucherTotal(v)} cartons au total`;
 }
 function scanCounts(){const out={C:0,P4:0,P6:0,P8:0};for(const x of voucherScans)out[x.support]++;return out;}
 function basketComplete(){if(!voucherExpected)return false;const got=scanCounts();return ['C','P4','P6','P8'].every(k=>got[k]===voucherExpected[k]);}
@@ -123,7 +138,7 @@ async function processCode(raw){
   try{
     const c=context();if(!c.enabled)throw new Error('ANOMALIE : suivi des ventes désactivé.');
     if(mode==='vente'&&c.voucherEnabled){
-      if(!voucherExpected){const parsed=parseVoucher(raw);if(!parsed)throw new Error('ANOMALIE : scannez d’abord un bon de validation valide.');voucherExpected=parsed;voucherScans=[];voucherKeys=new Set();renderVoucherMode();feedback(true,'BON RECONNU · scannez les cartons et planches.',1300);}
+      if(!voucherExpected){const parsed=parseVoucher(raw);if(!parsed)throw new Error('ANOMALIE : scannez d’abord un bon de validation valide.');voucherExpected=parsed;voucherScans=[];voucherKeys=new Set();renderVoucherMode();feedback(true,`BON RECONNU · ${voucherSummary(parsed)}`,2200);}
       else await processVoucherSupport(raw);
     }else{
       const cards=await findCards(raw);
