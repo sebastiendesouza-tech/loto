@@ -153,9 +153,11 @@
 .public-v213 .public-prize-row{border:1px solid #29466b;border-radius:12px;padding:10px;background:#102946;transition:opacity .2s ease,filter .2s ease,box-shadow .2s ease,transform .2s ease;}
 .public-v213 .public-prize-row.won{opacity:.34;filter:grayscale(.7);}
 .public-v213 .public-prize-row.active{background:#12365f;border-color:#f2a900;box-shadow:0 0 18px rgba(242,169,0,.32);transform:scale(1.01);}
-.public-v213 .public-prize-step{display:block;color:#f2a900;font-size:22px;font-weight:1000;line-height:1.05;}
-.public-v213 .public-prize-lot{display:block;color:#fff;font-size:17px;font-weight:900;margin-top:5px;}
-.public-v213 .public-prize-row.won .public-prize-step,.public-v213 .public-prize-row.won .public-prize-lot{color:#93a9c5;}
+.public-v213 .public-prize-line{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;font-size:19px;font-weight:900;line-height:1.2;}
+.public-v213 .public-prize-label{color:#fff;white-space:nowrap;}
+.public-v213 .public-prize-value{color:#f2a900;}
+.public-v213 .public-prize-condition{color:#fff;margin-left:auto;white-space:nowrap;font-size:17px;}
+.public-v213 .public-prize-row.won .public-prize-label,.public-v213 .public-prize-row.won .public-prize-value,.public-v213 .public-prize-row.won .public-prize-condition{color:#93a9c5;}
 .public-v213 .public-qr-card{padding:12px;}
 .public-v213 .qr-title{font-size:15px;margin-bottom:8px;}
 .public-v213 .qr-holder{min-height:136px;}
@@ -165,8 +167,8 @@
 .public-v213 .public-grid-v213 .num.drawn{background:#f2a900;color:#071421;border-color:#ffd166;box-shadow:0 0 20px rgba(242,169,0,.72),0 0 36px rgba(242,169,0,.22),inset 0 0 0 2px rgba(255,255,255,.3);}
 @media(max-width:850px){
   .public-v213 .public-prize-row{padding:7px;}
-  .public-v213 .public-prize-step{font-size:16px;}
-  .public-v213 .public-prize-lot{font-size:13px;}
+  .public-v213 .public-prize-line{font-size:14px;gap:4px;}
+  .public-v213 .public-prize-condition{font-size:13px;}
   .public-v213 .qr-holder{min-height:96px;}
   .public-v213 .qr-holder canvas,.public-v213 .qr-holder img{max-width:86px!important;width:86px!important;height:86px!important;}
 }
