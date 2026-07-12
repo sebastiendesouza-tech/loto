@@ -459,9 +459,11 @@
 /* V4.1.0 - bon de validation */
 .sale-voucher-panel{margin:10px 0;width:100%;box-sizing:border-box}
 .sale-voucher-panel h2{margin:0 0 8px;font-size:1.1rem}
-.voucher-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.voucher-grid>div{display:flex;justify-content:space-between;gap:8px;padding:10px;border:1px solid #d7dbe2;border-radius:10px;background:#fff}
-.voucher-grid span{font-weight:800}
-.basket-ok{color:#147a3a}.basket-error{color:#b42318}
+.voucher-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.voucher-grid>div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:86px;padding:10px 6px;border:1px solid #d7dbe2;border-radius:10px;background:#fff;color:#172033;text-align:center}
+.voucher-grid b{display:block;color:#172033;font-size:.92rem;line-height:1.15}
+.voucher-grid small{display:block;color:#667085;font-size:.68rem;line-height:1.1}
+.voucher-grid span{display:block;color:#172033;font-size:1.35rem;font-weight:900;line-height:1.1}
+.voucher-grid span.basket-ok{color:#147a3a}.voucher-grid span.basket-error{color:#b42318}
 .voucher-actions{margin-top:10px}.voucher-actions button{flex:1}
-@media(max-width:520px){.voucher-grid{grid-template-columns:1fr}.sale-voucher-panel{padding:10px}}
+@media(max-width:520px){.voucher-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.sale-voucher-panel{padding:10px}.voucher-grid>div{min-height:78px;padding:8px 4px}.voucher-grid b{font-size:.82rem}.voucher-grid span{font-size:1.2rem}}
