@@ -1,4 +1,4 @@
-# v4.1.2
+# v4.1.3
 - Stabilisation suivi des ventes et bon de validation.
 - Diagnostic et mode scanner visibles.
 - Correction de la conservation du loto actif lors de l'enregistrement.
