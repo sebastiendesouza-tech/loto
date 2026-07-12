@@ -80,11 +80,13 @@ function renderLots(s){
 
   const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false).slice(0,3);
   publicStep.textContent = '';
+  const mode = partie?.gameMode || 'ligne';
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
-    const lotLabel = (partie?.gameMode || 'ligne') === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
-    return `<div class="public-prize-row ${cls}"><span class="public-prize-step">${stepLabelFor(partie,i)}</span><span class="public-prize-lot">${lotLabel} : ${lot}</span></div>`;
+    const lotLabel = mode === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
+    const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : '';
+    return `<div class="public-prize-row ${cls}"><div class="public-prize-line"><span class="public-prize-label">${lotLabel} :</span> <span class="public-prize-value">${esc(lot)}</span>${step}</div></div>`;
   }).join('')}</div>`;
 }
 
