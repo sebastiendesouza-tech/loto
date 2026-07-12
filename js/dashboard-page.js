@@ -32,17 +32,23 @@
     const client=Loto.supabaseClient;
     if(!client){out.innerHTML=issue('warn','Supabase non configuré','Contrôle local uniquement impossible.');btn.disabled=false;return;}
     try{
-      const {data,error}=await client.from('loto_cartons').select('numero,carton_code,qr_payload,origine,actif,grille,numbers_signature').limit(12000);
+      const {data,error}=await client.from('loto_cartons').select('numero,carton_code,qr_payload,origine,actif,grille,numbers_signature,sheet_code,support_type').limit(12000);
       if(error)throw error;
-      const rows=data||[], dup=(key)=>{const seen=new Set(),d=[];for(const r of rows){const v=r[key];if(v==null||v==='')continue;if(seen.has(String(v)))d.push(v);else seen.add(String(v));}return d;};
-      const dupNum=dup('numero'),dupCode=dup('carton_code'),dupQr=dup('qr_payload');
+      const rows=data||[];
+      const duplicateGroups=(key)=>{const m=new Map();for(const r of rows){const v=r[key];if(v==null||v==='')continue;const k=String(v);if(!m.has(k))m.set(k,[]);m.get(k).push(r);}return [...m.entries()].filter(([,items])=>items.length>1);};
+      const dupNum=duplicateGroups('numero'),dupCode=duplicateGroups('carton_code');
+      const qrGroups=duplicateGroups('qr_payload');
+      const expectedSize={P4:4,P6:6,P8:8};
+      const normalSheetQr=[],badQr=[];
+      for(const [qr,items] of qrGroups){const sheets=[...new Set(items.map(x=>x.sheet_code).filter(Boolean))],types=[...new Set(items.map(x=>x.support_type).filter(Boolean))];const type=types[0];const normal=sheets.length===1&&types.length===1&&expectedSize[type]===items.length;if(normal)normalSheetQr.push([qr,items]);else badQr.push([qr,items]);}
       const noOrigin=rows.filter(r=>!r.origine).length;
       const archived=rows.filter(r=>r.actif===false).length;
       const invalidGrid=rows.filter(r=>{const g=r.grille;if(!Array.isArray(g))return true;const nums=g.flat?.().map(Number).filter(n=>n>0)||[];return nums.length!==15||new Set(nums).size!==15||nums.some(n=>n<1||n>90);}).length;
       let html='';
-      html+=issue(dupNum.length?'error':'ok','Identifiants internes',dupNum.length?`${dupNum.length} doublon(s) détecté(s).`:'Aucun doublon.');
-      html+=issue(dupCode.length?'error':'ok','Codes cartons',dupCode.length?`${dupCode.length} doublon(s) détecté(s).`:'Codes uniques.');
-      html+=issue(dupQr.length?'error':'ok','QR codes',dupQr.length?`${dupQr.length} doublon(s) détecté(s).`:'QR codes uniques.');
+      const detail=(groups)=>groups.slice(0,8).map(([v,items])=>`${v} (${items.length} lignes)`).join(', ');
+      html+=issue(dupNum.length?'error':'ok','Identifiants internes',dupNum.length?`${dupNum.length} groupe(s) en double : ${detail(dupNum)}.`:'Aucun doublon.');
+      html+=issue(dupCode.length?'error':'ok','Codes cartons',dupCode.length?`${dupCode.length} code(s) en double : ${detail(dupCode)}.`:'Codes uniques.');
+      html+=issue(badQr.length?'warn':'ok','QR codes',badQr.length?`${badQr.length} QR à vérifier : ${detail(badQr)}.`:(normalSheetQr.length?`${normalSheetQr.length} QR partagé(s) normalement par des planches. Aucun vrai doublon.`:'QR codes uniques.'));
       html+=issue(invalidGrid?'warn':'ok','Grilles',invalidGrid?`${invalidGrid} grille(s) à vérifier. Le loto n’est pas bloqué.`:'Toutes les grilles contrôlées sont cohérentes.');
       html+=issue(noOrigin?'warn':'ok','Origine des cartons',noOrigin?`${noOrigin} carton(s) sans origine. Ils peuvent être exclus du suivi des ventes.`:'Origines renseignées.');
       html+=issue('info','Cartons archivés',`${archived} carton(s) archivé(s). Information uniquement.`);
