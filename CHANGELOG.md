@@ -1,3 +1,9 @@
+## v4.1.4
+- Correction de l’affichage du bon de validation : libellés et quantités visibles.
+- Présentation des quatre types de supports en grille 2 x 2, y compris sur téléphone.
+- Remplacement du terme « panier » par « joueur » dans le scanner de vente.
+- Affichage explicite « Scannés / attendus » pour chaque support.
+
 # v4.1.3
 - Stabilisation suivi des ventes et bon de validation.
 - Diagnostic et mode scanner visibles.

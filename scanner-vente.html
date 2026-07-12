@@ -4,16 +4,16 @@
 <div class="sale-phone-camera" id="saleCameraBox"><video id="saleVideo" playsinline autoplay muted></video><div class="sale-phone-frame"></div></div>
 <div id="scannerStatus" class="sale-scanner-message">Appuyez sur « Démarrer la caméra ».</div>
 <section id="voucherPanel" class="card soft sale-voucher-panel" style="display:none">
-  <h2>Bon de validation</h2>
+  <h2>Bon de validation du joueur</h2>
   <div id="voucherPrompt" class="notice">Scannez d’abord le QR code du bon de validation.</div>
   <div id="voucherBasket" style="display:none">
     <div class="voucher-grid">
-      <div><b>Cartons</b><span id="basketC">0 / 0</span></div>
-      <div><b>Planches de 4</b><span id="basketP4">0 / 0</span></div>
-      <div><b>Planches de 6</b><span id="basketP6">0 / 0</span></div>
-      <div><b>Planches de 8</b><span id="basketP8">0 / 0</span></div>
+      <div class="voucher-item"><b>Cartons</b><small>Scannés / attendus</small><span id="basketC">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 4</b><small>Scannées / attendues</small><span id="basketP4">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 6</b><small>Scannées / attendues</small><span id="basketP6">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 8</b><small>Scannées / attendues</small><span id="basketP8">0 / 0</span></div>
     </div>
-    <div class="toolbar voucher-actions"><button id="validateVoucher" class="green" disabled>Valider le panier</button><button id="cancelVoucher" class="secondary">Annuler le bon</button></div>
+    <div class="toolbar voucher-actions"><button id="validateVoucher" class="green" disabled>Valider les cartons du joueur</button><button id="cancelVoucher" class="secondary">Annuler le bon</button></div>
   </div>
 </section>
 <button id="startSaleCamera" class="sale-camera-start">Démarrer la caméra</button>
