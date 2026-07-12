@@ -1,3 +1,8 @@
+# v4.1.2
+- Stabilisation suivi des ventes et bon de validation.
+- Diagnostic et mode scanner visibles.
+- Correction de la conservation du loto actif lors de l'enregistrement.
+
 # v4.1.1
 
 - Reconnaissance explicite du bon de validation caisse au format `C:1;P4:0;P6:2;P8:0`.
