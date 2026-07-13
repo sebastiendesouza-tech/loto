@@ -7,6 +7,7 @@ const input = document.getElementById('cardNumber');
 const result = document.getElementById('result');
 const showBtn = document.getElementById('showPublic');
 const hideBtn = document.getElementById('hidePublic');
+const publicCardActions = document.getElementById('publicCardActions');
 const currentLot = document.getElementById('currentLot');
 const salesTrackingBanner = document.getElementById('salesTrackingBanner');
 const cardControlHelp = document.getElementById('cardControlHelp');
@@ -62,12 +63,13 @@ function renderLot(s){
 }
 
 function renderResult(payload){
-  if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; lastResult = null; return; }
+  if(!payload){ result.innerHTML = ''; showBtn.style.display = 'none'; if(publicCardActions) publicCardActions.style.display = 'none'; lastResult = null; return; }
 
   if(!payload.found){
     lastResult = null;
     result.innerHTML = '<div class="simple-control-result invalid"><div class="simple-control-status bad">NON VALIDE</div></div>';
     showBtn.style.display = 'none';
+    if(publicCardActions) publicCardActions.style.display = 'none';
     return;
   }
 
@@ -79,6 +81,7 @@ function renderResult(payload){
       ${cardGridHtml(r)}
     </div>`;
   showBtn.style.display = 'inline-flex';
+  if(publicCardActions) publicCardActions.style.display = 'flex';
 }
 
 document.getElementById('checkBtn').onclick = async () => {
@@ -89,7 +92,7 @@ document.getElementById('checkBtn').onclick = async () => {
 };
 input.onkeydown = e => { if(e.key === 'Enter') document.getElementById('checkBtn').click(); };
 showBtn.onclick = () => lastResult && Loto.showPublicCard(lastResult);
-hideBtn.onclick = () => Loto.hidePublicCard();
+hideBtn.onclick = async () => { await Loto.hidePublicCard(); if(publicCardActions) publicCardActions.style.display = 'none'; };
 
 Loto.onChange((s) => {
   Loto.pageHeader();
@@ -99,6 +102,7 @@ Loto.onChange((s) => {
   renderSalesTrackingMode(s);
   if(s.publicCard){
     renderResult({found:true,result:s.publicCard});
+    if(publicCardActions) publicCardActions.style.display = 'flex';
   } else if(Number(s.cardClosedAt || 0) && Number(s.cardClosedAt || 0) !== lastCardClosedAt){
     lastCardClosedAt = Number(s.cardClosedAt || 0);
     renderResult(null);
