@@ -1,7 +1,5 @@
-## v4.2.1
-- Correctif critique : chargement obligatoire de la session avant le scan Commissaire.
-- Empêche l'effacement du loto actif par une sauvegarde d'état vide.
-- Corrige les faux résultats NON VALIDE lors d'un scan.
+## v4.2.2
+- Rétablissement de la commande de fermeture du carton sur l’affichage public depuis la page Commissaire.
 
 # v4.2.0
 
