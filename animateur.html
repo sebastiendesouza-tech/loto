@@ -17,6 +17,7 @@
         <div id="last" class="animateur-last-number">--</div>
       </div>
       <div id="currentLot" class="card current-lot compact-lot"></div>
+      <div class="card"><div class="toolbar"><button id="voicePause" class="secondary">Activer écoute</button><button id="miniBingoWon" class="secondary" style="display:none">Mini-bingo gagné</button><button id="startMiniBingo" class="green" style="display:none">Lancer Mini-bingo</button></div></div>
       <div class="card animateur-control-card">
         <h3>Contrôle carton</h3>
         <div class="toolbar control-toolbar-v229">
@@ -29,5 +30,5 @@
     </aside>
   </div>
   <div class="card history-card"><h3>Historique</h3><div id="history" class="history"></div></div>
-</main><div id="launchModal" class="modal-soft" style="display:none"><div class="modal-panel"><h2>Lancer un loto</h2><p>Choisis un loto enregistré ou démarre une partie simple.</p><div id="launchList"></div><p class="toolbar"><button id="closeLaunch" class="secondary">Fermer</button><button id="modalBlankGame">Nouvelle partie simple</button></p></div></div>
+</main><div id="launchModal" class="modal-soft" style="display:none"><div class="modal-panel"><h2>Lancer un loto</h2><p>Choisis un loto enregistré ou démarre une partie simple.</p><div id="launchGuard" class="notice" style="display:none"></div><div id="launchList"></div><p class="toolbar"><button id="closeLaunch" class="secondary">Fermer</button><button id="modalBlankGame">Nouvelle partie simple</button></p></div></div>
 <script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="js/voice.js"></script><script src="js/animateur-page.js"></script></body></html>

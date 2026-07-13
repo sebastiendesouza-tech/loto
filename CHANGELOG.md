@@ -1,3 +1,15 @@
+# v4.2.0
+
+- Stabilisation du cycle de partie et du Mini-bingo.
+- Pause de l’écoute vocale.
+- Arrêt manuel d’un loto actif.
+- Réinitialisation fiable du formulaire de création.
+
+## v4.1.10
+- Correction du contrôle du dernier numéro : il doit être présent sur la ligne gagnante ou sur le carton plein, sans obligation d’être le numéro qui complète mathématiquement le gain.
+- Le dernier numéro reste affiché avec un fond orange.
+- Suppression des commandes et textes sous la grille du carton contrôlé.
+
 # v4.1.8
 
 - Stabilisation création des lotos, numérotation et contrôle d’intégrité.
