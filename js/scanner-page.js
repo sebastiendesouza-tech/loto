@@ -1,4 +1,4 @@
-let scannerStream=null, scannerTimer=null, scannerLastValue='', scannerLastAt=0, scannerReadCount=0, scannerProcessing=false;
+let scannerStream=null, scannerTimer=null, scannerLastValue='', scannerLastAt=0, scannerReadCount=0, scannerProcessing=false, scannerSessionReady=false;
 const params=new URLSearchParams(location.search);
 let scannerUsageMode=(params.get('mode')||'commissaire').replace('-','_');
 if(scannerUsageMode!=='saisie_cartons') scannerUsageMode='commissaire';
@@ -96,6 +96,7 @@ async function startSaisieCartonsLoop(){
   }, saisieStep==='grid'?1800:1100);
 }
 async function startQrScanner(){
+  if(!scannerSessionReady){ setStatus('Chargement du loto en cours. Réessayez dans un instant.','muted'); return; }
   stopQrScanner(false); scannerProcessing=false; scannerLastValue=''; scannerLastAt=0; scannerReadCount=0; currentDraft=null; saisieStep='grid'; setReadTime(NaN); setFrame('');
   const isHttps=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'; if(!isHttps){setStatus('Caméra bloquée : ouvrir en HTTPS.','red'); return;} if(!navigator.mediaDevices?.getUserMedia){setStatus('Caméra non disponible.','red'); return;}
   try{const tmp=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); tmp.getTracks().forEach(t=>t.stop());}catch(e){setStatus('Erreur autorisation caméra : '+readableCameraError(e),'red'); return;}
@@ -103,7 +104,25 @@ async function startQrScanner(){
 }
 function stopQrScanner(showMessage=true){if(scannerTimer) clearInterval(scannerTimer); scannerTimer=null; if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop()); scannerStream=null;} const video=document.getElementById('qrScannerVideo'); if(video){video.pause?.(); video.srcObject=null;} if(showMessage) setStatus('Caméra arrêtée.','muted'); scannerProcessing=false; setFrame('');}
 function initPage(){const title=document.getElementById('scanPageTitle'); const help=document.getElementById('scanPageHelp'); const back=document.getElementById('scanBackLink'); if(scannerUsageMode==='saisie_cartons'){if(title) title.textContent='Scanner saisie cartons'; if(help) help.textContent='Étape 1 : grille complète. Étape 2 : QR, code-barres ou numéro imprimé du carton.'; if(back) back.href='administration.html#cartons'; document.body.classList.add('scan-saisie-mode');} else {if(title) title.textContent='Scanner commissaire'; if(help) help.textContent='Scanne le QR du carton. Après lecture, retour automatique vers la page commissaire.'; if(back) back.href='commissaire.html';}}
+async function bootScannerPage(){
+  initPage();
+  Loto.pageHeader();
+  Loto.protectPage();
+  const startBtn=document.getElementById('startQrScanner');
+  if(startBtn) startBtn.disabled=true;
+  setStatus('Chargement du loto en cours...','muted');
+  try{
+    await Loto.ensureSession();
+    scannerSessionReady=true;
+    Loto.pageHeader();
+    setStatus(scannerUsageMode==='commissaire' ? 'Loto chargé. Vous pouvez lancer le scanner.' : 'Session chargée. Vous pouvez lancer le scanner.','muted');
+    if(startBtn) startBtn.disabled=false;
+  }catch(e){
+    scannerSessionReady=false;
+    setStatus('Impossible de charger le loto : '+(e.message||e),'red');
+  }
+}
 document.getElementById('startQrScanner')?.addEventListener('click',startQrScanner);
 document.getElementById('stopQrScanner')?.addEventListener('click',()=>stopQrScanner(true));
 window.addEventListener('pagehide',()=>stopQrScanner(false));
-initPage(); Loto.pageHeader(); Loto.protectPage();
+bootScannerPage();
