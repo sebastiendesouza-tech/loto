@@ -484,3 +484,5 @@
 button.danger{background:#a92a2a;color:#fff;border-color:#a92a2a}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
 button.danger{background:#a92a2a;color:#fff;border-color:#a92a2a}
+
+.voice-fab{position:fixed;right:24px;bottom:24px;z-index:1000;width:150px;height:92px;border-radius:22px;border:3px solid rgba(255,255,255,.8);box-shadow:0 8px 24px rgba(0,0,0,.28);font-size:28px;display:flex;align-items:center;justify-content:center;gap:8px}.voice-fab span{font-size:13px;line-height:1.15;font-weight:800}.voice-fab.active{background:#16833b;color:#fff}.voice-fab.paused{background:#e57b12;color:#fff}.voice-fab.unavailable{background:#777;color:#fff}.voice-pause-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:999;background:#e57b12;color:#fff;padding:12px 18px;border-radius:14px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.2)}@media(max-width:700px){.voice-fab{right:12px;bottom:12px;width:132px;height:80px}.voice-pause-banner{left:12px;right:154px;transform:none;bottom:12px;font-size:12px}}
