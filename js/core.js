@@ -18,6 +18,9 @@
     miniBingoTakenParties: [],
     miniBingoReady: false,
     miniBingoActive: false,
+    miniBingoWon: false,
+    gameActive: false,
+    gameEnded: false,
     program: { id: '', title: '', date: '', parties: [], sales_tracking_enabled: false },
     savedPrograms: [],
     updatedAt: new Date().toISOString()
@@ -75,7 +78,14 @@
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, miniBingoWon:false, gameActive:true, gameEnded:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function canStartGame(){ return !state.gameActive; }
+  async function stopCurrentGame(){
+    await save({ gameActive:false, gameEnded:true, miniBingoReady:false, miniBingoActive:false, drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), toast:{type:'game_stopped',message:'Loto arrêté depuis l’administration.',at:Date.now(),duration:5000}, history:addLog('stop_game','Loto arrêté manuellement') });
+  }
+  async function markMiniBingoWon(){
+    await save({ miniBingoWon:true, miniBingoReady:false, toast:{type:'mini_bingo_won',message:'Mini-bingo indiqué comme gagné.',at:Date.now(),duration:3500}, history:addLog('mini_bingo_won','Mini-bingo gagné') });
+  }
   function applyMiniBingoFirstNumber(n, patch){
     if(!state.options?.bingoEnabled || state.miniBingoActive) return;
     if((state.options?.miniBingoSource || 'first') !== 'first') return;
@@ -178,6 +188,7 @@
     return true;
   }
   async function newGame(){
+    if(state.gameActive) return false;
     const old = state || {};
     const initial = defaultState();
     initial.sessionCode = code();
@@ -186,7 +197,9 @@
     initial.program = old.program || initial.program;
     initial.savedPrograms = old.savedPrograms || initial.savedPrograms;
     initial.history = addLog('new_game','Nouvelle partie');
+    initial.gameActive = true; initial.gameEnded = false; initial.miniBingoWon = false;
     await save(initial);
+    return true;
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
@@ -229,59 +242,7 @@
     const progress = nextProgress();
     await save({ ...progress, history:addLog('next_prize','Lot suivant') });
   }
-  const betweenPartMessages = [
-    '🎉 Partie terminée ! Vous pouvez démarquer vos cartons. Bonne chance pour la prochaine partie !',
-    '🏁 Fin de partie ! Démarquez vos cartons, on repart bientôt.',
-    '🎊 Bravo aux gagnants ! Démarquez vos cartons et préparez la suite.',
-    '🍀 On remet les compteurs à zéro ! Démarquez vos cartons.',
-    '✨ Cette partie est terminée. Démarquez tranquillement vos cartons.',
-    '🎯 Les jeux sont faits ! Démarquez vos cartons, la prochaine partie arrive.',
-    '🎈 Un lot de plus attribué ! Démarquez vos cartons.',
-    '🥳 Prenez quelques secondes pour démarquer, on continue.',
-    '⭐ Encore une belle partie ! Démarquez vos cartons.',
-    '🎁 Les lots continuent ! Démarquez vos cartons et restez prêts.',
-    '😊 Une partie s’achève, une autre arrive. Vous pouvez démarquer.',
-    '🍀 La chance tourne ! Démarquez vos cartons.',
-    '🎊 Merci pour votre bonne humeur ! Démarquez vos cartons.',
-    '🎉 Fin de cette partie ! Un petit démarquage, et on repart.',
-    '🌟 Nouvelle chance dans quelques instants ! Démarquez vos cartons.',
-    '🎯 Partie terminée. Démarquez tranquillement vos cartons.',
-    '🍀 Restez avec nous ! Démarquez vos cartons.',
-    '🎉 Bravo à tous ! Démarquez vos cartons pour la suite.',
-    '🏁 Fin de manche ! Démarquez vos cartons.',
-    '🎁 Prochain lot bientôt en jeu. Démarquez vos cartons.'
-  ];
-  const finalMessages = [
-    '🎉 Notre loto est terminé. Merci à toutes et à tous pour votre présence, et merci à nos bénévoles !',
-    '❤️ Merci d’avoir partagé ce moment avec nous. Merci aux joueurs et à tous les bénévoles.',
-    '👏 Félicitations aux gagnants ! Merci à tous les participants et aux bénévoles.',
-    '🎊 Merci pour votre fidélité et votre bonne humeur. À bientôt pour un prochain loto !',
-    '🍀 Le loto touche à sa fin. Merci aux joueurs et aux bénévoles qui ont rendu cette journée possible.',
-    '🎉 Merci pour votre participation ! Nous espérons que vous avez passé un agréable moment.',
-    '🤝 Un grand merci à nos bénévoles, partenaires et joueurs. Bonne fin de journée à toutes et à tous.',
-    '🌟 Merci pour votre présence tout au long de cette journée. À très bientôt.',
-    '🎁 Merci d’avoir participé à notre loto. Votre présence fait vivre cette belle journée.',
-    '❤️ À très bientôt pour une prochaine édition ! Merci aux joueurs et aux bénévoles.'
-  ];
-  const bingoIntroMessages = [
-    '🎉 Les parties classiques sont terminées ! Place maintenant au Mini-bingo !',
-    '🎊 Ne rangez pas vos tickets ! Le Mini-bingo commence dans quelques instants.',
-    '⭐ Les lots principaux sont attribués… il est temps de passer au Mini-bingo !',
-    '🍀 Une dernière chance de gagner ! Préparez-vous pour le Mini-bingo.',
-    '🎁 Ce n’est pas fini ! Le Mini-bingo va commencer.',
-    '🏁 Fin des parties classiques. Le Mini-bingo arrive maintenant.',
-    '🎯 Restez bien avec nous : place au Mini-bingo !',
-    '🥳 Encore un moment de jeu : le Mini-bingo démarre bientôt.',
-    '✨ Préparez vos tickets Mini-bingo, on continue !',
-    '🍀 Le loto continue avec le Mini-bingo. Bonne chance à tous !'
-  ];
-  function randomFrom(list){
-    const arr = list && list.length ? list : ['Partie terminée.'];
-    const last = state.toast?.message || '';
-    const choices = arr.length > 1 ? arr.filter(x => x !== last) : arr;
-    return choices[Math.floor(Math.random() * choices.length)];
-  }
-  function endOfPartieToast(progress){
+  function endOfPartieToast(){
     const parties = state.program?.parties || [];
     const currentPi = state.currentPartieIndex || 0;
     const prizes = visiblePrizes(parties[currentPi]);
@@ -289,15 +250,17 @@
     const isLastPrize = !prizes.length || currentLi >= prizes.length - 1;
     if(!isLastPrize) return null;
     const isLastPartie = currentPi >= parties.length - 1;
-    let type = 'partie_end';
-    let message = randomFrom(betweenPartMessages);
-    if(isLastPartie){
-      if(state.options?.bingoEnabled){ type = 'mini_bingo_intro'; message = randomFrom(bingoIntroMessages); }
-      else { type = 'loto_end'; message = randomFrom(finalMessages); }
+    if(!isLastPartie) return { type:'partie_end', message:'Partie terminée.', at:Date.now(), duration:4000 };
+    if(state.options?.bingoEnabled && !state.miniBingoWon){
+      return { type:'mini_bingo_intro', message:'Le loto principal est terminé. Le Mini-bingo n’a pas encore été gagné.', at:Date.now(), duration:7000 };
     }
-    return { type, message, at: Date.now(), duration: 5000 };
+    return { type:'loto_end', message:'Le loto est terminé.', at:Date.now(), duration:7000 };
   }
   async function winner(){
+    if(state.miniBingoActive){
+      await save({ miniBingoActive:false, miniBingoReady:false, miniBingoWon:true, gameActive:false, gameEnded:true, drawnNumbers:[], pendingNumber:null, publicCard:null, checkedCards:[], toast:{type:'loto_end',message:'Le loto est terminé.',at:Date.now(),duration:7000}, history:addLog('mini_bingo_winner','Mini-bingo gagné et loto terminé') });
+      return;
+    }
     const parties = state.program?.parties || [];
     const currentPi = state.currentPartieIndex || 0;
     const prizes = visiblePrizes(parties[currentPi]);
@@ -305,23 +268,21 @@
     const isLastPrize = !prizes.length || currentLi >= prizes.length - 1;
     const isLastPartie = currentPi >= parties.length - 1;
     const progress = nextProgress();
-    const toast = endOfPartieToast(progress);
+    const toast = endOfPartieToast();
     const patch = { ...progress, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
     if(isLastPrize) applyMiniBingoLastNumber(patch);
-    if(toast) {
-      patch.toast = toast;
-      // Fin de partie : le message de démarquage est affiché et le tableau est immédiatement remis à zéro
-      // pour préparer la partie suivante ou le Mini-bingo.
-      patch.drawnNumbers = [];
-      patch.pendingNumber = null;
-      patch.publicCard = null;
-      patch.checkedCards = [];
+    if(toast){
+      patch.toast=toast; patch.drawnNumbers=[]; patch.pendingNumber=null; patch.publicCard=null; patch.checkedCards=[];
     }
-    if(isLastPrize && isLastPartie && state.options?.bingoEnabled) patch.miniBingoReady = true;
+    if(isLastPrize && isLastPartie){
+      if(state.options?.bingoEnabled && !state.miniBingoWon){ patch.miniBingoReady=true; patch.gameActive=true; patch.gameEnded=false; }
+      else { patch.miniBingoReady=false; patch.gameActive=false; patch.gameEnded=true; }
+    }
     await save(patch);
   }
   async function startMiniBingo(){
-    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], miniBingoReady:false, miniBingoActive:true, toast:{ type:'mini_bingo_start', message:'🎯 Mini-bingo lancé ! Bonne chance à tous.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
+    if(state.miniBingoWon) return;
+    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], miniBingoReady:false, miniBingoActive:true, gameActive:true, gameEnded:false, toast:{ type:'mini_bingo_start', message:'Mini-bingo lancé.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;
@@ -389,7 +350,7 @@
     const completeLines = lineResults.filter(l => l.ok);
     const lastOnWinningLine = completeLines.some(l => l.hasLast);
     const lastOnCard = last ? lignes.flat().map(Number).includes(Number(last)) : false;
-    const lastRuleOk = !req.lastNumberRequired || (req.full ? (lastOnCard && lastCompletesGain) : (lastOnWinningLine && lastCompletesGain));
+    const lastRuleOk = !req.lastNumberRequired || (req.full ? lastOnCard : lastOnWinningLine);
     const valid = requirementReached && lastRuleOk;
 
     const messages = [];
@@ -470,5 +431,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
 })();

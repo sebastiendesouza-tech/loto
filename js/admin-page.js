@@ -2,6 +2,7 @@ Loto.pageHeader();
 Loto.protectPage();
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active');});
+const activeGameControl=document.getElementById('activeGameControl');
 const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList'),salesTrackingEnabled=document.getElementById('salesTrackingEnabled');
 
 const prizeTypes=['Lot 1','Lot 2','Lot 3'];
@@ -56,8 +57,10 @@ async function saveProgramToList({start=false}={}){
   program.mini_bingo_source=document.querySelector('input[name="miniBingoSource"]:checked')?.value||'first';
   const options={...s.options,showLots:showLots.checked,prevalidateSeconds:Number(prevalidate.value||6),lastNumberRequired:lastNumberRequired.checked,bingoEnabled:program.bingo_enabled,showBingo:program.show_bingo,miniBingoSource:program.mini_bingo_source};
   const saved=[...(s.savedPrograms||[])]; const idx=saved.findIndex(x=>x.id===program.id); if(idx>=0) saved[idx]=program; else saved.unshift(program);
-  const patch={savedPrograms:saved.slice(0,80),options,program}; patch.lotoName=program.title||s.lotoName||'Loto by SdS';
-  if(start){Object.assign(patch,Loto.freshGamePatch(program)); patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];}
+  const patch={savedPrograms:saved.slice(0,80),options};
+  if(start){patch.program=program; patch.lotoName=program.title||s.lotoName||'Loto by SdS'; Object.assign(patch,Loto.freshGamePatch(program)); patch.history=[{t:new Date().toISOString(),type:'start_program',label:'Lancement : '+programTitle(program),data:{programId:program.id}}];}
+  else if(s.gameActive){ patch.program=s.program; patch.lotoName=s.lotoName; }
+  else { patch.program={id:'',title:'',date:'',parties:[],sales_tracking_enabled:false,validation_voucher_enabled:false}; patch.lotoName='Loto by SdS'; }
   await Loto.save(patch); showSavedMessage(start ? 'Loto enregistré et lancé.' : 'Loto enregistré.'); if(!start) resetLotoForm();
 }
 function resetLotoForm(){
@@ -65,6 +68,13 @@ function resetLotoForm(){
   const voucher=document.getElementById('validationVoucherEnabled'); if(voucher) voucher.checked=false; bingoEnabled.checked=false; showBingo.checked=false; prevalidate.value=6;
   const first=document.querySelector('input[name="miniBingoSource"][value="first"]'); if(first) first.checked=true;
   partiesList.innerHTML=''; for(let i=0;i<6;i++){const p=defaultPartie(i); partiesList.insertAdjacentHTML('beforeend',`<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="Partie ${i+1}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" selected>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton">Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere">Bingo mystère : 1 lot, carton mystère</option></select></label></div><div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value=""></div>`).join('')}</div></div>`);}
+}
+function drawActiveGameControl(){
+  if(!activeGameControl) return;
+  const s=Loto.state();
+  if(!s.gameActive){ activeGameControl.innerHTML=''; return; }
+  activeGameControl.innerHTML=`<div class="card bad-note"><b>Loto ou partie en cours :</b> ${esc(s.program?.title||'Partie simple')}<div class="toolbar"><button id="stopActiveGame" class="danger">Stopper le loto / la partie</button></div></div>`;
+  document.getElementById('stopActiveGame').onclick=async()=>{ if(confirm('Arrêter la partie en cours ? Cette action permettra de lancer un autre loto.')) await Loto.stopCurrentGame(); };
 }
 function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>';return;} savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s) · ${p.sales_tracking_enabled?'suivi ventes actif':'suivi ventes inactif'}${p.validation_voucher_enabled?' · bon de validation':''}${p.bingo_enabled?' · mini-bingo':''}</span></div><div class="toolbar"><button data-load="${i}">Modifier</button><button class="danger" data-delete-program="${i}">Supprimer</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load))); savedProgramsList.querySelectorAll('[data-delete-program]').forEach(b=>b.onclick=()=>deleteProgram(Number(b.dataset.deleteProgram)));}
 async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p)return; await Loto.save({program:p,lotoName:p.title||'Loto by SdS',options:{...Loto.state().options,bingoEnabled:!!p.bingo_enabled,showBingo:!!p.show_bingo,miniBingoSource:p.mini_bingo_source||'first'}}); document.querySelector('[data-tab="loto"]').click(); showSavedMessage('Loto chargé pour modification.');}
@@ -141,7 +151,7 @@ if(salesTrackingEnabled) salesTrackingEnabled.addEventListener('change',persistA
 const validationVoucherToggle=document.getElementById('validationVoucherEnabled');
 if(validationVoucherToggle) validationVoucherToggle.addEventListener('change',persistActiveSaleOptions);
 
-Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; const voucherToggle=document.getElementById('validationVoucherEnabled'); if(voucherToggle) voucherToggle.checked=!!s.program?.validation_voucher_enabled; bingoEnabled.checked=!!(s.program?.bingo_enabled ?? s.options?.bingoEnabled); showBingo.checked=!!(s.program?.show_bingo ?? s.options?.showBingo); const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.program?.mini_bingo_source||s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms();});
+Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; const voucherToggle=document.getElementById('validationVoucherEnabled'); if(voucherToggle) voucherToggle.checked=!!s.program?.validation_voucher_enabled; bingoEnabled.checked=!!(s.program?.bingo_enabled ?? s.options?.bingoEnabled); showBingo.checked=!!(s.program?.show_bingo ?? s.options?.showBingo); const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.program?.mini_bingo_source||s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms(); drawActiveGameControl();});
 Loto.ensureSession().then(refreshCartonCount);
 
 
