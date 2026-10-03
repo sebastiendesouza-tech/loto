@@ -6,7 +6,6 @@ const activeGameControl=document.getElementById('activeGameControl');
 const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList'),salesTrackingEnabled=document.getElementById('salesTrackingEnabled');
 
 let editorProgram = {parties: []};
-let lotoFormEdited = false;
 function defaultPrize(i,label=''){return {type:'Lot '+(i+1),label,enabled:true};}
 function normalizePartiePrizes(partie){
   partie.gameMode = partie.gameMode === 'carton' || partie.gameMode === 'bingoMystere' ? 'carton' : 'ligne';
@@ -88,10 +87,10 @@ function drawActiveGameControl(){
   document.getElementById('stopActiveGame').onclick=async()=>{ if(confirm('Arrêter la partie en cours ? Cette action permettra de lancer un autre loto.')) await Loto.stopCurrentGame(); };
 }
 function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>';return;} savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s) · ${p.sales_tracking_enabled?'suivi ventes actif':'suivi ventes inactif'}${p.validation_voucher_enabled?' · bon de validation':''}${p.bingo_enabled?' · mini-bingo':''}</span></div><div class="toolbar"><button data-load="${i}">Modifier</button><button class="danger" data-delete-program="${i}">Supprimer</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load))); savedProgramsList.querySelectorAll('[data-delete-program]').forEach(b=>b.onclick=()=>deleteProgram(Number(b.dataset.deleteProgram)));}
-async function loadProgram(i){lotoFormEdited=true;const p=(Loto.state().savedPrograms||[])[i]; if(!p)return; fillLotoForm(p);document.querySelector('[data-tab="loto"]').click();showSavedMessage('Loto chargé pour modification.');}
+async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p)return; fillLotoForm(p);document.querySelector('[data-tab="loto"]').click();showSavedMessage('Loto chargé pour modification.');}
 async function deleteProgram(i){const s=Loto.state(),list=[...(s.savedPrograms||[])],p=list[i]; if(!p)return; if(!confirm(`Supprimer le loto « ${programTitle(p)} » de la liste des lotos enregistrés ?`))return; list.splice(i,1); await Loto.save({savedPrograms:list}); showSavedMessage('Loto supprimé.');}
 function adjustParties(){
-  lotoFormEdited=true;
+  
   if(!partieCount.checkValidity()){partieCount.reportValidity();return false;}
   editorProgram=readProgram();const target=Number(partieCount.value);
   while(editorProgram.parties.length<target) editorProgram.parties.push(defaultPartie(editorProgram.parties.length));
@@ -173,12 +172,8 @@ function fillLotoForm(program){
 }
 Loto.onChange(()=>{Loto.pageHeader();drawSavedPrograms();drawActiveGameControl();});
 // Les réglages sont utilisables dès l'ouverture, même si la connexion tarde.
-fillLotoForm(Loto.state().program);
-document.getElementById('loto').addEventListener('input',()=>{lotoFormEdited=true;});
-document.getElementById('loto').addEventListener('change',()=>{lotoFormEdited=true;});
-partiesList.addEventListener('click',()=>{lotoFormEdited=true;});
+resetLotoForm();
 Loto.ensureSession().then(()=>{
-  if(!lotoFormEdited) fillLotoForm(Loto.state().program);
   refreshCartonCount();
 }).catch(error=>{
   console.error('Chargement de la session loto :',error);
