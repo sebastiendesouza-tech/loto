@@ -44,6 +44,7 @@
     const voucher = p.validation_voucher_enabled ?? p.bon_validation ?? p.use_validation_ticket ?? false;
     p.sales_tracking_enabled = !!sales;
     p.validation_voucher_enabled = !!voucher;
+    p.parties = (p.parties || []).map(partie=>({...partie,gameMode:partie.gameMode==='carton'||partie.gameMode==='bingoMystere'?'carton':'ligne'}));
     return p;
   }
   function programSettings(program=state.program){
@@ -224,21 +225,18 @@
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
-  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystere') return 'Bingo mystère'; return 'À la ligne'; }
+  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; return 'À la ligne'; }
   function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
   function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
     const mode = partie?.gameMode || 'ligne';
-    if(mode === 'bingoMystere') return 'Bingo mystère';
-    if(mode === 'carton') return 'Carton plein';
-    if(prizeIndex === 0) return '1 ligne';
-    if(prizeIndex === 1) return '2 lignes';
-    return 'Carton plein';
+    if(mode === 'carton' || prizeIndex >= 2) return 'Carton plein';
+    return prizeIndex === 0 ? '1 ligne' : '2 lignes';
   }
   function currentRequirement(){
     const partie = currentPartie();
     const prizeIndex = state.currentPrizeIndex || 0;
     const mode = partie?.gameMode || 'ligne';
-    const full = mode === 'carton' || mode === 'bingoMystere' || prizeIndex >= 2;
+    const full = mode === 'carton' || prizeIndex >= 2;
     const requiredLines = full ? 3 : (prizeIndex === 0 ? 1 : 2);
     return {
       mode,

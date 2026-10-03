@@ -5,19 +5,14 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.query
 const activeGameControl=document.getElementById('activeGameControl');
 const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList'),salesTrackingEnabled=document.getElementById('salesTrackingEnabled');
 
-const prizeTypes=['Lot 1','Lot 2','Lot 3'];
-function defaultPrize(i,label=''){return {type:prizeTypes[i] || 'Lot',label,enabled:true};}
+let editorProgram = {parties: []};
+function defaultPrize(i,label=''){return {type:'Lot '+(i+1),label,enabled:true};}
 function normalizePartiePrizes(partie){
-  partie.gameMode ||= 'ligne';
-  if(partie.gameMode === 'bingoMystere'){
-    partie.prizes = [partie.prizes?.[0] || {type:'Bingo mystère',label:'',enabled:true}];
-    partie.prizes[0].type = 'Bingo mystère';
-    partie.prizes[0].enabled = true;
-  } else {
-    partie.prizes ||= [];
-    for(let pi=0;pi<3;pi++){partie.prizes[pi] ||= defaultPrize(pi); partie.prizes[pi].type=prizeTypes[pi]; partie.prizes[pi].enabled=true;}
-    partie.prizes = partie.prizes.slice(0,3);
-  }
+  partie.gameMode = partie.gameMode === 'carton' || partie.gameMode === 'bingoMystere' ? 'carton' : 'ligne';
+  partie.prizes = (Array.isArray(partie.prizes) ? partie.prizes : [defaultPrize(0),defaultPrize(1),defaultPrize(2)]).filter(p=>p && p.enabled!==false);
+  if(partie.gameMode==='ligne') partie.prizes=partie.prizes.slice(0,3);
+  if(!partie.prizes.length) partie.prizes.push(defaultPrize(0));
+  partie.prizes.forEach((prize,i)=>{prize.type='Lot '+(i+1);prize.enabled=true;});
   return partie;
 }
 function defaultPartie(i){return normalizePartiePrizes({name:'Partie '+(i+1),gameMode:'ligne',prizes:[defaultPrize(0),defaultPrize(1),defaultPrize(2)]});}
@@ -27,18 +22,31 @@ function showSavedMessage(text, good=true){saveMsg.textContent=text;saveMsg.clas
 function cartonStatus(text, good=true){const el=document.getElementById('cartonStatus'); if(!el) return; el.textContent=text; el.className='notice '+(good?'ok-note':'bad-note'); el.style.display='block';}
 
 function drawParties(){
-  const s=Loto.state(); const parties=s.program?.parties||[]; partieCount.value=parties.length||Number(partieCount.value||6);
-  partiesList.innerHTML=parties.map((p,i)=>{
-    const mode=p.gameMode||'ligne';
-    const prizeInputs = mode === 'bingoMystere'
-      ? `<div class="one-col"><div><label>Lot bingo mystère</label><input data-p="${i}" data-prize="0" placeholder="Nom du lot" value="${esc(p.prizes?.[0]?.label||'')}"></div></div>`
-      : `<div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value="${esc(p.prizes?.[pi]?.label||'')}"></div>`).join('')}</div>`;
-    return `<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="${esc(p.name||('Partie '+(i+1)))}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" ${mode==='ligne'?'selected':''}>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton" ${mode==='carton'?'selected':''}>Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere" ${mode==='bingoMystere'?'selected':''}>Bingo mystère : 1 lot, carton mystère</option></select></label></div>${prizeInputs}</div>`;
-  }).join('')||'<p>Aucune partie.</p>';
-  partiesList.querySelectorAll('select[data-f="gameMode"]').forEach(sel=>sel.onchange=()=>{const program=readProgram(); Loto.save({program});});
+  const parties=editorProgram.parties;
+  partieCount.value=parties.length;
+  partiesList.innerHTML=parties.map((partie,i)=>{
+    const p=normalizePartiePrizes(partie);
+    return `<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom de la partie<input data-p="${i}" data-f="name" value="${esc(p.name||('Partie '+(i+1)))}"></label><label>Règle de la partie<select data-p="${i}" data-f="gameMode"><option value="ligne" ${p.gameMode==='ligne'?'selected':''}>Jeu à la ligne</option><option value="carton" ${p.gameMode==='carton'?'selected':''}>Jeu au carton plein</option></select></label></div><p class="muted">${p.gameMode==='carton'?'Chaque lot se joue au carton plein.':'Lot 1 : 1 ligne · Lot 2 : 2 lignes · Lot 3 : carton plein (3 lots maximum).'}</p><div class="toolbar"><label>Nombre de lots<input type="number" min="1" ${p.gameMode==='ligne'?'max="3"':''} step="1" value="${p.prizes.length}" data-p="${i}" data-f="prizeCount"></label><button type="button" data-add-prize="${i}" ${p.gameMode==='ligne'&&p.prizes.length>=3?'disabled':''}>Ajouter un lot</button></div><div class="three-cols">${p.prizes.map((prize,pi)=>`<div><label>Lot ${pi+1}<input data-p="${i}" data-prize="${pi}" placeholder="Nom du lot" value="${esc(prize.label||'')}"></label><button type="button" class="danger small" data-remove-prize="${pi}" data-party="${i}" ${p.prizes.length===1?'disabled':''} aria-label="Supprimer le lot ${pi+1} de la partie ${i+1}">Supprimer</button></div>`).join('')}</div></div>`;
+  }).join('');
+  partiesList.querySelectorAll('select[data-f="gameMode"]').forEach(sel=>sel.onchange=()=>{const reduced=sel.value==='ligne'&&editorProgram.parties[Number(sel.dataset.p)].prizes.length>3;editorProgram=readProgram();drawParties();if(reduced)showSavedMessage('Jeu à la ligne : seuls les trois premiers lots sont conservés.');});
+  partiesList.querySelectorAll('[data-add-prize]').forEach(button=>button.onclick=()=>{
+    editorProgram=readProgram();const partie=editorProgram.parties[Number(button.dataset.addPrize)];const prizes=partie.prizes;
+    if(partie.gameMode==='ligne'&&prizes.length>=3)return;
+    prizes.push(defaultPrize(prizes.length));drawParties();
+  });
+  partiesList.querySelectorAll('[data-remove-prize]').forEach(button=>button.onclick=()=>{
+    editorProgram=readProgram();const prizes=editorProgram.parties[Number(button.dataset.party)].prizes;
+    if(prizes.length>1) prizes.splice(Number(button.dataset.removePrize),1);drawParties();
+  });
+  partiesList.querySelectorAll('[data-f="prizeCount"]').forEach(input=>input.onchange=()=>{
+    if(!input.checkValidity()){input.reportValidity();return;}
+    editorProgram=readProgram();const prizes=editorProgram.parties[Number(input.dataset.p)].prizes;
+    const count=editorProgram.parties[Number(input.dataset.p)].gameMode==='ligne'?Math.min(3,Number(input.value)):Number(input.value);while(prizes.length<count) prizes.push(defaultPrize(prizes.length));
+    prizes.splice(count);drawParties();
+  });
 }
 function readProgram(){
-  const s=Loto.state(); const parties=JSON.parse(JSON.stringify(s.program?.parties||[]));
+  const parties=JSON.parse(JSON.stringify(editorProgram.parties||[]));
   partiesList.querySelectorAll('[data-p]').forEach(inp=>{
     const p=Number(inp.dataset.p); parties[p] ||= defaultPartie(p); parties[p].prizes ||= [];
     if(inp.dataset.f==='name') parties[p].name=inp.value;
@@ -46,10 +54,12 @@ function readProgram(){
     if(inp.dataset.prize){const pi=Number(inp.dataset.prize); parties[p].prizes[pi] ||= defaultPrize(pi); parties[p].prizes[pi].enabled=true; parties[p].prizes[pi].label=inp.value;}
   });
   parties.forEach((partie,i)=>{partie.name ||= 'Partie '+(i+1); normalizePartiePrizes(partie);});
-  return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,bingo_enabled:!!bingoEnabled?.checked,show_bingo:!!showBingo?.checked,mini_bingo_source:document.querySelector('input[name=\"miniBingoSource\"]:checked')?.value||'first',createdAt:new Date().toISOString()};
+  return {id:editorProgram.id||Loto.makeId('loto'),title:lotoName.value.trim(),date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,bingo_enabled:!!bingoEnabled?.checked,show_bingo:!!showBingo?.checked,mini_bingo_source:document.querySelector('input[name=\"miniBingoSource\"]:checked')?.value||'first',createdAt:editorProgram.createdAt||new Date().toISOString()};
 }
-function normalizedProgramForSave(){const p=readProgram(); const current=Loto.state().program || {}; p.id=current.id || p.id; p.createdAt=current.createdAt || p.createdAt; p.updatedAt=new Date().toISOString(); return p;}
+function normalizedProgramForSave(){const p=readProgram(); const current=editorProgram; p.id=current.id || p.id; p.createdAt=current.createdAt || p.createdAt; p.updatedAt=new Date().toISOString(); return p;}
 async function saveProgramToList({start=false}={}){
+  if(!lotoName.value.trim()){showSavedMessage('Donne un nom au loto.',false);lotoName.focus();return;}
+  if(!adjustParties()) return;
   const s=Loto.state(); const program=normalizedProgramForSave();
   program.sales_tracking_enabled=!!salesTrackingEnabled?.checked;
   program.validation_voucher_enabled=!!document.getElementById('validationVoucherEnabled')?.checked;
@@ -67,7 +77,7 @@ function resetLotoForm(){
   lotoName.value=''; lotoDate.value=''; partieCount.value=6; showLots.checked=false; lastNumberRequired.checked=true; salesTrackingEnabled.checked=false;
   const voucher=document.getElementById('validationVoucherEnabled'); if(voucher) voucher.checked=false; bingoEnabled.checked=false; showBingo.checked=false; prevalidate.value=6;
   const first=document.querySelector('input[name="miniBingoSource"][value="first"]'); if(first) first.checked=true;
-  partiesList.innerHTML=''; for(let i=0;i<6;i++){const p=defaultPartie(i); partiesList.insertAdjacentHTML('beforeend',`<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="Partie ${i+1}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" selected>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton">Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere">Bingo mystère : 1 lot, carton mystère</option></select></label></div><div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value=""></div>`).join('')}</div></div>`);}
+  editorProgram={parties:Array.from({length:6},(_,i)=>defaultPartie(i))};drawParties();
 }
 function drawActiveGameControl(){
   if(!activeGameControl) return;
@@ -77,9 +87,16 @@ function drawActiveGameControl(){
   document.getElementById('stopActiveGame').onclick=async()=>{ if(confirm('Arrêter la partie en cours ? Cette action permettra de lancer un autre loto.')) await Loto.stopCurrentGame(); };
 }
 function drawSavedPrograms(){const list=Loto.state().savedPrograms||[]; if(!list.length){savedProgramsList.innerHTML='<p>Aucun loto enregistré.</p>';return;} savedProgramsList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s) · ${p.sales_tracking_enabled?'suivi ventes actif':'suivi ventes inactif'}${p.validation_voucher_enabled?' · bon de validation':''}${p.bingo_enabled?' · mini-bingo':''}</span></div><div class="toolbar"><button data-load="${i}">Modifier</button><button class="danger" data-delete-program="${i}">Supprimer</button></div></div>`).join(''); savedProgramsList.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadProgram(Number(b.dataset.load))); savedProgramsList.querySelectorAll('[data-delete-program]').forEach(b=>b.onclick=()=>deleteProgram(Number(b.dataset.deleteProgram)));}
-async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p)return; await Loto.save({program:p,lotoName:p.title||'Loto by SdS',options:{...Loto.state().options,bingoEnabled:!!p.bingo_enabled,showBingo:!!p.show_bingo,miniBingoSource:p.mini_bingo_source||'first'}}); document.querySelector('[data-tab="loto"]').click(); showSavedMessage('Loto chargé pour modification.');}
+async function loadProgram(i){const p=(Loto.state().savedPrograms||[])[i]; if(!p)return; fillLotoForm(p);document.querySelector('[data-tab="loto"]').click();showSavedMessage('Loto chargé pour modification.');}
 async function deleteProgram(i){const s=Loto.state(),list=[...(s.savedPrograms||[])],p=list[i]; if(!p)return; if(!confirm(`Supprimer le loto « ${programTitle(p)} » de la liste des lotos enregistrés ?`))return; list.splice(i,1); await Loto.save({savedPrograms:list}); showSavedMessage('Loto supprimé.');}
-document.getElementById('generateParties').onclick=()=>{let program=readProgram(); const target=Math.max(1,Number(partieCount.value||1)); while(program.parties.length<target)program.parties.push(defaultPartie(program.parties.length)); program.parties=program.parties.slice(0,target); Loto.save({program});};
+function adjustParties(){
+  if(!partieCount.checkValidity()){partieCount.reportValidity();return false;}
+  editorProgram=readProgram();const target=Number(partieCount.value);
+  while(editorProgram.parties.length<target) editorProgram.parties.push(defaultPartie(editorProgram.parties.length));
+  editorProgram.parties=editorProgram.parties.slice(0,target);drawParties();return true;
+}
+document.getElementById('generateParties').onclick=adjustParties;
+partieCount.onchange=adjustParties;
 document.getElementById('saveProgram').onclick=()=>saveProgramToList({start:false});
 
 async function refreshCartonCount(){
@@ -139,20 +156,21 @@ document.getElementById('refreshCartons')?.addEventListener('click',refreshCarto
 document.getElementById('testCardBtn')?.addEventListener('click', testCard);
 
 
-async function persistActiveSaleOptions(){
-  const s=Loto.state();
-  if(!s.program?.id) return;
-  const program={...s.program,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,updatedAt:new Date().toISOString()};
-  const saved=(s.savedPrograms||[]).map(p=>p.id===program.id?program:p);
-  await Loto.save({program,savedPrograms:saved});
-  showSavedMessage('Paramètres de vente appliqués au loto actif.');
+function fillLotoForm(program){
+  const s=Loto.state();editorProgram=JSON.parse(JSON.stringify(program||{parties:[]}));
+  editorProgram.parties=(editorProgram.parties||[]).map(normalizePartiePrizes);
+  if(!editorProgram.parties.length) editorProgram.parties=Array.from({length:6},(_,i)=>defaultPartie(i));
+  lotoName.value=editorProgram.title||'';lotoDate.value=editorProgram.date||'';
+  prevalidate.value=s.options?.prevalidateSeconds||6;lastNumberRequired.checked=s.options?.lastNumberRequired!==false;
+  showLots.checked=!!s.options?.showLots;salesTrackingEnabled.checked=!!editorProgram.sales_tracking_enabled;
+  document.getElementById('validationVoucherEnabled').checked=!!editorProgram.validation_voucher_enabled;
+  bingoEnabled.checked=!!(editorProgram.bingo_enabled??s.options?.bingoEnabled);
+  showBingo.checked=!!(editorProgram.show_bingo??s.options?.showBingo);
+  const mb=document.querySelector(`input[name="miniBingoSource"][value="${editorProgram.mini_bingo_source==='last'?'last':'first'}"]`);if(mb)mb.checked=true;
+  drawParties();
 }
-if(salesTrackingEnabled) salesTrackingEnabled.addEventListener('change',persistActiveSaleOptions);
-const validationVoucherToggle=document.getElementById('validationVoucherEnabled');
-if(validationVoucherToggle) validationVoucherToggle.addEventListener('change',persistActiveSaleOptions);
-
-Loto.onChange(s=>{Loto.pageHeader(); lotoName.value=s.program?.title||''; lotoDate.value=s.program?.date||''; prevalidate.value=s.options?.prevalidateSeconds||6; lastNumberRequired.checked=s.options?.lastNumberRequired!==false; showLots.checked=!!s.options?.showLots; if(salesTrackingEnabled) salesTrackingEnabled.checked=!!s.program?.sales_tracking_enabled; const voucherToggle=document.getElementById('validationVoucherEnabled'); if(voucherToggle) voucherToggle.checked=!!s.program?.validation_voucher_enabled; bingoEnabled.checked=!!(s.program?.bingo_enabled ?? s.options?.bingoEnabled); showBingo.checked=!!(s.program?.show_bingo ?? s.options?.showBingo); const mb=document.querySelector(`input[name=\"miniBingoSource\"][value=\"${s.program?.mini_bingo_source||s.options?.miniBingoSource||'first'}\"]`); if(mb) mb.checked=true; drawParties(); drawSavedPrograms(); drawActiveGameControl();});
-Loto.ensureSession().then(refreshCartonCount);
+Loto.onChange(()=>{Loto.pageHeader();drawSavedPrograms();drawActiveGameControl();});
+Loto.ensureSession().then(()=>{fillLotoForm(Loto.state().program);refreshCartonCount();});
 
 
 // V3.0.0 - création de cartons, planches A3 et test scanner QR
