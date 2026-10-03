@@ -433,6 +433,12 @@
 /* v3.2.5 - scan commissaire opérationnel */
 .scanner-layout-simple{grid-template-columns:1fr!important;max-width:520px;margin:auto;}
 .scan-time-under{text-align:center;margin:10px 0 0!important;font-size:20px!important;}
+
+/* v4.3.2 - page commissaire : lot lisible */
+.commissaire-lot{display:block;min-height:0;padding:14px 16px;border:2px solid #1e5fa9;border-radius:12px;background:#edf5ff;color:#10243e;font-size:17px;line-height:1.45;overflow:visible;white-space:normal;}
+.commissaire-lot b:first-child{display:block;font-size:20px;color:#123f73;margin-bottom:2px;}
+.commissaire-lot strong{display:block;color:#17385f;margin-top:4px;}
+.commissaire-lot b:last-child{display:block;margin-top:8px;padding:7px 10px;border-radius:8px;background:#ffd24d;color:#162339;font-size:19px;line-height:1.25;}
 .scan-dev-hidden{display:none!important;}
 
 /* v3.2.6 - scan saisie cartons */
