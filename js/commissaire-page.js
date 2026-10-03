@@ -60,7 +60,9 @@ function renderLot(s){
   const prize = Loto.currentPrize();
   if(!p || !prize){ currentLot.innerHTML = '<b>Lot en cours :</b> partie simple sans programme'; return; }
   const req = Loto.currentRequirement();
-  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(Loto.gameModeLabel(p))}</span><br><strong>${esc(req.label || '')}</strong><br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
+  const mode=Loto.gameModeLabel(p);
+  const condition=req.label && req.label!==mode ? `<br><strong>${esc(req.label)}</strong>` : '';
+  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(mode)}</span>${condition}<br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
 }
 
 function renderResult(payload){
