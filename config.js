@@ -1,9 +1,10 @@
 window.LOTO_CONFIG = {
   APP_NAME: "Loto by SdS",
-  APP_VERSION: 'v4.2.1' ,
+  APP_VERSION: 'v4.3.1' ,
   TEAM_PIN: "2580",
   DEFAULT_SESSION_CODE: "SESSION_ACTIVE",
   SUPABASE_URL: "https://vexpdodlhnoorsoektmn.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_D4INnFIdG-Mr4EtC9wT7Lw__-TykxNV",
-  PLAYER_URL: "https://sebastiendesouza-tech.github.io/loto/joueur.html"
+  PLAYER_URL: "https://sebastiendesouza-tech.github.io/loto/joueur.html",
+  REQUIRE_TEAM_LOGIN: false
 };
