@@ -28,7 +28,12 @@
   let state = defaultState();
   let listeners = [];
   let channel = null;
+  let connectionState = supabaseClient ? 'checking' : 'local';
+  let syncTimer = null;
   const code = () => new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';
+  const backupKey = () => 'loto_state_backup_' + code();
+  const pendingKey = () => 'loto_state_pending_' + code();
+  const isMasterDevice = () => new URLSearchParams(location.search).get('master') === '1' || localStorage.getItem('loto_master_device') === '1' || location.pathname.endsWith('/index.html') || location.pathname.endsWith('/');
   const title = () => `${state.lotoName || C.APP_NAME || 'Loto by SdS'} ${C.APP_VERSION || ''}`.trim();
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
@@ -46,18 +51,32 @@
     return { salesTrackingEnabled:!!p.sales_tracking_enabled, validationVoucherEnabled:!!p.validation_voucher_enabled };
   }
   function mergeState(next){ state = Object.assign(defaultState(), next || {}); state.program = normalizeProgram(state.program); state.savedPrograms=(state.savedPrograms||[]).map(normalizeProgram); state.sessionCode = code(); notify(); }
+  function cacheState(next=state){ localStorage.setItem(backupKey(), JSON.stringify(next)); }
+  function setConnection(next){ connectionState=next; document.querySelectorAll('[data-connection]').forEach(el=>{ el.textContent=next==='online'?'● Connecté':next==='offline'?'● Hors connexion':next==='local'?'● Local':'● Vérification…'; el.className='connection '+next; }); }
+  function queueSync(){ if(isMasterDevice()) localStorage.setItem(pendingKey(), JSON.stringify(state)); }
+  async function flushPending(){
+    if(!supabaseClient || !navigator.onLine || !localStorage.getItem(pendingKey())) return false;
+    const queued=safeJson(localStorage.getItem(pendingKey()), null); if(!queued) return false;
+    const {error}=await supabaseClient.from('loto_app_sessions').upsert({code:code(),state:queued,updated_at:new Date().toISOString()});
+    if(error){ setConnection('offline'); return false; }
+    localStorage.removeItem(pendingKey()); setConnection('online'); return true;
+  }
   async function ensureSession(){
-    if(!supabaseClient) { mergeState(safeJson(localStorage.getItem('loto_state'), defaultState())); return; }
+    const backup=safeJson(localStorage.getItem(backupKey()), null);
+    if(!supabaseClient) { mergeState(backup || safeJson(localStorage.getItem('loto_state'), defaultState())); setConnection('local'); return; }
     const sessionCode = code(); localStorage.setItem('loto_session_code', sessionCode);
     const { data, error } = await supabaseClient.from('loto_app_sessions').select('state').eq('code', sessionCode).maybeSingle();
-    if(error) console.warn(error);
-    if(data && data.state) mergeState(data.state);
+    if(error) { console.warn(error); mergeState(backup || defaultState()); setConnection('offline'); return; }
+    if(data && data.state) { mergeState(data.state); cacheState(); setConnection('online'); }
     else {
       const initial = defaultState(); initial.sessionCode = sessionCode;
-      await supabaseClient.from('loto_app_sessions').upsert({ code: sessionCode, state: initial, updated_at: new Date().toISOString() });
+      const {error:writeError}=await supabaseClient.from('loto_app_sessions').upsert({ code: sessionCode, state: initial, updated_at: new Date().toISOString() });
+      if(writeError){ mergeState(backup || initial); cacheState(); queueSync(); setConnection('offline'); return; }
       mergeState(initial);
+      cacheState(); setConnection('online');
     }
     subscribe(sessionCode);
+    await flushPending();
   }
   function subscribe(sessionCode){
     if(!supabaseClient) return;
@@ -72,9 +91,11 @@
     const next = Object.assign({}, state, patch || {}, { updatedAt: new Date().toISOString(), appVersion: C.APP_VERSION });
     if(!next.history) next.history = [];
     state = next; notify();
-    if(!supabaseClient){ localStorage.setItem('loto_state', JSON.stringify(state)); return; }
+    cacheState();
+    if(!supabaseClient){ localStorage.setItem('loto_state', JSON.stringify(state)); setConnection('local'); return; }
+    if(!navigator.onLine){ queueSync(); setConnection('offline'); return; }
     const { error } = await supabaseClient.from('loto_app_sessions').upsert({ code: code(), state, updated_at: new Date().toISOString() });
-    if(error) console.error(error);
+    if(error){ console.error(error); queueSync(); setConnection('offline'); } else { setConnection('online'); }
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
@@ -421,15 +442,18 @@
     }
   }
   function lastNumber(){ return state.pendingNumber || (state.drawnNumbers || []).slice(-1)[0] || '--'; }
-  function protectPage(){
+  async function protectPage(){
     if(sessionStorage.getItem('loto_team_ok') === '1') return;
     const overlay = document.createElement('div'); overlay.className = 'modal-lock';
-    overlay.innerHTML = `<div class="lock-card"><h2>Accès équipe</h2><p>Code PIN</p><input id="pinInput" type="password" inputmode="numeric" autocomplete="off"><p id="pinErr" class="bad"></p><button id="pinBtn">Valider</button></div>`;
+    const requireLogin=!!C.REQUIRE_TEAM_LOGIN;
+    overlay.innerHTML = `<div class="lock-card"><h2>Accès équipe</h2>${requireLogin?'<p>Adresse e-mail</p><input id="teamEmail" type="email" autocomplete="username"><p>Mot de passe</p><input id="teamPassword" type="password" autocomplete="current-password">':''}<p>Code PIN</p><input id="pinInput" type="password" inputmode="numeric" autocomplete="off"><p id="pinErr" class="bad"></p><button id="pinBtn">Valider</button></div>`;
     document.body.appendChild(overlay);
     const input = overlay.querySelector('#pinInput'); input.focus();
-    const check = () => { if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else overlay.querySelector('#pinErr').textContent = 'PIN incorrect'; };
+    const check = async () => { const err=overlay.querySelector('#pinErr'); if(requireLogin){ const email=overlay.querySelector('#teamEmail').value.trim(),password=overlay.querySelector('#teamPassword').value; const {error}=await supabaseClient.auth.signInWithPassword({email,password}); if(error){err.textContent='Connexion équipe refusée';return;} } if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else err.textContent = 'PIN incorrect'; };
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
-  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
+  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); setConnection(connectionState); }
+  window.addEventListener('online',()=>{ setConnection('checking'); flushPending(); });
+  window.addEventListener('offline',()=>setConnection('offline'));
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings, flushPending };
 })();
