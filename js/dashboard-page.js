@@ -4,22 +4,23 @@
   function set(id,value){const el=$(id);if(el)el.textContent=value;}
   function fmtDate(v){if(!v)return 'Non renseignée';try{return new Date(v+'T12:00:00').toLocaleDateString('fr-FR')}catch{return v}}
   function renderState(s){
-    const p=s.program||{};
-    set('dashLotoName',p.title||'Aucun loto lancé');
+    const game=Loto.gameStatus(s);
+    const p=game.active?(s.program||{}):{};
+    set('dashLotoName',game.title);
     set('dashLotoDate',fmtDate(p.date));
     set('dashParties',(p.parties||[]).length||0);
-    set('dashDrawn',(s.drawnNumbers||[]).length);
-    set('dashCurrent',Loto.lastNumber?.()||'—');
+    set('dashDrawn',game.active?(s.drawnNumbers||[]).length:0);
+    set('dashCurrent',game.active?(Loto.lastNumber?.()||'—'):'—');
     set('dashSalesMode',Loto.programSettings(p).salesTrackingEnabled?'Activé':'Désactivé');
-    const status=$('dashLotoStatus'); if(status){status.textContent=p.id?'Loto actif':'Aucun loto actif';status.className='dashboard-status '+(p.id?'good':'neutral');}
+    const status=$('dashLotoStatus'); if(status){status.textContent=game.label;status.className='dashboard-status '+(game.active?'good':'neutral');}
     set('dashSync',s.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fr-FR'):'—');
   }
   async function refreshStats(){
-    const client=Loto.supabaseClient,s=Loto.state(),p=s.program||{},lotoId=p.id||s.sessionCode||Loto.code();
+    const client=Loto.supabaseClient,s=Loto.state(),p=Loto.gameStatus(s).active?(s.program||{}):{},lotoId=p.id||s.sessionCode||Loto.code();
     if(!client){set('dashDbState','Supabase non configuré');return;}
     const [{count:created,error:e1},{data:sales,error:e2}]=await Promise.all([
       client.from('loto_cartons').select('numero',{count:'exact',head:true}).eq('actif',true).eq('origine','Loto by SdS'),
-      client.from('loto_carton_sales').select('status').eq('loto_id',lotoId)
+      Loto.gameStatus(s).active?client.from('loto_carton_sales').select('status').eq('loto_id',lotoId):Promise.resolve({data:[]})
     ]);
     if(e1||e2){set('dashDbState','Lecture impossible');return;}
     const sold=(sales||[]).filter(x=>x.status==='vendu').length;

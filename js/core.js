@@ -214,9 +214,10 @@
     const old = state || {};
     const initial = defaultState();
     initial.sessionCode = code();
-    initial.lotoName = old.lotoName || initial.lotoName;
+    initial.lotoName = C.APP_NAME || 'Loto by SdS';
     initial.options = old.options || initial.options;
-    initial.program = old.program || initial.program;
+    // Une partie simple ne reprend pas le programme du loto précédent.
+    initial.program = defaultState().program;
     initial.savedPrograms = old.savedPrograms || initial.savedPrograms;
     initial.history = addLog('new_game','Nouvelle partie');
     initial.gameActive = true; initial.gameEnded = false; initial.miniBingoWon = false;
@@ -450,8 +451,28 @@
     const check = async () => { const err=overlay.querySelector('#pinErr'); if(requireLogin){ const email=overlay.querySelector('#teamEmail').value.trim(),password=overlay.querySelector('#teamPassword').value; const {error}=await supabaseClient.auth.signInWithPassword({email,password}); if(error){err.textContent='Connexion équipe refusée';return;} } if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else err.textContent = 'PIN incorrect'; };
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
-  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); setConnection(connectionState); }
+  function gameStatus(snapshot=state){
+    const active=!!snapshot.gameActive && !snapshot.gameEnded;
+    if(!active) return {active:false,title:'Aucun loto lancé',label:'Aucun loto en cours',message:'Aucun loto en cours.'};
+    const program=snapshot.program||{};
+    const programmed=!!(program.parties||[]).length;
+    const title=programmed?String(program.title||'Loto sans nom'):'Partie simple';
+    let label=(snapshot.drawnNumbers||[]).length||snapshot.pendingNumber?'Loto en cours':'Loto lancé';
+    if(!programmed) label='Partie simple en cours';
+    if(snapshot.miniBingoReady) label='Mini-bingo à lancer';
+    if(snapshot.miniBingoActive) label='Mini-bingo en cours';
+    return {active:true,title,label,message:label+' : '+title};
+  }
+  function pageHeader(){
+    const status=gameStatus();
+    document.querySelectorAll('[data-title]').forEach(e=>e.textContent=C.APP_NAME||'Loto by SdS');
+    document.querySelectorAll('[data-version]').forEach(e=>e.textContent=C.APP_VERSION||'');
+    document.querySelectorAll('[data-session]').forEach(e=>e.textContent=code());
+    document.querySelectorAll('[data-loto-name]').forEach(e=>e.textContent=status.active?status.title:'Aucun loto en cours');
+    document.querySelectorAll('[data-game-status]').forEach(e=>{e.textContent=status.message;e.className='notice '+(status.active?'ok-note':'');});
+    setConnection(connectionState);
+  }
   window.addEventListener('online',()=>{ setConnection('checking'); flushPending(); });
   window.addEventListener('offline',()=>setConnection('offline'));
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings, flushPending };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, gameStatus, normalizeProgram, programSettings, flushPending };
 })();

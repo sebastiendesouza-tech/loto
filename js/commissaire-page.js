@@ -54,6 +54,7 @@ function renderSalesTrackingMode(s){
 
 function renderLot(s){
   if(!currentLot) return;
+  if(!Loto.gameStatus(s).active){currentLot.textContent=s.gameEnded?'Loto terminé. Aucun loto en cours.':'Aucun loto en cours.';return;}
   if(s.miniBingoActive){ currentLot.innerHTML = '<b>MINI-BINGO</b> · tirage de départage en cours'; return; }
   const p = Loto.currentPartie();
   const prize = Loto.currentPrize();
