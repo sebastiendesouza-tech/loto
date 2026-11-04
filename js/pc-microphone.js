@@ -44,7 +44,6 @@
       publish();
     }
     function apply(active){
-      sourceMode = active ? 'micro' : 'manual';
       error = '';
       if(active) LotoVoice.resume(voiceStatus);
       else LotoVoice.pause(voiceStatus);
@@ -78,7 +77,7 @@
         sourceMode = payload.value;
         if(sourceMode === 'manual') apply(false);
         else if(initialized) apply(true);
-        else { error = 'Cliquez sur Micro PC sur le PC pour autoriser le microphone.'; publish(); }
+        else { error = 'Cliquez sur Micro PC sur le PC pour démarrer le microphone.'; publish(); }
       }
       else apply(payload.value);
     }
@@ -101,7 +100,7 @@
       toggle(){
         if(!host) return command('active', !snapshot().active);
         // Only a click on the PC arms this page; tablet commands cannot request permission.
-        if(!initialized){ initialized = true; error=''; apply(true); }
+        if(!initialized){ initialized = true; sourceMode='micro'; error=''; apply(true); }
         else apply(!LotoVoice.isActive());
       },
       setMode(mode){ if(MODES.includes(mode)) return host ? (LotoVoice.setMode(mode), publish()) : command('mode', mode); },
