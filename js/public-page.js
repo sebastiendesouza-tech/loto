@@ -106,9 +106,9 @@ function renderQr(){
   // QR fiable sur GitHub Pages : image externe directe, sans afficher l'URL longue.
   const img = document.createElement('img');
   img.alt = 'QR Code joueur';
-  img.width = 120;
-  img.height = 120;
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=8&data=' + encodeURIComponent(url);
+  img.width = 240;
+  img.height = 240;
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(url);
   qr.appendChild(img);
 }
 
@@ -125,6 +125,8 @@ Loto.onChange(s=>{
   Loto.pageHeader();
   last.textContent = Loto.lastNumber();
   Loto.renderNumbers(grid);
+  const currentNumber = Number(Loto.lastNumber());
+  Array.from(grid.children).forEach((cell, index) => cell.classList.toggle('current', index + 1 === currentNumber));
   renderCard(s.publicCard);
   renderLots(s);
   renderBingo(s);
