@@ -1,0 +1,24 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Scanner vente</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css"></head><body class="sale-scanner-body">
+<header class="sale-scanner-header"><div><b>Scanner vente</b><span id="scannerLotoName">Chargement…</span><span id="scannerModeLabel">Chargement du mode…</span></div></header>
+<main class="sale-scanner-main" id="saleScannerScreen">
+<div id="playerCompleteOverlay" class="player-complete-overlay" aria-hidden="true"><div><strong>JOUEUR TERMINÉ</strong><span>Cartons enregistrés</span></div></div>
+<div class="sale-phone-camera" id="saleCameraBox"><video id="saleVideo" playsinline autoplay muted></video><div class="sale-phone-frame"></div></div>
+<div id="scannerStatus" class="sale-scanner-message">Appuyez sur « Démarrer la caméra ».</div>
+<section id="voucherPanel" class="card soft sale-voucher-panel" style="display:none">
+  <h2>Bon de validation du joueur</h2>
+  <div id="voucherPrompt" class="notice">Scannez d’abord le QR code du bon de validation.</div>
+  <div id="voucherBasket" style="display:none">
+    <div class="voucher-grid">
+      <div class="voucher-item"><b>Cartons</b><small>Scannés / attendus</small><span id="basketC">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 4</b><small>Scannées / attendues</small><span id="basketP4">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 6</b><small>Scannées / attendues</small><span id="basketP6">0 / 0</span></div>
+      <div class="voucher-item"><b>Planches de 8</b><small>Scannées / attendues</small><span id="basketP8">0 / 0</span></div>
+    </div>
+    <div class="toolbar voucher-actions"><button id="validateVoucher" class="green" disabled>Valider les cartons du joueur</button><button id="cancelVoucher" class="secondary">Annuler le bon</button></div>
+  </div>
+</section>
+<button id="startSaleCamera" class="sale-camera-start">Démarrer la caméra</button>
+<p id="saleScanHelp" class="sale-phone-help">Présentez le QR code du carton dans le cadre.</p>
+<div class="sale-mode-switch sale-mode-switch-bottom"><button id="modeSale" class="active">MODE VENTE</button><button id="modeReturn">MODE RETOUR</button></div>
+</main>
+<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script><script src="js/scanner-vente-page.js"></script></body></html>
