@@ -17,7 +17,48 @@
   async function validateVoiceNumber(n){const now=Date.now();if(!processingEnabled||now<mutedUntil)return;if(lastVoiceNumber===n&&now-lastVoiceAt<SAME_NUMBER_GUARD_MS)return;lastVoiceNumber=n;lastVoiceAt=now;firstHeard=null;pauseListening(REECOUTE_DELAY_MS);await Loto.setPendingNumber(n);}
   async function handle(text){if(!processingEnabled||Date.now()<mutedUntil)return;const t=norm(text);if(!t||!keywordAccepted(t))return;const nums=extractNumbers(t);if(!nums.length)return;for(let i=1;i<nums.length;i++)if(nums[i]===nums[i-1])return validateVoiceNumber(nums[i]);const n=nums[0];if(firstHeard===n)return validateVoiceNumber(n);firstHeard=n;}
   function supported(){return window.SpeechRecognition||window.webkitSpeechRecognition;}
-  function ensureEngine(onStatus){const SR=supported();if(!SR){onStatus&&onStatus(false,'Reconnaissance vocale non disponible');return false;}if(engineRunning)return true;recognition=new SR();recognition.lang='fr-FR';recognition.continuous=true;recognition.interimResults=true;recognition.onstart=()=>{engineRunning=true;onStatus&&onStatus(processingEnabled,processingEnabled?'reconnaissance active':'reconnaissance en pause');};recognition.onresult=e=>{if(!processingEnabled||Date.now()<mutedUntil)return;for(let i=e.resultIndex;i<e.results.length;i++)handle(e.results[i][0].transcript||'');};recognition.onend=()=>{if(!engineRunning)return;if(restartingAfterPause||Date.now()<mutedUntil)return;try{recognition.start();}catch{}};recognition.onerror=e=>{const msg=e?.error||'erreur micro';if(msg==='aborted')return;if(msg!=='no-speech'){engineRunning=false;processingEnabled=false;try{recognition.abort();}catch{}}onStatus&&onStatus(processingEnabled,msg);};engineRunning=true;try{recognition.start();return true;}catch{engineRunning=false;processingEnabled=false;onStatus&&onStatus(false,'démarrage impossible');return false;}}
+  function ensureEngine(onStatus){
+    const SR=supported();
+    if(!SR){onStatus&&onStatus(false,'Reconnaissance vocale non disponible');return false;}
+    if(engineRunning)return true;
+    recognition=new SR();
+    let lastFinalIndex=-1;
+    recognition.lang='fr-FR';
+    recognition.continuous=true;
+    recognition.interimResults=false;
+    recognition.onstart=()=>{
+      lastFinalIndex=-1;
+      engineRunning=true;
+      onStatus&&onStatus(processingEnabled,processingEnabled?'reconnaissance active':'reconnaissance en pause');
+    };
+    recognition.onresult=e=>{
+      // Chrome may revise a single utterance several times. Only new final
+      // results count as announcements, never interim revisions or replays.
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const result=e.results[i];
+        if(!result.isFinal||i<=lastFinalIndex)continue;
+        lastFinalIndex=i;
+        // Consume results received during a pause without counting them later.
+        if(processingEnabled&&Date.now()>=mutedUntil)handle(result[0].transcript||'');
+      }
+    };
+    recognition.onend=()=>{
+      if(!engineRunning||restartingAfterPause||Date.now()<mutedUntil)return;
+      try{recognition.start();}catch{}
+    };
+    recognition.onerror=e=>{
+      const msg=e?.error||'erreur micro';
+      if(msg==='aborted')return;
+      if(msg!=='no-speech'){
+        engineRunning=false;processingEnabled=false;
+        try{recognition.abort();}catch{}
+      }
+      onStatus&&onStatus(processingEnabled,msg);
+    };
+    engineRunning=true;
+    try{recognition.start();return true;}
+    catch{engineRunning=false;processingEnabled=false;onStatus&&onStatus(false,'démarrage impossible');return false;}
+  }
   function resume(onStatus){if(!ensureEngine(onStatus))return;processingEnabled=true;firstHeard=null;onStatus&&onStatus(true,'reconnaissance active');}
   function pause(onStatus){processingEnabled=false;firstHeard=null;lastVoiceNumber=null;onStatus&&onStatus(false,'reconnaissance en pause');}
   function toggle(onStatus){processingEnabled?pause(onStatus):resume(onStatus);}
