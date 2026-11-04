@@ -107,7 +107,7 @@ function renderToast(s){
 Loto.onChange(s=>{
   Loto.pageHeader();
   last.textContent = Loto.lastNumber();
-  Loto.renderNumbers(grid);
+  Loto.renderNumbers(grid,{button:true,source:'public_backup'});
   const currentNumber = Number(Loto.lastNumber());
   Array.from(grid.children).forEach((cell, index) => cell.classList.toggle('current', index + 1 === currentNumber));
   renderCard(s.publicCard);

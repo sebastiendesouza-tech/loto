@@ -1,5 +1,6 @@
 (function(){
   const C = window.LOTO_CONFIG || {};
+  const remoteConfigured = !!C.SUPABASE_URL;
   const supabaseClient = window.supabase && C.SUPABASE_URL ? window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY) : null;
   const defaultState = () => ({
     appVersion: C.APP_VERSION || 'v5',
@@ -160,14 +161,27 @@
   }
   function hydrateCache(){
     const cached=read(cacheKey());
+    if(!cached?.state){
+      const legacy=read('loto_state');
+      if(legacy&&(!legacy.sessionCode||legacy.sessionCode===code()))mergeState(legacy);
+    }
     if(cached?.state){serverState=cached.remote||cached.state;serverStamp=cached.stamp||'';let view=clone(serverState);for(const op of pendingChanges())view=applyOperation(view,op).state;mergeState(view);}
   }
   function retry(){
     if(retryTimer||!sessionStarted||!supabaseClient)return;
     retryTimer=window.setTimeout(()=>{retryTimer=null;void refreshSession();},4000);
   }
+  async function sessionRequest(query){
+    const controller=new AbortController();
+    let timer;
+    const timeout=new Promise((resolve,reject)=>{
+      timer=window.setTimeout(()=>{controller.abort();reject(new Error('Délai de connexion dépassé'));},12000);
+    });
+    try{return await Promise.race([query.abortSignal(controller.signal),timeout]);}
+    finally{window.clearTimeout(timer);}
+  }
   async function readServer(){
-    const {data,error}=await supabaseClient.from('loto_app_sessions').select('state,updated_at').eq('code',code()).maybeSingle();
+    const {data,error}=await sessionRequest(supabaseClient.from('loto_app_sessions').select('state,updated_at').eq('code',code()).maybeSingle());
     if(error)throw error;
     lastReadAt=Date.now();return data;
   }
@@ -185,8 +199,8 @@
       if(row?.state){
         let query=supabaseClient.from('loto_app_sessions').update({state:applied.state,updated_at:stamp}).eq('code',code());
         if(row.updated_at)query=query.eq('updated_at',row.updated_at);
-        result=await query.select('state,updated_at');
-      }else result=await supabaseClient.from('loto_app_sessions').insert({code:code(),state:applied.state,updated_at:stamp}).select('state,updated_at');
+        result=await sessionRequest(query.select('state,updated_at'));
+      }else result=await sessionRequest(supabaseClient.from('loto_app_sessions').insert({code:code(),state:applied.state,updated_at:stamp}).select('state,updated_at'));
       if(result.error){if(result.error.code==='23505'){row=await readServer();if(row)showRemote(row);continue;}throw result.error;}
       if(!result.data?.length){row=await readServer();if(row)showRemote(row);continue;}
       row=result.data[0];forget(op);showRemote(row);
@@ -199,7 +213,10 @@
   }
   function refreshSession(){
     if(syncFlight)return syncFlight;
-    if(!supabaseClient){mergeState(read(cacheKey())?.state||read('loto_state')||state);syncReady=true;notifySync();return Promise.resolve({ok:true});}
+    if(!supabaseClient){
+      if(remoteConfigured){syncError='Service de connexion indisponible. Le tirage reste sauvegardé sur cet appareil.';notifySync();return Promise.resolve({ok:false});}
+      syncReady=true;notifySync();return Promise.resolve({ok:true});
+    }
     if(typeof navigator!=='undefined'&&navigator.onLine===false){syncError='Connexion interrompue. Les changements restent enregistrés sur cet appareil.';notifySync();retry();return Promise.resolve({ok:false});}
     syncFlight=Promise.resolve().then(synchronize).catch(error=>{syncError='Connexion indisponible. Les changements restent en attente.';console.warn('Synchronisation du loto en attente.',error);retry();return {ok:false,error};}).finally(()=>{syncFlight=null;notifySync();});
     notifySync();return syncFlight;
@@ -224,15 +241,16 @@
         window.addEventListener('online',()=>void refreshSession());
         window.addEventListener('offline',()=>{syncError='Connexion interrompue.';notifySync();});
         window.addEventListener('pageshow',()=>void refreshSession());
+        window.addEventListener('focus',()=>void refreshSession());
         window.addEventListener('storage',event=>{if(event.key?.startsWith(pendingPrefix()))void refreshSession();});
         if(typeof document!=='undefined')document.addEventListener?.('visibilitychange',()=>{if(!document.hidden)void refreshSession();});
-        if(window.setInterval)pollTimer=window.setInterval(()=>{if((typeof document==='undefined'||!document.hidden)&&(pendingChanges().length||Date.now()-lastReadAt>=30000))void refreshSession();},5000);
+        if(window.setInterval)pollTimer=window.setInterval(()=>{if((typeof document==='undefined'||!document.hidden)&&(pendingChanges().length||Date.now()-lastReadAt>=5000))void refreshSession();},5000);
       }
     }
     return refreshSession();
   }
   async function save(patch){
-    if(!supabaseClient){state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();store('loto_state',state);persistCache();return;}
+    if(!remoteConfigured&&!supabaseClient){state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();store('loto_state',state);persistCache();return;}
     const op=makeOperation(patch||{});
     memoryPending.set(op.id,op);store(pendingPrefix()+op.id,op);
     state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();persistCache();notifySync();
@@ -299,9 +317,13 @@
     const oldPending = state.pendingNumber;
     if(oldPending && oldPending !== n && !drawn.includes(oldPending)) drawn.push(oldPending);
     if(drawn.includes(n)) return;
-    await save({ drawnNumbers: drawn, pendingNumber: n, history: addLog('pending', 'Prévalidation ' + n, { n }) });
+    const saving=save({ drawnNumbers: drawn, pendingNumber: n, history: addLog('pending', 'Prévalidation ' + n, { n }) });
+    const currentPhase=phase(state);
     window.clearTimeout(window.__lotoPendingTimer);
-    window.__lotoPendingTimer = window.setTimeout(() => commitPending(), (state.options?.prevalidateSeconds || 6) * 1000);
+    window.__lotoPendingTimer = window.setTimeout(() => {
+      if(state.pendingNumber===n&&phase(state)===currentPhase)void commitPending();
+    }, (state.options?.prevalidateSeconds || 6) * 1000);
+    await saving;
   }
   async function commitPending(){
     const p = state.pendingNumber; if(!p) return;
@@ -633,12 +655,11 @@
   async function hidePublicCard(){ await save({ publicCard:null, cardClosedAt:Date.now(), history:addLog('hide_card','Fermeture carton') }); }
   function renderNumbers(container, opts={}){
     if(!container) return;
-    const drawn = new Set((state.drawnNumbers || []).map(Number)); const pending = Number(state.pendingNumber) || null;
-    const latest = Number(state.pendingNumber || (state.drawnNumbers || []).slice(-1)[0]) || null;
+    const drawn = new Set(state.drawnNumbers || []); const pending = state.pendingNumber;
     container.innerHTML = '';
     for(let i=1;i<=90;i++){
       const b = document.createElement(opts.button ? 'button':'div');
-      b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (latest===i?' latest':'') + (opts.button?' clickable':'');
+      b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (opts.button?' clickable':'');
       b.textContent = String(i).padStart(2,'0');
       if(opts.button) b.onclick = () => {
         const drawnNow = new Set(state.drawnNumbers || []);
