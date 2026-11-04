@@ -504,7 +504,8 @@
 .commissaire-body .commissaire-lot-card{display:block;flex:0 1 auto;min-height:80px;max-height:30vh;overflow:auto;padding:12px;background:#0b1d36;border-color:#29466b;color:#fff;}
 .commissaire-lot-title{font-size:clamp(16px,2vw,22px);font-weight:1000;margin-bottom:4px;}
 .commissaire-lot-mode{font-size:13px;color:#c7d8ee;margin-bottom:9px;}
-.animateur-body .animateur-lot-card{display:block;flex:0 1 auto;min-height:110px;max-height:32dvh;overflow:auto;padding:12px;background:#0b1d36;border-color:#29466b;color:#fff;}
+.animateur-body .animateur-lot-card{display:block;flex:0 0 auto;min-height:0;max-height:32dvh;overflow:auto;padding:12px;background:#0b1d36;border-color:#29466b;color:#fff;}
+.animateur-lot-notice{display:table;padding:4px 8px;margin:6px 0 9px;border:1px solid #8a743e;border-radius:8px;background:#40341b;color:#ffe1a1;font-size:12px;font-weight:800;}
 .animateur-voice-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;}
 .animateur-voice-controls label{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px;font-weight:800;}
 .animateur-voice-controls select{min-width:0;width:100%;padding:7px 8px;font-size:14px;}
