@@ -134,13 +134,12 @@ Loto.onChange(s=>{
 
 Loto.ensureSession();
 
-function updateMic(on){
-  micBtn.textContent = 'Micro PC';
-  micBtn.className = 'public-mic ' + (on ? 'red' : 'green');
-  micBtn.title = on ? 'Micro actif' : 'Micro inactif';
-}
-
-micBtn.onclick = () => {
-  if(!window.LotoVoice){ updateMic(false); return; }
-  LotoVoice.toggle((on) => updateMic(on));
-};
+const pcMicrophone = LotoPcMicrophone.connect('host', status => {
+  micBtn.textContent = status.active ? 'Micro PC : actif' : 'Micro PC : en pause';
+  micBtn.className = 'public-mic ' + (status.active ? 'red' : 'green');
+  micBtn.setAttribute('aria-pressed', String(status.active));
+  micBtn.title = status.error ? 'Micro : ' + status.error :
+    (status.connected ? 'Reconnaissance des numéros. Commande depuis la tablette disponible.' :
+      'Reconnaissance locale. Connexion à la tablette indisponible.');
+});
+micBtn.onclick = () => pcMicrophone.toggle();
