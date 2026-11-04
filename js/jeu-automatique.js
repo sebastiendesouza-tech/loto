@@ -2,7 +2,6 @@ Loto.pageHeader();
 const $ = id => document.getElementById(id);
 const setup = $('setup');
 const play = $('play');
-const countForm = $('countForm');
 const codesForm = $('codesForm');
 const codeFields = $('cardCodeFields');
 const setupMessage = $('setupMessage');
@@ -24,33 +23,38 @@ function cardGrid(card){
   (card.lignes||[]).slice(0,3).forEach((line,row)=>line.forEach(n=>{const col=Math.min(8,Math.floor(Number(n)/10));if(Number(n)>0)grid[row][col]=Number(n);}));
   return grid;
 }
-function createFields(count){
-  $('codesTitle').textContent=`Saisissez les ${count} numéro${count>1?'s':''} de carton`;
-  codeFields.innerHTML=Array.from({length:count},(_,i)=>`<label><span class="code-index">${i+1}</span><input name="cardCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="Code du carton ${i+1}" aria-label="Code du carton ${i+1}" required></label>`).join('');
-  countForm.hidden=true;codesForm.hidden=false;setupMessage.textContent='';codeFields.querySelector('input')?.focus();
-}
-countForm.addEventListener('submit',event=>{event.preventDefault();createFields(Number($('cardCount').value));});
-$('backToCount').addEventListener('click',()=>{codesForm.hidden=true;countForm.hidden=false;setupMessage.textContent='';});
-$('editCards').addEventListener('click',()=>{document.body.classList.remove('auto-playing');play.hidden=true;setup.hidden=false;codesForm.hidden=true;countForm.hidden=false;setupMessage.textContent='';$('loadCards').disabled=false;lastRenderedStateKey='';});
+$('editCards').addEventListener('click',()=>{
+  closeWinnerModal();
+  ++renderToken;
+  document.body.classList.remove('auto-playing');
+  play.hidden=true;setup.hidden=false;$('editCards').hidden=true;
+  setupMessage.textContent='';$('loadCards').disabled=false;lastRenderedStateKey='';
+  codeFields.querySelector('input')?.focus();
+});
 
 codesForm.addEventListener('submit',async event=>{
-  event.preventDefault();if(!$('loadCards').disabled){$('loadCards').disabled=true;setupMessage.textContent='Recherche des cartons…';}
-  const inputs=[...codeFields.querySelectorAll('input')];
-  const codes=inputs.map(input=>input.value.trim());
-  if(codes.some(code=>!code)){setupMessage.textContent='Saisissez le code de chaque carton.';$('loadCards').disabled=false;return;}
-  const unique=new Set(codes.map(code=>code.toUpperCase()));
-  if(unique.size!==codes.length){setupMessage.textContent='Un même carton a été saisi plusieurs fois.';$('loadCards').disabled=false;return;}
+  event.preventDefault();
+  const button=$('loadCards');
+  if(button.disabled)return;
+  const entries=[...codeFields.querySelectorAll('input')].map(input=>({input,code:input.value.trim()})).filter(entry=>entry.code);
+  if(!entries.length){setupMessage.textContent='Saisissez au moins un numéro de carton.';codeFields.querySelector('input')?.focus();return;}
+  if(entries.length>6){setupMessage.textContent='Vous pouvez suivre 6 cartons maximum.';return;}
+  const codes=entries.map(entry=>entry.code);
+  if(new Set(codes.map(code=>code.toUpperCase())).size!==codes.length){setupMessage.textContent='Un même carton a été saisi plusieurs fois.';return;}
+  button.disabled=true;setupMessage.textContent='Recherche des cartons…';
   try{
     const rows=await Promise.all(codes.map(code=>Loto.fetchCard(code)));
     const missing=rows.findIndex(row=>!row);
-    if(missing!==-1){setupMessage.textContent=`Carton « ${codes[missing]} » introuvable. Vérifiez son numéro.`;$('loadCards').disabled=false;return;}
+    if(missing!==-1){setupMessage.textContent=`Carton « ${codes[missing]} » introuvable. Vérifiez son numéro.`;entries[missing].input.focus();return;}
+    if(new Set(rows.map(card=>String(card.numero))).size!==rows.length){setupMessage.textContent='Deux numéros correspondent au même carton. Corrigez la saisie.';return;}
     selectedCards.splice(0,selectedCards.length,...rows);
-    rememberedWinners=new Set();winnerRound='';lastRenderedStateKey='';
-    setup.hidden=true;play.hidden=false;document.body.classList.add('auto-playing');
-    $('cardsCountLabel').textContent=`${rows.length} carton${rows.length>1?'s':''} suivi${rows.length>1?'s':''}`;
+    rememberedWinners=new Set();winnerRound='';lastRenderedStateKey='';lastLoserLookupKey='';
+    setup.hidden=true;play.hidden=false;$('editCards').hidden=false;
+    document.body.classList.add('auto-playing');
     setupMessage.textContent='';
     render(Loto.state());
-  }catch(error){setupMessage.textContent='Impossible de lire les cartons. Vérifiez la connexion puis réessayez.';$('loadCards').disabled=false;}
+  }catch(error){setupMessage.textContent='Impossible de lire les cartons. Vérifiez la connexion puis réessayez.';}
+  finally{button.disabled=false;}
 });
 
 function roundKey(state){return `${state.currentPartieIndex||0}:${state.currentPrizeIndex||0}:${state.miniBingoActive?'mini':'classique'}`;}
@@ -70,12 +74,38 @@ function paintCard(card,state,result,checkingSale=false){
   }).join('')}</tr>`).join('');
   return `<article class="tracked-card${cardClass}" data-card-number="${esc(card.numero)}"><div class="tracked-card-head"><strong class="tracked-card-code">${esc(displayCode(card))}</strong><span class="card-state">${status}</span></div><table class="auto-bingo-grid" aria-label="Grille du carton ${esc(displayCode(card))}"><tbody>${rows}</tbody></table></article>`;
 }
+function closeWinnerModal(){
+  const wasOpen=!$('winnerModal').hidden;
+  $('winnerModal').hidden=true;
+  document.body.classList.remove('winner-open');
+  if(wasOpen&&!$('editCards').hidden)$('editCards').focus({preventScroll:true});
+}
+function openWinnerModal(winners){
+  $('winnerTitle').textContent=winners.length===1?'Carton gagnant !':'Cartons gagnants !';
+  $('winnerCodes').textContent=winners.map(({card})=>displayCode(card)).join('\n');
+  $('winnerModal').hidden=false;
+  document.body.classList.add('winner-open');
+  $('winnerClose').focus({preventScroll:true});
+}
+$('winnerClose').addEventListener('click',closeWinnerModal);
+$('winnerModal').addEventListener('click',event=>{if(event.target===$('winnerModal'))closeWinnerModal();});
+document.addEventListener('keydown',event=>{
+  if($('winnerModal').hidden)return;
+  if(event.key==='Escape'){event.preventDefault();closeWinnerModal();}
+  else if(event.key==='Tab'){event.preventDefault();$('winnerClose').focus();}
+});
 function showWinnerAlert(alert,winners,token){
-  if(token!==renderToken)return;
-  const label=winners.map(({card})=>displayCode(card)).join(', ');
-  alert.hidden=false;alert.className='auto-alert';alert.textContent=`🎉 BINGO ! ${winners.length===1?'Carton gagnant':'Cartons gagnants'} : ${label}`;
+  if(token!==renderToken||play.hidden)return;
+  alert.hidden=true;alert.textContent='';
+  const ids=new Set(winners.map(({card})=>String(card.numero)));
+  rememberedWinners=new Set([...rememberedWinners].filter(id=>ids.has(id)));
+  if(!winners.length){closeWinnerModal();return;}
   const newWinners=winners.filter(({card})=>!rememberedWinners.has(String(card.numero)));
-  if(newWinners.length){newWinners.forEach(({card})=>rememberedWinners.add(String(card.numero)));if(navigator.vibrate)navigator.vibrate([180,80,180]);}
+  if(newWinners.length){
+    newWinners.forEach(({card})=>rememberedWinners.add(String(card.numero)));
+    openWinnerModal(winners);
+    if(navigator.vibrate)navigator.vibrate([180,80,180]);
+  }else if(!$('winnerModal').hidden)openWinnerModal(winners);
 }
 async function checkSaleStatus(state,winners,alert,token){
   if(!Loto.programSettings().salesTrackingEnabled||!winners.length){showWinnerAlert(alert,winners,token);return;}
@@ -85,7 +115,7 @@ async function checkSaleStatus(state,winners,alert,token){
     const {data,error}=await Loto.supabaseClient.from('loto_carton_sales').select('numero').eq('loto_id',lotoId).eq('status','vendu').in('numero',nums);
     if(error)throw error;
     const confirmed=winners.filter(({card})=>(data||[]).some(row=>Number(row.numero)===Number(card.numero)));
-    if(token===renderToken)winners.forEach(({card})=>{
+    if(token===renderToken&&!play.hidden)winners.forEach(({card})=>{
       const node=[...$('trackedCards').querySelectorAll('[data-card-number]')].find(el=>Number(el.dataset.cardNumber)===Number(card.numero));
       if(!node)return;
       const badge=node.querySelector('.card-state');
@@ -94,7 +124,7 @@ async function checkSaleStatus(state,winners,alert,token){
     });
     showWinnerAlert(alert,confirmed,token);
   }catch(error){
-    if(token!==renderToken)return;
+    if(token!==renderToken||play.hidden)return;
     winners.forEach(({card})=>{const node=[...$('trackedCards').querySelectorAll('[data-card-number]')].find(el=>Number(el.dataset.cardNumber)===Number(card.numero));const badge=node?.querySelector('.card-state');if(node)node.classList.remove('card-candidate');if(badge)badge.textContent='Vente à confirmer';});
     alert.hidden=false;alert.className='auto-alert loser';alert.textContent='Un carton semble gagnant. Le commissaire doit confirmer sa vente.';
   }
@@ -132,7 +162,7 @@ async function checkLastLoserCard(state,stillInGame,alert,token){
   lastLoserLookupKey=key;
   try{
     const {soldNumbers,soldCards}=await loadLoserPool(state);
-    if(token!==renderToken)return;
+    if(token!==renderToken||play.hidden)return;
     const remaining=soldCards.filter(card=>(card.lignes||[]).flat().every(n=>!drawn.has(Number(n))));
     const remainingSet=new Set(remaining.map(card=>Number(card.numero)));
     stillInGame.forEach(({card})=>{
@@ -145,9 +175,9 @@ async function checkLastLoserCard(state,stillInGame,alert,token){
     });
     const ownWinners=remaining.length===1?stillInGame.filter(({card})=>remainingSet.has(Number(card.numero))):[];
     if(ownWinners.length)showWinnerAlert(alert,ownWinners,token);
-    else{alert.hidden=true;alert.textContent='';}
+    else{showWinnerAlert(alert,[],token);}
   }catch(error){
-    if(token!==renderToken)return;
+    if(token!==renderToken||play.hidden)return;
     alert.hidden=true;alert.textContent='';
   }
 }
@@ -163,14 +193,12 @@ function render(state){
   const req=Loto.currentRequirement();
   const currentPart=(state.program?.parties||[])[state.currentPartieIndex||0];
   $('autoPartLabel').textContent=state.miniBingoActive?'Mini-bingo':currentPart?`Partie ${pi+1} / ${state.program.parties.length}`:'Partie —';
-  $('partMode').textContent=currentPart?`Partie ${(state.currentPartieIndex||0)+1} · ${req.label}`:'En attente du tirage';
-  const last=state.pendingNumber||(state.drawnNumbers||[]).slice(-1)[0];
-  $('lastNumber').textContent=last?String(last).padStart(2,'0'):'--';
   const status=$('connectionStatus');
   status.textContent=Loto.supabaseClient?'En direct':'Hors connexion';
   status.className='connection-status '+(Loto.supabaseClient?'online':'offline');
   const round=roundKey(state);if(round!==winnerRound){winnerRound=round;rememberedWinners=new Set();lastLoserLookupKey='';}
   const token=++renderToken;
+  if(play.hidden)return;
   const results=selectedCards.map(card=>({card,result:Loto.checkCard(card)}));
   const checkSales=Loto.programSettings().salesTrackingEnabled;
   $('trackedCards').innerHTML=results.map(({card,result})=>paintCard(card,state,result,checkSales&&result.valid)).join('');
@@ -179,7 +207,7 @@ function render(state){
   if(winners.length){checkSaleStatus(state,winners,alert,token);}
   else if(req.mode==='perdant'&&results.some(({result})=>result.stillInGame)){
     checkLastLoserCard(state,results.filter(({result})=>result.stillInGame),alert,token);
-  }else{alert.hidden=true;alert.textContent='';}
+  }else{rememberedWinners.clear();closeWinnerModal();alert.hidden=true;alert.textContent='';}
 }
 
 Loto.onChange(state=>{
