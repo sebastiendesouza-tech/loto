@@ -50,13 +50,13 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   }
   if(voiceMode){ voiceMode.disabled = !usable || status.pending; voiceMode.value = status.mode; }
   if(voicePauseBanner){
-    voicePauseBanner.style.display = usable && status.active && !status.error && !status.pending ? 'none' : 'block';
+    voicePauseBanner.style.display = usable && !status.error && !status.pending ? 'none' : 'block';
     voicePauseBanner.textContent = status.error ? 'Micro PC : ' + status.error :
       !status.connected ? 'Commande du PC déconnectée. Vérifiez Internet sur la tablette.' :
       !status.online ? 'PC non joignable. Ouvrez l’affichage public sur le PC avec la même session.' :
       !status.ready ? 'Cliquez sur Micro PC sur le PC pour autoriser le microphone.' :
       status.pending ? 'Commande envoyée : attente de confirmation du PC.' :
-      'Écoute des numéros en pause sur le PC. Votre voix reste diffusée dans l’enceinte.';
+      '';
   }
 });
 if(voicePause) voicePause.onclick = () => pcMicrophone.toggle();
