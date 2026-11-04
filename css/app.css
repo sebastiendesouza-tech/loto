@@ -480,6 +480,21 @@
 @media(max-width:600px){.simple-control-status{font-size:28px}.simple-control-result{padding:10px}}
 
 .player-complete-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:#0f8a4b;color:#fff;text-align:center;padding:24px}.player-complete-overlay.show{display:flex}.player-complete-overlay strong{display:block;font-size:clamp(2rem,10vw,4.5rem);font-weight:1000;line-height:1}.player-complete-overlay span{display:block;margin-top:16px;font-size:clamp(1.1rem,5vw,2rem);font-weight:800}.player-complete-overlay div{animation:playerCompletePop .22s ease-out}@keyframes playerCompletePop{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+.player .title{position:relative;padding:0 54px;}
+.player-lots-button{position:absolute;right:0;top:50%;transform:translateY(-50%);padding:7px 10px;font-size:13px;background:#175da8;color:#fff;border-radius:999px;}
+.player-lots-panel{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.76);}
+.player-lots-panel[hidden]{display:none!important;}
+.player-lots-dialog{width:min(92vw,520px);max-height:82dvh;overflow:auto;padding:18px;border:1px solid #456486;border-radius:18px;background:#0b1d36;color:#fff;box-shadow:0 12px 40px #0008;}
+.player-lots-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.player-lots-dialog h2{margin:0;font-size:20px;}
+.player-lots-close{padding:8px 11px;background:#59677a;font-size:13px;}
+.player-lots-list{display:flex;flex-direction:column;gap:8px;}
+.player-lot-row{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:10px;border:1px solid #29466b;border-radius:12px;background:#102946;}
+.player-lot-row strong{color:#fff;}
+.player-lot-row span{color:#f2a900;font-weight:900;}
+.player-lot-row small{grid-column:1/-1;color:#c7d8ee;font-weight:700;}
+.player-lot-row.active{border:2px solid #f2a900;background:#12365f;}
+.player-lot-row.won{opacity:.5;}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
 button.danger{background:#a92a2a;color:#fff;border-color:#a92a2a}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
