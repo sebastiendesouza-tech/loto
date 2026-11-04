@@ -2,7 +2,6 @@
 .public-projection{--display-gap:clamp(8px,1.1vmin,16px);--header-height:64px;}
 .public-projection .public-topbar{height:var(--header-height);grid-template-columns:auto minmax(0,1fr) auto;gap:clamp(10px,1.5vw,28px);padding:0 16px;}
 .public-projection .public-brand{font-size:clamp(14px,1.4vw,24px);}
-.public-projection .public-brand [data-version]{font-size:12px;opacity:.65;}
 .public-projection .public-heading{min-width:0;display:flex;align-items:center;justify-content:center;gap:clamp(12px,2vw,36px);}
 .public-projection .public-loto-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(20px,2.2vw,38px);font-weight:900;}
 .public-projection .public-part-header{flex-shrink:0;font-size:clamp(18px,1.8vw,30px);padding-left:clamp(12px,2vw,32px);border-left:2px solid #ffffff40;}
@@ -32,7 +31,6 @@
 .public-projection .public-bingo-card .pill{font-size:13px;padding:3px 7px;}
 @media(max-width:1000px){
   .public-projection{--header-height:58px;}
-  .public-projection .public-brand [data-version]{display:none;}
   .public-projection .public-layout-v213{grid-template-columns:minmax(0,1fr) clamp(210px,27vw,270px);}
   .public-projection .public-topbar{grid-template-areas:none;padding:0 10px;}
   .public-projection .public-brand,.public-projection .public-mic,.public-projection .public-part-header{grid-area:auto;}
