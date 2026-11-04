@@ -29,14 +29,14 @@ function renderCard(card){
   if(!card){ overlay.style.display='none'; return; }
   overlay.style.display='block';
   const req = card.requirement || {};
-  const messages = card.messages && card.messages.length ? card.messages : [card.reason].filter(Boolean);
+  const failureLabel = Loto.cardFailureLabel(card);
   overlay.innerHTML = `
     <div class="public-card-overlay-inner">
       <h1>Carton ${esc(card.numero)}</h1>
       <p class="public-card-req">${esc(req.label || '')}</p>
       <p class="${card.valid ? 'ok' : 'bad'} public-card-status">${card.valid ? 'GAIN VALIDE' : 'NON VALIDE'}</p>
       ${renderPublicCardGrid(card)}
-      ${messages.length ? `<ul class="public-diagnostic-list">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+      ${failureLabel ? `<ul class="public-diagnostic-list"><li>${esc(failureLabel)}</li></ul>` : ''}
     </div>`;
 }
 
