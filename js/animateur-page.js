@@ -36,10 +36,15 @@ animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animChe
 document.getElementById('winner').onclick=()=>Loto.winner();
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
 if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
+let legacyModeUpdateScheduled=false;
 const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   const connected = status.connected && status.online;
   if(voiceControlMode){ voiceControlMode.disabled = !connected || status.pending; voiceControlMode.value = status.sourceMode; }
-  if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending; voiceMode.value = status.mode; }
+  if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending; voiceMode.value = status.mode==='numero'?'numero':'le'; }
+  if(status.mode==='free'&&connected&&status.ready&&!status.pending&&!status.error&&!legacyModeUpdateScheduled){
+    legacyModeUpdateScheduled=true;
+    Promise.resolve().then(()=>pcMicrophone.setMode('le')).catch(error=>console.warn('Mise à jour du mot-clé impossible.',error)).finally(()=>{legacyModeUpdateScheduled=false;});
+  }
   if(voicePauseBanner){
     const waitingForMic = status.sourceMode === 'micro' && !status.ready && !status.error;
     voicePauseBanner.style.display = connected && !status.error && !status.pending && !waitingForMic ? 'none' : 'block';
@@ -54,7 +59,24 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
 if(voiceControlMode) voiceControlMode.onchange = () => pcMicrophone.setSourceMode(voiceControlMode.value);
 if(voiceMode) voiceMode.onchange = () => pcMicrophone.setMode(voiceMode.value);
 if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mini-bingo a été gagné ?')) await Loto.markMiniBingoWon(); };
-function renderLot(s){if(miniBingoWon) miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none'; if(startMiniBingoBtn) startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none'; if(s.miniBingoReady){currentLot.innerHTML='<b>LOTO PRINCIPAL TERMINÉ</b> · Mini-bingo non gagné : utilise le bouton « Lancer Mini-bingo ».';return;} if(s.gameEnded&&!s.gameActive){currentLot.innerHTML='<b>FIN DU LOTO</b>';return;} if(s.miniBingoActive){currentLot.innerHTML='<b>MINI-BINGO</b> · tirage de départage en cours';return;}const p=Loto.currentPartie();const prize=Loto.currentPrize();if(!p||!prize){currentLot.innerHTML='<b>Lot en cours :</b> partie simple sans programme';return;}const req=Loto.currentRequirement();currentLot.innerHTML=`<b>${p.name||'Partie'}</b> · <span>${Loto.gameModeLabel(p)}</span> · <strong>${req.label}</strong> · <b>LOT : ${prize.label||'Lot non renseigné'}</b>`;}
+function renderLot(s){
+  if(miniBingoWon)miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none';
+  if(startMiniBingoBtn)startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none';
+  if(s.miniBingoReady){currentLot.innerHTML='<div class="commissaire-lot-title">Loto principal terminé</div><div class="commissaire-lot-mode">Mini-bingo à lancer</div>';return;}
+  if(s.gameEnded&&!s.gameActive){currentLot.innerHTML='<div class="commissaire-lot-title">Fin du loto</div>';return;}
+  if(s.miniBingoActive){currentLot.innerHTML='<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>';return;}
+  const p=Loto.currentPartie();
+  if(!p){currentLot.innerHTML='<div class="commissaire-lot-title">Partie simple</div><div class="commissaire-lot-mode">Aucun lot programmé</div>';return;}
+  const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
+  const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
+  const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
+  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length} · ${esc(p.name||'Partie')}</div><div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+    const cls=i<prizeIndex?'won':i===prizeIndex?'active':'upcoming';
+    const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
+    const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
+    return `<div class="commissaire-prize-row ${cls}"><div><strong>${label} :</strong> <span>${esc(prize.label||'Lot non renseigné')}</span></div><small>${condition}</small></div>`;
+  }).join('')||'<p>Aucun lot renseigné.</p>'}</div>`;
+}
 Loto.onChange(s=>{
   Loto.pageHeader();
   Loto.renderNumbers(grid,{button:true});
