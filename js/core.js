@@ -416,7 +416,14 @@
       const b = document.createElement(opts.button ? 'button':'div');
       b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (opts.button?' clickable':'');
       b.textContent = String(i).padStart(2,'0');
-      if(opts.button) b.onclick = () => { const drawnNow = new Set(state.drawnNumbers || []); if(drawnNow.has(i)){ if(confirm('Annuler le numéro '+i+' ?')) cancelNumber(i, 'grid_click'); } else drawNumber(i, 'click'); };
+      if(opts.button) b.onclick = () => {
+        const drawnNow = new Set(state.drawnNumbers || []);
+        if(state.pendingNumber===i){
+          if(confirm('Annuler le numéro en attente '+i+' ?')) cancelPending();
+        } else if(drawnNow.has(i)){
+          if(confirm('Annuler le numéro '+i+' ?')) cancelNumber(i, 'grid_click');
+        } else drawNumber(i, 'click');
+      };
       container.appendChild(b);
     }
   }

@@ -15,7 +15,7 @@
   function keywordAccepted(t){if(mode==='free')return true;if(mode==='numero')return /\bnumero\b/.test(t);return /\ble\b/.test(t);}
   function pauseListening(ms){mutedUntil=Date.now()+Number(ms||REECOUTE_DELAY_MS);restartingAfterPause=true;clearTimeout(pauseTimer);try{recognition&&recognition.stop();}catch{}pauseTimer=setTimeout(()=>{restartingAfterPause=false;if(engineRunning&&recognition){try{recognition.start();}catch{}}},Math.max(250,Number(ms||REECOUTE_DELAY_MS)));}
   async function validateVoiceNumber(n){const now=Date.now();if(!processingEnabled||now<mutedUntil)return;if(lastVoiceNumber===n&&now-lastVoiceAt<SAME_NUMBER_GUARD_MS)return;lastVoiceNumber=n;lastVoiceAt=now;firstHeard=null;pauseListening(REECOUTE_DELAY_MS);await Loto.setPendingNumber(n);}
-  async function handle(text){if(!processingEnabled||Date.now()<mutedUntil)return;const t=norm(text);if(!t||!keywordAccepted(t))return;const nums=extractNumbers(t);if(!nums.length)return;for(let i=1;i<nums.length;i++)if(nums[i]===nums[i-1])return validateVoiceNumber(nums[i]);const n=nums[0];if(firstHeard===n)return validateVoiceNumber(n);firstHeard=n;}
+  async function handle(text){if(!processingEnabled||Date.now()<mutedUntil)return;const t=norm(text);if(!t||!keywordAccepted(t))return;const nums=extractNumbers(t);if(!nums.length)return;await validateVoiceNumber(nums[0]);}
   function supported(){return window.SpeechRecognition||window.webkitSpeechRecognition;}
   function ensureEngine(onStatus){
     const SR=supported();
