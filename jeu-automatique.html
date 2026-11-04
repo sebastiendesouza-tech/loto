@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
-  <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-4">
+  <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-5">
 </head>
 <body class="auto-game-body">
   <header class="auto-header">
@@ -16,7 +16,7 @@
       <div class="auto-heading-name"><strong data-title>Loto by SdS</strong><span aria-hidden="true">-</span><span id="gameName">Chargement du loto…</span></div>
       <span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span>
     </div>
-    <button id="editCards" class="auto-secondary" type="button" hidden>Modifier</button>
+    <nav class="auto-header-actions" aria-label="Navigation"><a id="returnToPlayer" class="auto-secondary" href="joueur.html">Retour</a><button id="editCards" class="auto-secondary" type="button" hidden>Modifier</button></nav>
     <span id="connectionStatus" hidden>Connexion…</span>
   </header>
 
@@ -56,6 +56,6 @@
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/core.js"></script>
-  <script src="js/jeu-automatique.js?v=5-auto-20261104-4"></script>
+  <script src="js/jeu-automatique.js?v=5-auto-20261104-5"></script>
 </body>
 </html>
