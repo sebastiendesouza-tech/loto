@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#071421">
   <title>Jeu automatique - Loto by SdS</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
-  <link rel="stylesheet" href="css/jeu-automatique.css">
+  <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-4">
 </head>
 <body class="auto-game-body">
   <header class="auto-header">
@@ -16,51 +16,46 @@
       <div class="auto-heading-name"><strong data-title>Loto by SdS</strong><span aria-hidden="true">-</span><span id="gameName">Chargement du loto…</span></div>
       <span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span>
     </div>
-    <span id="connectionStatus" class="connection-status" hidden>Connexion…</span>
+    <button id="editCards" class="auto-secondary" type="button" hidden>Modifier</button>
+    <span id="connectionStatus" hidden>Connexion…</span>
   </header>
 
   <main class="auto-main">
     <section id="setup" class="auto-panel setup-panel">
-      <div class="auto-kicker">VOTRE PARTIE SUR TÉLÉPHONE</div>
-      <h1>Jouez avec vos cartons</h1>
-      <p class="auto-intro">Les numéros s’allument au fur et à mesure du tirage. Vous pouvez suivre jusqu’à 6 cartons.</p>
-
-      <form id="countForm">
-        <label for="cardCount">Combien de cartons jouez-vous ?</label>
-        <div class="count-row">
-          <select id="cardCount" required>
-            <option value="1">1 carton</option><option value="2">2 cartons</option>
-            <option value="3">3 cartons</option><option value="4">4 cartons</option>
-            <option value="5">5 cartons</option><option value="6">6 cartons</option>
-          </select>
-          <button class="auto-primary" type="submit">Continuer</button>
+      <h1>Vos cartons</h1>
+      <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton. Laissez les autres cases vides.</p>
+      <form id="codesForm">
+        <div id="cardCodeFields" class="card-code-fields">
+          <label><span class="code-index">1</span><input id="cardCode1" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 1" aria-label="Numéro du carton 1"></label>
+          <label><span class="code-index">2</span><input id="cardCode2" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 2" aria-label="Numéro du carton 2"></label>
+          <label><span class="code-index">3</span><input id="cardCode3" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 3" aria-label="Numéro du carton 3"></label>
+          <label><span class="code-index">4</span><input id="cardCode4" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 4" aria-label="Numéro du carton 4"></label>
+          <label><span class="code-index">5</span><input id="cardCode5" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 5" aria-label="Numéro du carton 5"></label>
+          <label><span class="code-index">6</span><input id="cardCode6" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 6" aria-label="Numéro du carton 6"></label>
         </div>
-      </form>
-
-      <form id="codesForm" hidden>
-        <div class="codes-heading"><button id="backToCount" class="auto-back" type="button">← Retour</button><span id="codesTitle"></span></div>
-        <div id="cardCodeFields" class="card-code-fields"></div>
-        <button id="loadCards" class="auto-primary auto-full" type="submit">Afficher mes cartons</button>
+        <button id="loadCards" class="auto-primary auto-full" type="submit">Valider mes cartons</button>
       </form>
       <p id="setupMessage" class="auto-message" role="status" aria-live="polite"></p>
-      <p class="auto-help">Saisissez le numéro ou le code imprimé sur chaque carton.</p>
     </section>
 
     <section id="play" class="play-screen" hidden>
-      <div class="play-summary auto-panel">
-        <div><span class="summary-label">PARTIE EN COURS</span><strong id="partMode">En attente du tirage</strong></div>
-        <div class="summary-last"><span>Dernier numéro</span><strong id="lastNumber">--</strong></div>
-      </div>
-      <div id="autoAlert" class="auto-alert" role="status" aria-live="assertive" hidden></div>
-      <div class="cards-toolbar"><strong id="cardsCountLabel"></strong><button id="editCards" class="auto-secondary" type="button">Modifier mes cartons</button></div>
+      <div id="autoAlert" class="auto-alert" role="status" aria-live="polite" hidden></div>
       <div id="trackedCards" class="tracked-cards"></div>
-      <p class="auto-footnote">Les numéros se mettent à jour en direct. En cas d’erreur de tirage, le carton se corrige automatiquement.</p>
     </section>
   </main>
+
+  <div id="winnerModal" class="winner-modal" role="dialog" aria-modal="true" aria-labelledby="winnerTitle" aria-describedby="winnerCodes" hidden>
+    <section class="winner-dialog">
+      <div class="winner-symbol" aria-hidden="true">★</div>
+      <h2 id="winnerTitle">Carton gagnant !</h2>
+      <p id="winnerCodes" class="winner-codes"></p>
+      <button id="winnerClose" class="auto-primary auto-full" type="button">Fermer</button>
+    </section>
+  </div>
 
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/core.js"></script>
-  <script src="js/jeu-automatique.js"></script>
+  <script src="js/jeu-automatique.js?v=5-auto-20261104-4"></script>
 </body>
 </html>
