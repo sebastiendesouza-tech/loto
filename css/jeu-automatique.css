@@ -11,5 +11,6 @@
 .tracked-card.card-candidate{border-color:#e7a81e}
 .tracked-card.card-still-in{border-color:#d4941b}.tracked-card.card-unconfirmed{border-color:#6e5322;opacity:.85}
 .auto-game-body #codesForm[hidden]{display:none}
+.auto-playing .auto-header,.auto-playing .play-summary,.auto-playing .cards-toolbar,.auto-playing .auto-footnote{display:none!important}
 @media(min-width:600px){.auto-main{padding:24px 18px}.setup-panel{padding:28px}.tracked-cards{grid-template-columns:1fr 1fr}.auto-bingo-grid td{height:50px}}
 @media(max-width:360px){.auto-main{padding:11px 8px}.setup-panel{padding:18px 13px}.play-summary{padding:12px}.auto-bingo-grid{border-spacing:2px;padding:4px}.auto-bingo-grid td{height:28px;font-size:12px}}
