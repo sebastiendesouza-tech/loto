@@ -65,7 +65,12 @@ function renderLots(s){
 
   publicPartHeader.textContent = s.miniBingoActive ? 'MINI-BINGO' : (total ? `Partie ${index}/${total}` : 'Partie simple');
   publicGameTitle.textContent = s.miniBingoActive ? 'Mini-bingo' : (total ? `Partie n°${index}` : 'Partie simple');
-  publicGameMode.textContent = s.miniBingoActive ? 'Jeu : Mini-bingo' : (partie ? `Jeu : ${Loto.gameModeLabel(partie)}` : 'Jeu : tirage simple');
+  const mode = partie?.gameMode || 'ligne';
+  const requirement = Loto.currentRequirement();
+  const rule = mode === 'perdant' ? 'Aucun numéro tiré sur le carton'
+    : mode === 'carton' || mode === 'bingoMystere' ? 'Carton plein'
+    : requirement.label;
+  publicGameMode.textContent = s.miniBingoActive ? 'Jeu : Mini-bingo' : (partie ? `Jeu : ${rule}` : 'Jeu : tirage simple');
 
   if(!opts.showLots || !partie){
     publicStep.textContent = '';
@@ -75,12 +80,11 @@ function renderLots(s){
 
   const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false).slice(0,3);
   publicStep.textContent = '';
-  const mode = partie?.gameMode || 'ligne';
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
     const lotLabel = mode === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
-    const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : '';
+    const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : mode === 'bingoMystere' ? '<span class="public-prize-condition">CARTON PLEIN</span>' : '';
     return `<div class="public-prize-row ${cls}"><div class="public-prize-line"><span class="public-prize-label">${lotLabel} :</span> <span class="public-prize-value">${esc(lot)}</span>${step}</div></div>`;
   }).join('')}</div>`;
 }
