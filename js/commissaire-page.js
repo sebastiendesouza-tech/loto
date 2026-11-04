@@ -9,8 +9,6 @@ const showBtn = document.getElementById('showPublic');
 const hideBtn = document.getElementById('hidePublic');
 const publicCardActions = document.getElementById('publicCardActions');
 const currentLot = document.getElementById('currentLot');
-const salesTrackingBanner = document.getElementById('salesTrackingBanner');
-const cardControlHelp = document.getElementById('cardControlHelp');
 let lastResult = null;
 let lastCardClosedAt = 0;
 
@@ -31,26 +29,11 @@ function cardGridHtml(r){
 }
 
 function diagnosticHtml(r){
-  const details = r.messages && r.messages.length ? r.messages : [r.reason].filter(Boolean);
-  if(!details.length) return '';
-  return `<ul class="diagnostic-list">${details.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
+  const label = Loto.cardFailureLabel(r);
+  return label ? `<ul class="diagnostic-list"><li>${esc(label)}</li></ul>` : '';
 }
 
 
-
-function renderSalesTrackingMode(s){
-  if(!salesTrackingBanner) return;
-  const enabled = Loto.programSettings().salesTrackingEnabled;
-  if(enabled){
-    salesTrackingBanner.className = 'notice success';
-    salesTrackingBanner.innerHTML = '<b>Suivi des ventes activé</b><br>Un gain ne sera validé que si le carton a été enregistré comme vendu pour ce loto.';
-    if(cardControlHelp) cardControlHelp.textContent = 'Scannez le QR code du carton ou saisissez son numéro.';
-  }else{
-    salesTrackingBanner.className = 'notice';
-    salesTrackingBanner.innerHTML = '<b>Suivi des ventes désactivé</b><br>Le contrôle vérifie uniquement si le carton est gagnant. Aucun contrôle de vente ne sera effectué.';
-    if(cardControlHelp) cardControlHelp.textContent = 'Pour les cartons existants sans QR code, saisissez directement leur numéro.';
-  }
-}
 
 function renderLot(s){
   if(!currentLot) return;
@@ -75,10 +58,16 @@ function renderResult(payload){
 
   const r = payload.result;
   lastResult = r;
+  const unsold = r.salesTrackingEnabled && !r.soldForCurrentLoto;
+  const status = r.loserMode
+    ? (unsold ? 'CARTON NON VENDU' : r.winnerEligible ? 'GAGNANT · DERNIER CARTON' : r.stillInGame ? 'ENCORE EN JEU' : 'ÉLIMINÉ')
+    : (r.valid ? 'GAIN VALIDE' : 'NON VALIDE');
+  const good = r.valid || (r.stillInGame && !unsold);
   result.innerHTML = `
-    <div class="simple-control-result ${r.valid ? 'valid' : 'invalid'}">
-      <div class="simple-control-status ${r.valid ? 'ok' : 'bad'}">${r.valid ? 'VALIDE' : 'NON VALIDE'}</div>
+    <div class="simple-control-result ${good ? 'valid' : 'invalid'}">
+      <div class="simple-control-status ${good ? 'ok' : 'bad'}">${status}</div>
       ${cardGridHtml(r)}
+      ${diagnosticHtml(r)}
     </div>`;
   showBtn.style.display = 'inline-flex';
   if(publicCardActions) publicCardActions.style.display = 'flex';
@@ -99,7 +88,6 @@ Loto.onChange((s) => {
   Loto.renderNumbers(grid);
   last.textContent = Loto.lastNumber();
   renderLot(s);
-  renderSalesTrackingMode(s);
   if(s.publicCard){
     renderResult({found:true,result:s.publicCard});
     if(publicCardActions) publicCardActions.style.display = 'flex';
@@ -126,12 +114,3 @@ function renderLastScanFromStorage(){
 
 Loto.ensureSession();
 renderLastScanFromStorage();
-
-function correctionNumberValue(id){ return Number(document.getElementById(id)?.value || 0); }
-function setCorrectionMsg(text, good=true){ const el=document.getElementById('commCorrectionMsg'); if(!el) return; el.textContent=text; el.className=good?'ok':'bad'; }
-const commUndo=document.getElementById('commUndo');
-if(commUndo) commUndo.onclick=async()=>{ if(confirm('Annuler le dernier numéro tiré ?')){ await Loto.undoLast(); setCorrectionMsg('Dernier numéro annulé.'); } };
-const commCancelBtn=document.getElementById('commCancelBtn');
-if(commCancelBtn) commCancelBtn.onclick=async()=>{ const n=correctionNumberValue('commCancelNumber'); if(!n) return; if(confirm('Annuler le numéro '+n+' ?')){ await Loto.cancelNumber(n,'commissaire'); document.getElementById('commCancelNumber').value=''; setCorrectionMsg('Numéro '+n+' annulé.'); } };
-const commReplaceBtn=document.getElementById('commReplaceBtn');
-if(commReplaceBtn) commReplaceBtn.onclick=async()=>{ const oldN=correctionNumberValue('commOldNumber'), newN=correctionNumberValue('commNewNumber'); if(!oldN||!newN) return; if(confirm('Remplacer '+oldN+' par '+newN+' ?')){ await Loto.replaceNumber(oldN,newN,'commissaire'); document.getElementById('commOldNumber').value=''; document.getElementById('commNewNumber').value=''; setCorrectionMsg('Correction enregistrée : '+oldN+' remplacé par '+newN+'.'); } };
