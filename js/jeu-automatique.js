@@ -31,7 +31,7 @@ function createFields(count){
 }
 countForm.addEventListener('submit',event=>{event.preventDefault();createFields(Number($('cardCount').value));});
 $('backToCount').addEventListener('click',()=>{codesForm.hidden=true;countForm.hidden=false;setupMessage.textContent='';});
-$('editCards').addEventListener('click',()=>{play.hidden=true;setup.hidden=false;codesForm.hidden=true;countForm.hidden=false;setupMessage.textContent='';$('loadCards').disabled=false;});
+$('editCards').addEventListener('click',()=>{document.body.classList.remove('auto-playing');play.hidden=true;setup.hidden=false;codesForm.hidden=true;countForm.hidden=false;setupMessage.textContent='';$('loadCards').disabled=false;lastRenderedStateKey='';});
 
 codesForm.addEventListener('submit',async event=>{
   event.preventDefault();if(!$('loadCards').disabled){$('loadCards').disabled=true;setupMessage.textContent='Recherche des cartons…';}
@@ -46,7 +46,7 @@ codesForm.addEventListener('submit',async event=>{
     if(missing!==-1){setupMessage.textContent=`Carton « ${codes[missing]} » introuvable. Vérifiez son numéro.`;$('loadCards').disabled=false;return;}
     selectedCards.splice(0,selectedCards.length,...rows);
     rememberedWinners=new Set();winnerRound='';lastRenderedStateKey='';
-    setup.hidden=true;play.hidden=false;
+    setup.hidden=true;play.hidden=false;document.body.classList.add('auto-playing');
     $('cardsCountLabel').textContent=`${rows.length} carton${rows.length>1?'s':''} suivi${rows.length>1?'s':''}`;
     setupMessage.textContent='';
     render(Loto.state());
@@ -57,13 +57,12 @@ function roundKey(state){return `${state.currentPartieIndex||0}:${state.currentP
 function paintCard(card,state,result,checkingSale=false){
   const draws=new Set([...(state.drawnNumbers||[]).map(Number),...(state.pendingNumber?[Number(state.pendingNumber)]:[])]);
   const grid=cardGrid(card);
-  let status='En attente du tirage';let cardClass='';
+  let status='';let cardClass='';
   if(result.requirement?.mode==='perdant'){
-    if(result.stillInGame){status='Toujours en jeu';cardClass=' card-still-in';}
-    else{status='Numéro sorti sur ce carton';cardClass=' card-eliminated';}
+    if(result.stillInGame)cardClass=' card-still-in';
+    else cardClass=' card-eliminated';
   }else if(result.valid&&checkingSale){status='Vérification de la vente…';cardClass=' card-candidate';}
   else if(result.valid){status='🎉 CARTON GAGNANT !';cardClass=' card-winning';}
-  else if(draws.size){status=`${result.hitsOnCard?.length||0} numéro${result.hitsOnCard?.length===1?'':'s'} trouvé${result.hitsOnCard?.length===1?'':'s'}`;}
   const rows=grid.map(row=>`<tr>${row.map(n=>{
     if(!n)return '<td class="empty"></td>';
     const hit=draws.has(Number(n));const pending=Number(state.pendingNumber)===Number(n);
@@ -125,7 +124,7 @@ function loadLoserPool(state){
 }
 async function checkLastLoserCard(state,stillInGame,alert,token){
   if(!Loto.programSettings().salesTrackingEnabled){
-    alert.hidden=false;alert.className='auto-alert loser';alert.textContent='🎱 Votre carton est encore en jeu. Activez le suivi des ventes pour confirmer le dernier carton.';return;
+    alert.hidden=true;return;
   }
   const drawn=new Set([...(state.drawnNumbers||[]),...(state.pendingNumber?[state.pendingNumber]:[])].map(Number));
   const key=`${roundKey(state)}:${[...drawn].sort((a,b)=>a-b).join(',')}`;
@@ -146,11 +145,10 @@ async function checkLastLoserCard(state,stillInGame,alert,token){
     });
     const ownWinners=remaining.length===1?stillInGame.filter(({card})=>remainingSet.has(Number(card.numero))):[];
     if(ownWinners.length)showWinnerAlert(alert,ownWinners,token);
-    else if(remaining.length===0){alert.hidden=false;alert.className='auto-alert loser';alert.textContent='Aucun carton vendu encore en jeu.';}
-    else{alert.hidden=false;alert.className='auto-alert loser';alert.textContent=`🎱 Votre carton est encore en jeu · ${remaining.length} carton${remaining.length>1?'s':''} vendu${remaining.length>1?'s':''} restant${remaining.length>1?'s':''}.`;}
+    else{alert.hidden=true;alert.textContent='';}
   }catch(error){
     if(token!==renderToken)return;
-    alert.hidden=false;alert.className='auto-alert loser';alert.textContent='Votre carton est encore en jeu. Le commissaire doit confirmer le dernier carton.';
+    alert.hidden=true;alert.textContent='';
   }
 }
 function render(state){
@@ -185,5 +183,4 @@ function render(state){
 
 Loto.onChange(state=>{
   render(state);
-  if(state.gameActive===false&&selectedCards.length)$('partMode').textContent='En attente du prochain tirage';
 });
