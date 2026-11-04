@@ -270,7 +270,7 @@
     const isLastPartie = currentPi >= parties.length - 1;
     const progress = nextProgress();
     const toast = endOfPartieToast();
-    const patch = { ...progress, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
+    const patch = { ...progress, gameActive:true, gameEnded:false, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
     if(isLastPrize) applyMiniBingoLastNumber(patch);
     if(toast){
       patch.toast=toast; patch.drawnNumbers=[]; patch.pendingNumber=null; patch.publicCard=null; patch.checkedCards=[];

@@ -33,7 +33,22 @@ function diagnosticHtml(r){const label=Loto.cardFailureLabel(r);return label?`<u
 function renderAnimCard(payload){if(!animCardResult)return; if(!payload){animCardResult.innerHTML='';return;} if(!payload.found){animCardResult.innerHTML=`<p class="bad">${esc(payload.message||Loto.knownMissingCardMessage(payload.numero)||("Carton "+payload.numero+" non enregistré dans la base."))}</p>`;return;} const r=payload.result; const loser=r.loserMode; const unsold=r.salesTrackingEnabled&&!r.soldForCurrentLoto; const status=loser?(unsold?'<span class="bad">CARTON NON VENDU</span>':r.winnerEligible?'<span class="ok">GAGNANT · DERNIER CARTON</span>':r.stillInGame?'<span class="ok">ENCORE EN JEU</span>':'<span class="bad">ÉLIMINÉ</span>'):(r.valid?'<span class="ok">GAIN VALIDE</span>':'<span class="bad">NON VALIDE</span>'); animCardResult.innerHTML=`<div class="control-card-result ${r.valid||r.stillInGame&&!unsold?'valid':'invalid'}"><b>Carton ${esc(r.numero)}</b> · ${status}${cardMiniHtml(r)}${diagnosticHtml(r)}</div>`;}
 document.getElementById('animCheckBtn').onclick=async()=>{if(!animCardNumber.value)return; const payload=await Loto.controlCard(animCardNumber.value); renderAnimCard(payload); if(payload?.found) await Loto.showPublicCard(payload.result);};
 animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animCheckBtn').click();};
-document.getElementById('winner').onclick=()=>Loto.winner();
+const nextPartieButton=document.getElementById('winner');
+nextPartieButton.onclick=async()=>{
+  if(nextPartieButton.disabled)return;
+  const s=Loto.state(),parties=s.program?.parties||[],pi=Number(s.currentPartieIndex||0),li=Number(s.currentPrizeIndex||0);
+  const prizes=(parties[pi]?.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
+  let question;
+  if(s.miniBingoActive)question='Terminer le mini-bingo et le loto ?\nLes numéros du tirage seront effacés.';
+  else if(s.miniBingoReady){alert('Le mini-bingo est en attente. Utilisez « Lancer Mini-bingo ».');return;}
+  else if(li<prizes.length-1)question=`Passer au lot suivant de la partie n°${pi+1} ?\nLes numéros déjà tirés seront conservés.`;
+  else if(pi<parties.length-1)question=`Passer à la partie n°${pi+2} ?\nLes numéros du tirage actuel seront remis à zéro.`;
+  else if(s.options?.bingoEnabled&&!s.miniBingoWon)question='Terminer la dernière partie et préparer le mini-bingo ?\nLes numéros du tirage actuel seront remis à zéro.';
+  else question='Terminer cette partie et le loto ?\nLes numéros du tirage actuel seront remis à zéro.';
+  if(!confirm(question))return;
+  nextPartieButton.disabled=true;
+  try{await Loto.winner();}finally{nextPartieButton.disabled=false;}
+};
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
 if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
 let legacyModeUpdateScheduled=false;
@@ -63,14 +78,19 @@ function renderLot(s){
   if(miniBingoWon)miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none';
   if(startMiniBingoBtn)startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none';
   if(s.miniBingoActive){currentLot.innerHTML='<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>';return;}
-  const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':s.gameEnded&&!s.gameActive?'Fin du loto':'';
   const p=Loto.currentPartie();
+  const parties=s.program?.parties||[];
+  const lastPartie=!parties.length||Number(s.currentPartieIndex||0)>=parties.length-1;
+  const prizeCount=(p?.prizes||[]).filter(prize=>prize&&prize.enabled!==false).length;
+  const lastPrize=!prizeCount||Number(s.currentPrizeIndex||0)>=prizeCount-1;
+  const lotoEnded=!!s.gameEnded&&!s.gameActive&&lastPartie&&lastPrize;
+  const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
   if(!p){currentLot.innerHTML=`<div class="commissaire-lot-title">Partie simple</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
   currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length} · ${esc(p.name||'Partie')}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
-    const cls=i<prizeIndex?'won':i===prizeIndex&&s.gameActive&&!s.miniBingoReady?'active':'upcoming';
+    const cls=i<prizeIndex?'won':i===prizeIndex&&!lotoEnded&&!s.miniBingoReady?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
     return `<div class="commissaire-prize-row ${cls}"><div><strong>${label} :</strong> <span>${esc(prize.label||'Lot non renseigné')}</span></div><small>${condition}</small></div>`;
