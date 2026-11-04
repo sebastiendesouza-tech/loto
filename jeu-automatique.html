@@ -23,15 +23,15 @@
   <main class="auto-main">
     <section id="setup" class="auto-panel setup-panel">
       <h1>Vos cartons</h1>
-      <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton. Laissez les autres cases vides.</p>
-      <form id="codesForm">
+      <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton, de 101000 à 102999. Laissez les autres cases vides.</p>
+      <form id="codesForm" novalidate>
         <div id="cardCodeFields" class="card-code-fields">
-          <label><span class="code-index">1</span><input id="cardCode1" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 1" aria-label="Numéro du carton 1"></label>
-          <label><span class="code-index">2</span><input id="cardCode2" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 2" aria-label="Numéro du carton 2"></label>
-          <label><span class="code-index">3</span><input id="cardCode3" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 3" aria-label="Numéro du carton 3"></label>
-          <label><span class="code-index">4</span><input id="cardCode4" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 4" aria-label="Numéro du carton 4"></label>
-          <label><span class="code-index">5</span><input id="cardCode5" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 5" aria-label="Numéro du carton 5"></label>
-          <label><span class="code-index">6</span><input id="cardCode6" name="cardCode" type="text" autocomplete="off" autocapitalize="characters" maxlength="100" placeholder="Numéro du carton 6" aria-label="Numéro du carton 6"></label>
+          <label><span class="code-index">1</span><input id="cardCode1" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 1" aria-label="Numéro du carton 1"></label>
+          <label><span class="code-index">2</span><input id="cardCode2" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 2" aria-label="Numéro du carton 2"></label>
+          <label><span class="code-index">3</span><input id="cardCode3" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 3" aria-label="Numéro du carton 3"></label>
+          <label><span class="code-index">4</span><input id="cardCode4" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 4" aria-label="Numéro du carton 4"></label>
+          <label><span class="code-index">5</span><input id="cardCode5" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 5" aria-label="Numéro du carton 5"></label>
+          <label><span class="code-index">6</span><input id="cardCode6" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 6" aria-label="Numéro du carton 6"></label>
         </div>
         <button id="loadCards" class="auto-primary auto-full" type="submit">Valider mes cartons</button>
       </form>
@@ -56,6 +56,6 @@
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/core.js"></script>
-  <script src="js/jeu-automatique.js?v=5-auto-20261104-5"></script>
+  <script src="js/jeu-automatique.js?v=5-auto-20261104-6"></script>
 </body>
 </html>
