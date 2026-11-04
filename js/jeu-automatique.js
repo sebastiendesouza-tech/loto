@@ -14,6 +14,19 @@ let lastLoserLookupKey = '';
 let lastRenderedStateKey = '';
 let loserPoolKey = '';
 let loserPoolPromise = null;
+let selectionTouched = false;
+const selectionStorageKey='loto_auto_cards_v1:'+encodeURIComponent(Loto.code());
+function readStoredSelection(){
+  try{
+    const codes=JSON.parse(localStorage.getItem(selectionStorageKey));
+    if(!Array.isArray(codes)||codes.length>6||!codes.every(code=>typeof code==='string')||!codes.some(code=>code.trim()))return null;
+    return Array.from({length:6},(_,i)=>codes[i]||'');
+  }catch(error){return null;}
+}
+function rememberSelection(codes){
+  try{localStorage.setItem(selectionStorageKey,JSON.stringify(codes));}catch(error){console.warn('Mémorisation des cartons indisponible.',error);}
+}
+codeFields.addEventListener('input',()=>{selectionTouched=true;});
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function displayCode(card){return card.external_code||card.carton_code||String(card.numero);}
@@ -25,6 +38,7 @@ function cardGrid(card){
   return grid;
 }
 $('editCards').addEventListener('click',()=>{
+  selectionTouched=true;
   closeWinnerModal();
   ++renderToken;
   document.body.classList.remove('auto-playing');
@@ -33,29 +47,37 @@ $('editCards').addEventListener('click',()=>{
   codeFields.querySelector('input')?.focus();
 });
 
-codesForm.addEventListener('submit',async event=>{
-  event.preventDefault();
+async function loadEnteredCards(){
   const button=$('loadCards');
   if(button.disabled)return;
-  const entries=[...codeFields.querySelectorAll('input')].map(input=>({input,code:input.value.trim()})).filter(entry=>entry.code);
+  const inputs=[...codeFields.querySelectorAll('input')];
+  const fieldValues=inputs.map(input=>input.value.trim());
+  const entries=inputs.map((input,i)=>({input,code:fieldValues[i]})).filter(entry=>entry.code);
   if(!entries.length){setupMessage.textContent='Saisissez au moins un numéro de carton.';codeFields.querySelector('input')?.focus();return;}
   if(entries.length>6){setupMessage.textContent='Vous pouvez suivre 6 cartons maximum.';return;}
+  const invalid=entries.find(({code})=>!/^\d{6}$/.test(code)||Number(code)<101000||Number(code)>102999);
+  if(invalid){setupMessage.textContent='Chaque numéro de carton doit être compris entre 101000 et 102999 (6 chiffres).';invalid.input.focus();return;}
   const codes=entries.map(entry=>entry.code);
   if(new Set(codes.map(code=>code.toUpperCase())).size!==codes.length){setupMessage.textContent='Un même carton a été saisi plusieurs fois.';return;}
-  button.disabled=true;setupMessage.textContent='Recherche des cartons…';
+  button.disabled=true;inputs.forEach(input=>{input.disabled=true;});setupMessage.textContent='Recherche des cartons…';
   try{
     const rows=await Promise.all(codes.map(code=>Loto.fetchCard(code)));
     const missing=rows.findIndex(row=>!row);
     if(missing!==-1){setupMessage.textContent=`Carton « ${codes[missing]} » introuvable. Vérifiez son numéro.`;entries[missing].input.focus();return;}
     if(new Set(rows.map(card=>String(card.numero))).size!==rows.length){setupMessage.textContent='Deux numéros correspondent au même carton. Corrigez la saisie.';return;}
     selectedCards.splice(0,selectedCards.length,...rows);
+    rememberSelection(fieldValues);
     rememberedWinners=new Set();winnerRound='';lastRenderedStateKey='';lastLoserLookupKey='';
     setup.hidden=true;play.hidden=false;$('editCards').hidden=false;
     document.body.classList.add('auto-playing');
     setupMessage.textContent='';
     render(Loto.state());
   }catch(error){setupMessage.textContent='Impossible de lire les cartons. Vérifiez la connexion puis réessayez.';}
-  finally{button.disabled=false;}
+  finally{button.disabled=false;inputs.forEach(input=>{input.disabled=false;});}
+}
+codesForm.addEventListener('submit',event=>{
+  event.preventDefault();selectionTouched=true;
+  return loadEnteredCards();
 });
 
 function roundKey(state){return `${state.currentPartieIndex||0}:${state.currentPrizeIndex||0}:${state.miniBingoActive?'mini':'classique'}`;}
@@ -215,8 +237,12 @@ Loto.onChange(state=>{
   render(state);
 });
 
-// Charger le tirage déjà enregistré et démarrer son suivi en temps réel.
-Loto.ensureSession().catch(error=>{
+// Retrouver les six cases et recharger les cartons avec le tirage actuel.
+const storedSelection=readStoredSelection();
+if(storedSelection)[...codeFields.querySelectorAll('input')].forEach((input,i)=>{input.value=storedSelection[i];});
+Loto.ensureSession().then(()=>{
+  if(storedSelection&&!selectionTouched)return loadEnteredCards();
+}).catch(error=>{
   console.error('Connexion au tirage impossible.',error);
   const status=$('connectionStatus');
   status.textContent='Connexion indisponible';
