@@ -84,8 +84,7 @@
     }
     async function command(action, value){
       const s = snapshot();
-      if(host || !s.online || pending || (action !== 'source-mode' && !s.ready)
-        || (action === 'source-mode' && value === 'micro' && !s.ready)) return;
+      if(host || !s.online || pending || (action !== 'source-mode' && !s.ready)) return;
       error = '';
       const request = {hostId:remote.hostId, requestId:id + '_' + (++sequence), action, value};
       pending = request;
