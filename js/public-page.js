@@ -53,7 +53,13 @@ function ordinalLabel(i){
   return i === 0 ? '1er LOT' : (i + 1) + 'e LOT';
 }
 
-function stepLabelFor(partie, index){return Loto.stepLabel(partie,index).toUpperCase();}
+function stepLabelFor(partie, index){
+  if((partie?.gameMode || 'ligne') === 'bingoMystere') return 'BINGO MYSTÈRE';
+  if((partie?.gameMode || 'ligne') === 'carton') return 'CARTON PLEIN';
+  if(index === 0) return '1 LIGNE';
+  if(index === 1) return '2 LIGNES';
+  return 'CARTON PLEIN';
+}
 
 function renderLots(s){
   const opts = s.options || {};
@@ -72,13 +78,13 @@ function renderLots(s){
     return;
   }
 
-  const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false);
+  const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false).slice(0,3);
   publicStep.textContent = '';
   const mode = partie?.gameMode || 'ligne';
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
-    const lotLabel = ordinalLabel(i);
+    const lotLabel = mode === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
     const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : '';
     return `<div class="public-prize-row ${cls}"><div class="public-prize-line"><span class="public-prize-label">${lotLabel} :</span> <span class="public-prize-value">${esc(lot)}</span>${step}</div></div>`;
   }).join('')}</div>`;

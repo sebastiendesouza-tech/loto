@@ -54,15 +54,12 @@ function renderSalesTrackingMode(s){
 
 function renderLot(s){
   if(!currentLot) return;
-  if(!Loto.gameStatus(s).active){currentLot.textContent=s.gameEnded?'Loto terminé. Aucun loto en cours.':'Aucun loto en cours.';return;}
   if(s.miniBingoActive){ currentLot.innerHTML = '<b>MINI-BINGO</b> · tirage de départage en cours'; return; }
   const p = Loto.currentPartie();
   const prize = Loto.currentPrize();
   if(!p || !prize){ currentLot.innerHTML = '<b>Lot en cours :</b> partie simple sans programme'; return; }
   const req = Loto.currentRequirement();
-  const mode=Loto.gameModeLabel(p);
-  const condition=req.label && req.label!==mode ? `<br><strong>${esc(req.label)}</strong>` : '';
-  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(mode)}</span>${condition}<br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
+  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(Loto.gameModeLabel(p))}</span><br><strong>${esc(req.label || '')}</strong><br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
 }
 
 function renderResult(payload){
@@ -129,3 +126,12 @@ function renderLastScanFromStorage(){
 
 Loto.ensureSession();
 renderLastScanFromStorage();
+
+function correctionNumberValue(id){ return Number(document.getElementById(id)?.value || 0); }
+function setCorrectionMsg(text, good=true){ const el=document.getElementById('commCorrectionMsg'); if(!el) return; el.textContent=text; el.className=good?'ok':'bad'; }
+const commUndo=document.getElementById('commUndo');
+if(commUndo) commUndo.onclick=async()=>{ if(confirm('Annuler le dernier numéro tiré ?')){ await Loto.undoLast(); setCorrectionMsg('Dernier numéro annulé.'); } };
+const commCancelBtn=document.getElementById('commCancelBtn');
+if(commCancelBtn) commCancelBtn.onclick=async()=>{ const n=correctionNumberValue('commCancelNumber'); if(!n) return; if(confirm('Annuler le numéro '+n+' ?')){ await Loto.cancelNumber(n,'commissaire'); document.getElementById('commCancelNumber').value=''; setCorrectionMsg('Numéro '+n+' annulé.'); } };
+const commReplaceBtn=document.getElementById('commReplaceBtn');
+if(commReplaceBtn) commReplaceBtn.onclick=async()=>{ const oldN=correctionNumberValue('commOldNumber'), newN=correctionNumberValue('commNewNumber'); if(!oldN||!newN) return; if(confirm('Remplacer '+oldN+' par '+newN+' ?')){ await Loto.replaceNumber(oldN,newN,'commissaire'); document.getElementById('commOldNumber').value=''; document.getElementById('commNewNumber').value=''; setCorrectionMsg('Correction enregistrée : '+oldN+' remplacé par '+newN+'.'); } };
