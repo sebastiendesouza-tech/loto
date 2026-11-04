@@ -37,12 +37,18 @@ function diagnosticHtml(r){
 
 function renderLot(s){
   if(!currentLot) return;
-  if(s.miniBingoActive){ currentLot.innerHTML = '<b>MINI-BINGO</b> · tirage de départage en cours'; return; }
+  if(s.miniBingoActive){ currentLot.innerHTML = '<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>'; return; }
   const p = Loto.currentPartie();
-  const prize = Loto.currentPrize();
-  if(!p || !prize){ currentLot.innerHTML = '<b>Lot en cours :</b> partie simple sans programme'; return; }
-  const req = Loto.currentRequirement();
-  currentLot.innerHTML = `<b>${esc(p.name || 'Partie')}</b><br><span>${esc(Loto.gameModeLabel(p))}</span><br><strong>${esc(req.label || '')}</strong><br><b>LOT : ${esc(prize.label || 'Lot non renseigné')}</b>`;
+  if(!p){ currentLot.innerHTML = '<div class="commissaire-lot-title">Aucun lot programmé</div><div class="commissaire-lot-mode">Partie simple</div>'; return; }
+  const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(x=>x&&x.enabled!==false);
+  const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
+  const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
+  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} · ${esc(p.name||'Partie')}</div><div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+    const cls=i<prizeIndex?'won':i===prizeIndex?'active':'upcoming';
+    const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
+    const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO': 'CARTON PLEIN';
+    return `<div class="commissaire-prize-row ${cls}"><div><strong>${label} :</strong> <span>${esc(prize.label||'Lot non renseigné')}</span></div><small>${condition}</small></div>`;
+  }).join('')}</div>`;
 }
 
 function renderResult(payload){
