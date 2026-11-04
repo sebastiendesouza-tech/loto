@@ -3,6 +3,12 @@ Loto.protectPage();
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active');});
 const activeGameControl=document.getElementById('activeGameControl');
+const showPlayerCards=document.getElementById('showPlayerCards');
+showPlayerCards.addEventListener('change',async()=>{
+  await Loto.save({options:{...Loto.state().options,showPlayerCards:showPlayerCards.checked}});
+  showSavedMessage(showPlayerCards.checked?'Bouton « Mes cartons » affiché sur la page joueur.':'Bouton « Mes cartons » masqué sur la page joueur.');
+});
+Loto.onChange(s=>{showPlayerCards.checked=!!s.options?.showPlayerCards;});
 const lotoName=document.getElementById('lotoName'),lotoDate=document.getElementById('lotoDate'),partieCount=document.getElementById('partieCount'),partiesList=document.getElementById('partiesList'),showLots=document.getElementById('showLots'),bingoEnabled=document.getElementById('bingoEnabled'),showBingo=document.getElementById('showBingo'),prevalidate=document.getElementById('prevalidate'),lastNumberRequired=document.getElementById('lastNumberRequired'),saveMsg=document.getElementById('saveMsg'),savedProgramsList=document.getElementById('savedProgramsList'),salesTrackingEnabled=document.getElementById('salesTrackingEnabled');
 
 const prizeTypes=['Lot 1','Lot 2','Lot 3'];

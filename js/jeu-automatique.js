@@ -1,5 +1,6 @@
 Loto.pageHeader();
 const $ = id => document.getElementById(id);
+$('returnToPlayer').href='joueur.html?s='+encodeURIComponent(Loto.code());
 const setup = $('setup');
 const play = $('play');
 const codesForm = $('codesForm');

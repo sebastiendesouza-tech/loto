@@ -1,6 +1,7 @@
 Loto.pageHeader();
 const grid=document.getElementById('grid'),last=document.getElementById('last');
 const lotsBtn=document.getElementById('playerLotsBtn'),lotsPanel=document.getElementById('playerLotsPanel'),lotsContent=document.getElementById('playerLotsContent'),lotsTitle=document.getElementById('playerLotsTitle');
+const cardsLink=document.getElementById('playerCardsLink');
 let previous=null;
 function partRule(mode,index){
   if(mode==='perdant') return 'Aucun numéro tiré sur le carton';
@@ -8,6 +9,10 @@ function partRule(mode,index){
   return index===0?'1 ligne':index===1?'2 lignes':'Carton plein';
 }
 function renderLots(s){
+  const showCards=!!s.options?.showPlayerCards;
+  cardsLink.hidden=!showCards;
+  cardsLink.href='jeu-automatique.html?s='+encodeURIComponent(Loto.code());
+  document.getElementById('playerHeading').classList.toggle('has-cards-link',showCards);
   const parties=s.program?.parties||[],partIndex=Number(s.currentPartieIndex||0),partie=parties[partIndex];
   document.getElementById('playerPartLabel').textContent=s.miniBingoActive?'Mini-bingo':partie?`Partie ${partIndex+1} / ${parties.length}`:'Partie —';
   const prizes=(partie?.prizes||[]).filter(p=>p&&p.enabled!==false);
