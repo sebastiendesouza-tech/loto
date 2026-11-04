@@ -155,13 +155,14 @@ function render(state){
   if(!state)return;
   const pi=state.currentPartieIndex||0,li=state.currentPrizeIndex||0;
   const activePart=(state.program?.parties||[])[pi];
-  const viewKey=[roundKey(state),state.pendingNumber||'',(state.drawnNumbers||[]).join(','),state.gameActive,state.program?.title||'',activePart?.gameMode||'',activePart?.prizes?.[li]?.name||'',JSON.stringify(state.options||{}),selectedCards.map(card=>card.numero).join(',')].join('|');
+  const viewKey=[roundKey(state),state.pendingNumber||'',(state.drawnNumbers||[]).join(','),state.gameActive,state.program?.title||'',state.lotoName||'',state.program?.parties?.length||0,activePart?.gameMode||'',activePart?.prizes?.[li]?.name||'',JSON.stringify(state.options||{}),selectedCards.map(card=>card.numero).join(',')].join('|');
   if(viewKey===lastRenderedStateKey)return;
   lastRenderedStateKey=viewKey;
   Loto.pageHeader();
   $('gameName').textContent=state.program?.title||state.lotoName||'Loto';
   const req=Loto.currentRequirement();
   const currentPart=(state.program?.parties||[])[state.currentPartieIndex||0];
+  $('autoPartLabel').textContent=state.miniBingoActive?'Mini-bingo':currentPart?`Partie ${pi+1} / ${state.program.parties.length}`:'Partie —';
   $('partMode').textContent=currentPart?`Partie ${(state.currentPartieIndex||0)+1} · ${req.label}`:'En attente du tirage';
   const last=state.pendingNumber||(state.drawnNumbers||[]).slice(-1)[0];
   $('lastNumber').textContent=last?String(last).padStart(2,'0'):'--';

@@ -9,6 +9,7 @@ function partRule(mode,index){
 }
 function renderLots(s){
   const parties=s.program?.parties||[],partIndex=Number(s.currentPartieIndex||0),partie=parties[partIndex];
+  document.getElementById('playerPartLabel').textContent=s.miniBingoActive?'Mini-bingo':partie?`Partie ${partIndex+1} / ${parties.length}`:'Partie —';
   const prizes=(partie?.prizes||[]).filter(p=>p&&p.enabled!==false);
   lotsTitle.textContent=partie?`Lots · Partie ${partIndex+1}/${parties.length}`:'Lots de la partie';
   lotsBtn.disabled=!partie||!prizes.length;
