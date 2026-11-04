@@ -495,6 +495,9 @@
 .player-lot-row small{grid-column:1/-1;color:#c7d8ee;font-weight:700;}
 .player-lot-row.active{border:2px solid #f2a900;background:#12365f;}
 .player-lot-row.won{opacity:.5;}
+.commissaire-commandbar{justify-content:space-between;}
+.commissaire-control-toolbar{grid-template-columns:minmax(0,1fr) auto;}
+.commissaire-scan-toolbar{margin-top:7px;}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
 button.danger{background:#a92a2a;color:#fff;border-color:#a92a2a}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
