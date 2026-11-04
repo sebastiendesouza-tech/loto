@@ -62,16 +62,15 @@ if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mi
 function renderLot(s){
   if(miniBingoWon)miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none';
   if(startMiniBingoBtn)startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none';
-  if(s.miniBingoReady){currentLot.innerHTML='<div class="commissaire-lot-title">Loto principal terminé</div><div class="commissaire-lot-mode">Mini-bingo à lancer</div>';return;}
-  if(s.gameEnded&&!s.gameActive){currentLot.innerHTML='<div class="commissaire-lot-title">Fin du loto</div>';return;}
   if(s.miniBingoActive){currentLot.innerHTML='<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>';return;}
+  const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':s.gameEnded&&!s.gameActive?'Fin du loto':'';
   const p=Loto.currentPartie();
-  if(!p){currentLot.innerHTML='<div class="commissaire-lot-title">Partie simple</div><div class="commissaire-lot-mode">Aucun lot programmé</div>';return;}
+  if(!p){currentLot.innerHTML=`<div class="commissaire-lot-title">Partie simple</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
-  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length} · ${esc(p.name||'Partie')}</div><div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
-    const cls=i<prizeIndex?'won':i===prizeIndex?'active':'upcoming';
+  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length} · ${esc(p.name||'Partie')}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+    const cls=i<prizeIndex?'won':i===prizeIndex&&s.gameActive&&!s.miniBingoReady?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
     return `<div class="commissaire-prize-row ${cls}"><div><strong>${label} :</strong> <span>${esc(prize.label||'Lot non renseigné')}</span></div><small>${condition}</small></div>`;
