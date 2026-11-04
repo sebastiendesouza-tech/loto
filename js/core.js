@@ -23,12 +23,13 @@
     gameEnded: false,
     program: { id: '', title: '', date: '', parties: [], sales_tracking_enabled: false },
     savedPrograms: [],
+    _syncRoundId:'',
     updatedAt: new Date().toISOString()
   });
   let state = defaultState();
   let listeners = [];
   let channel = null;
-  const code = () => new URLSearchParams(location.search).get('s') || localStorage.getItem('loto_session_code') || C.DEFAULT_SESSION_CODE || 'SESSION_ACTIVE';
+  const code = () => {let cached='';try{cached=localStorage.getItem('loto_session_code')||'';}catch(error){}return new URLSearchParams(location.search).get('s')||cached||C.DEFAULT_SESSION_CODE||'SESSION_ACTIVE';};
   const title = () => `${state.lotoName || C.APP_NAME || 'Loto by SdS'} ${C.APP_VERSION || ''}`.trim();
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
@@ -46,42 +47,212 @@
     return { salesTrackingEnabled:!!p.sales_tracking_enabled, validationVoucherEnabled:!!p.validation_voucher_enabled };
   }
   function mergeState(next){ state = Object.assign(defaultState(), next || {}); state.program = normalizeProgram(state.program); state.savedPrograms=(state.savedPrograms||[]).map(normalizeProgram); state.sessionCode = code(); notify(); }
-  async function ensureSession(){
-    if(!supabaseClient) { mergeState(safeJson(localStorage.getItem('loto_state'), defaultState())); return; }
-    const sessionCode = code(); localStorage.setItem('loto_session_code', sessionCode);
-    const { data, error } = await supabaseClient.from('loto_app_sessions').select('state').eq('code', sessionCode).maybeSingle();
-    if(error) console.warn(error);
-    if(data && data.state) mergeState(data.state);
-    else {
-      const initial = defaultState(); initial.sessionCode = sessionCode;
-      await supabaseClient.from('loto_app_sessions').upsert({ code: sessionCode, state: initial, updated_at: new Date().toISOString() });
-      mergeState(initial);
+  // Persist individual changes, rather than overwriting a newer remote game.
+  let serverState=null, serverStamp='', sessionStarted=false, syncFlight=null;
+  let syncReady=false, syncError='', syncConflict='', storageError=false;
+  let retryTimer=null, pollTimer=null, lastReadAt=0, sequence=0;
+  const memoryPending=new Map(),syncListeners=[];
+  const writerId=(window.crypto?.randomUUID?.()||('pc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)));
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  const cacheKey=()=> 'loto_cache_v2:'+encodeURIComponent(code());
+  const pendingPrefix=()=> 'loto_pending_v2:'+encodeURIComponent(code())+':';
+  function store(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(error){storageError=true;return false;}}
+  function read(key){try{return safeJson(localStorage.getItem(key),null);}catch(error){return null;}}
+  function pendingChanges(){
+    const found=new Map(memoryPending);
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(key?.startsWith(pendingPrefix())){const op=read(key);if(op?.id&&op.session===code())found.set(op.id,op);}
+      }
+    }catch(error){storageError=true;}
+    return [...found.values()].sort((a,b)=>a.time-b.time||a.sequence-b.sequence||a.id.localeCompare(b.id));
+  }
+  function forget(op){memoryPending.delete(op.id);try{localStorage.removeItem(pendingPrefix()+op.id);}catch(error){storageError=true;}}
+  function syncStatus(){
+    const pending=pendingChanges().length;
+    const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
+    return {state:syncConflict||storageError?'attention':offline||syncError?'offline':syncFlight?'syncing':pending?'pending':syncReady?'online':'waiting',pending,message:syncConflict||(storageError?'Sauvegarde locale indisponible. Gardez cette page ouverte.':syncError)};
+  }
+  function notifySync(){
+    const status=syncStatus();syncListeners.forEach(fn=>fn(status));
+    if(typeof document==='undefined'||!document.querySelectorAll)return;
+    const labels={attention:'À vérifier',offline:'Hors connexion',syncing:'Actualisation…',pending:'En attente',online:'À jour',waiting:'Connexion…'};
+    document.querySelectorAll('[data-sync-status]').forEach(el=>{el.textContent=labels[status.state]+(status.pending?` · ${status.pending} en attente`:'');el.dataset.state=status.state;el.title=status.message||'';});
+    document.querySelectorAll('[data-sync-refresh]').forEach(button=>{button.disabled=!!syncFlight;button.title=status.message||'Relire le tirage et transmettre les changements en attente';});
+  }
+  function onSyncChange(fn){syncListeners.push(fn);fn(syncStatus());return ()=>{const i=syncListeners.indexOf(fn);if(i>=0)syncListeners.splice(i,1);};}
+  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  function difference(before,after){
+    if(same(before,after))return null;
+    if(after&&typeof after==='object'&&!Array.isArray(after)&&before&&typeof before==='object'&&!Array.isArray(before)){
+      const children={};for(const key of Object.keys(after)){const d=difference(before[key],after[key]);if(d)children[key]=d;}
+      return {children};
     }
-    subscribe(sessionCode);
+    return {value:after};
+  }
+  function applyDifference(before,diff){
+    if(Object.prototype.hasOwnProperty.call(diff,'value'))return clone(diff.value);
+    const next={...(before||{})};for(const [key,d] of Object.entries(diff.children))next[key]=applyDifference(next[key],d);return next;
+  }
+  const phase=s=>[s._syncRoundId||'',s.program?.id||'',Number(s.currentPartieIndex||0),!!s.miniBingoActive].join('|');
+  const guarded=new Set(['draw','pending','validate','cancel_pending','undo','cancel_number','replace_number','winner','next_prize','check','show_card','hide_card','stop_game','mini_bingo_start']);
+  const numberOps=new Set(['draw','pending','validate','cancel_pending','undo','cancel_number','replace_number']);
+  const logKey=entry=>JSON.stringify(entry);
+  function makeOperation(patch){
+    const log=patch.history?.[0],type=log?.type||'update';
+    const changes={};
+    for(const [key,value] of Object.entries(patch)){
+      if(key==='history'||(numberOps.has(type)&&['drawnNumbers','pendingNumber'].includes(key)))continue;
+      if(key==='savedPrograms'){
+        const before=state.savedPrograms||[],after=value||[];
+        changes[key]={programs:after.filter(p=>!same(p,before.find(old=>old.id===p.id))),removed:before.filter(p=>!after.some(next=>next.id===p.id)).map(p=>p.id)};
+      }else{const d=difference(state[key],value);if(d)changes[key]=d;}
+    }
+    const previousLogs=new Set((state.history||[]).map(logKey));
+    const time=Date.now();
+    return {id:writerId+'_'+(++sequence),sequence,time,session:code(),phase:phase(state),prize:Number(state.currentPrizeIndex||0),type,data:log?.data||{},pending:state.pendingNumber||null,changes,logs:(patch.history||[]).filter(entry=>!previousLogs.has(logKey(entry)))};
+  }
+  function applyOperation(base,op){
+    const next=clone(base);
+    if((next._syncAppliedOps||[]).includes(op.id))return {state:next,applied:true};
+    if(guarded.has(op.type)&&(op.phase!==phase(next)||(['winner','next_prize'].includes(op.type)&&op.prize!==Number(next.currentPrizeIndex||0))))return {state:next,conflict:true};
+    if(op.changes.program&&op.phase.split('|')[1]&&(op.phase.split('|')[1]!==String(next.program?.id||'')))return {state:next,conflict:true};
+    for(const [key,diff] of Object.entries(op.changes)){
+      if(key==='savedPrograms'){
+        const ids=new Set(diff.programs.map(p=>p.id));
+        next[key]=[...diff.programs,...(next[key]||[]).filter(p=>!ids.has(p.id)&&!diff.removed.includes(p.id))].slice(0,80);
+      }else next[key]=applyDifference(next[key],diff);
+    }
+    if(numberOps.has(op.type)){
+      let drawn=(next.drawnNumbers||[]).map(Number),pending=Number(next.pendingNumber)||null;
+      const n=Number(op.data.n),type=op.type;
+      if(type==='draw'){
+        if(!drawn.includes(n)){if(pending&&!drawn.includes(pending))drawn.push(pending);drawn.push(n);pending=null;}
+      }else if(type==='pending'){
+        if(!drawn.includes(n)){if(pending&&pending!==n&&!drawn.includes(pending))drawn.push(pending);pending=n;}
+      }else if(type==='validate'){
+        if(pending===n){if(!drawn.includes(n))drawn.push(n);pending=null;}
+      }else if(type==='cancel_pending'){if(pending===Number(op.pending))pending=null;}
+      else if(type==='undo'||type==='cancel_number'){
+        drawn=drawn.filter(value=>value!==n);if(pending===n||(type==='undo'&&pending===Number(op.pending)))pending=null;
+      }else if(type==='replace_number'){
+        const old=Number(op.data.oldNumber),replacement=Number(op.data.newNumber),index=drawn.indexOf(old),already=drawn.includes(replacement);
+        if(index>=0)drawn=drawn.flatMap((value,i)=>value===replacement?[]:i===index?[replacement]:value===old?[]:[value]);
+        else if(!already)drawn.push(replacement);
+        if(pending===old)pending=already?null:replacement;else if(pending===replacement)pending=null;
+      }
+      next.drawnNumbers=drawn;next.pendingNumber=pending;
+    }
+    if(op.logs.length){const keys=new Set(op.logs.map(logKey));next.history=[...op.logs,...(next.history||[]).filter(entry=>!keys.has(logKey(entry)))].slice(0,300);}
+    next.updatedAt=new Date(op.time).toISOString();next.appVersion=C.APP_VERSION;
+    next._syncAppliedOps=[...(next._syncAppliedOps||[]),op.id].slice(-2048);
+    return {state:next};
+  }
+  function persistCache(){store(cacheKey(),{state,remote:serverState,stamp:serverStamp});}
+  function showRemote(row){
+    if(!row?.state)return;
+    if(row.updated_at&&serverStamp&&Date.parse(row.updated_at)<Date.parse(serverStamp))return;
+    serverState=clone(row.state);serverStamp=row.updated_at||serverStamp;
+    let view=clone(serverState);
+    for(const op of pendingChanges())view=applyOperation(view,op).state;
+    mergeState(view);persistCache();
+  }
+  function hydrateCache(){
+    const cached=read(cacheKey());
+    if(cached?.state){serverState=cached.remote||cached.state;serverStamp=cached.stamp||'';let view=clone(serverState);for(const op of pendingChanges())view=applyOperation(view,op).state;mergeState(view);}
+  }
+  function retry(){
+    if(retryTimer||!sessionStarted||!supabaseClient)return;
+    retryTimer=window.setTimeout(()=>{retryTimer=null;void refreshSession();},4000);
+  }
+  async function readServer(){
+    const {data,error}=await supabaseClient.from('loto_app_sessions').select('state,updated_at').eq('code',code()).maybeSingle();
+    if(error)throw error;
+    lastReadAt=Date.now();return data;
+  }
+  async function synchronize(){
+    let row=await readServer();
+    if(row?.state)showRemote(row);
+    for(let attempt=0;attempt<250;attempt++){
+      const op=pendingChanges()[0];if(!op)break;
+      if(row?.state?._syncAppliedOps?.includes(op.id)){forget(op);continue;}
+      const base=row?.state||serverState||defaultState();
+      const applied=applyOperation(base,op);
+      if(applied.conflict){forget(op);syncConflict='Un changement de l’ancienne partie n’a pas été appliqué. Vérifiez le tirage.';continue;}
+      const stamp=new Date(Math.max(Date.now(),Date.parse(row?.updated_at||'')+1||0)).toISOString();
+      let result;
+      if(row?.state){
+        let query=supabaseClient.from('loto_app_sessions').update({state:applied.state,updated_at:stamp}).eq('code',code());
+        if(row.updated_at)query=query.eq('updated_at',row.updated_at);
+        result=await query.select('state,updated_at');
+      }else result=await supabaseClient.from('loto_app_sessions').insert({code:code(),state:applied.state,updated_at:stamp}).select('state,updated_at');
+      if(result.error){if(result.error.code==='23505'){row=await readServer();if(row)showRemote(row);continue;}throw result.error;}
+      if(!result.data?.length){row=await readServer();if(row)showRemote(row);continue;}
+      row=result.data[0];forget(op);showRemote(row);
+    }
+    if(row?.state)showRemote(row);
+    else if(!pendingChanges().length){serverState=defaultState();serverStamp='';mergeState(serverState);persistCache();}
+    syncError='';syncReady=true;
+    if(pendingChanges().length)retry();
+    return {ok:true,pending:pendingChanges().length};
+  }
+  function refreshSession(){
+    if(syncFlight)return syncFlight;
+    if(!supabaseClient){mergeState(read(cacheKey())?.state||read('loto_state')||state);syncReady=true;notifySync();return Promise.resolve({ok:true});}
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){syncError='Connexion interrompue. Les changements restent enregistrés sur cet appareil.';notifySync();retry();return Promise.resolve({ok:false});}
+    syncFlight=Promise.resolve().then(synchronize).catch(error=>{syncError='Connexion indisponible. Les changements restent en attente.';console.warn('Synchronisation du loto en attente.',error);retry();return {ok:false,error};}).finally(()=>{syncFlight=null;notifySync();});
+    notifySync();return syncFlight;
   }
   function subscribe(sessionCode){
-    if(!supabaseClient) return;
-    if(channel) supabaseClient.removeChannel(channel);
-    channel = supabaseClient.channel('loto_session_' + sessionCode)
-      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'loto_app_sessions', filter:'code=eq.' + sessionCode }, payload => {
-        if(payload.new && payload.new.state) mergeState(payload.new.state);
-      })
-      .subscribe();
+    if(!supabaseClient||channel)return;
+    const current=supabaseClient.channel('loto_session_'+sessionCode);
+    channel=current;
+    current.on('postgres_changes',{event:'*',schema:'public',table:'loto_app_sessions',filter:'code=eq.'+sessionCode},payload=>{
+      if(payload.new?.state){showRemote(payload.new);syncError='';syncReady=true;notifySync();}
+    }).subscribe(status=>{
+      if(channel!==current)return;
+      if(status==='SUBSCRIBED'){syncError='';void refreshSession();}
+      else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){syncError='Connexion interrompue. Reconnexion en cours.';notifySync();retry();}
+    });
+  }
+  async function ensureSession(){
+    if(!sessionStarted){
+      sessionStarted=true;try{localStorage.setItem('loto_session_code',code());}catch(error){storageError=true;}
+      hydrateCache();subscribe(code());
+      if(window.addEventListener){
+        window.addEventListener('online',()=>void refreshSession());
+        window.addEventListener('offline',()=>{syncError='Connexion interrompue.';notifySync();});
+        window.addEventListener('pageshow',()=>void refreshSession());
+        window.addEventListener('storage',event=>{if(event.key?.startsWith(pendingPrefix()))void refreshSession();});
+        if(typeof document!=='undefined')document.addEventListener?.('visibilitychange',()=>{if(!document.hidden)void refreshSession();});
+        if(window.setInterval)pollTimer=window.setInterval(()=>{if((typeof document==='undefined'||!document.hidden)&&(pendingChanges().length||Date.now()-lastReadAt>=30000))void refreshSession();},5000);
+      }
+    }
+    return refreshSession();
   }
   async function save(patch){
-    const next = Object.assign({}, state, patch || {}, { updatedAt: new Date().toISOString(), appVersion: C.APP_VERSION });
-    if(!next.history) next.history = [];
-    state = next; notify();
-    if(!supabaseClient){ localStorage.setItem('loto_state', JSON.stringify(state)); return; }
-    const { error } = await supabaseClient.from('loto_app_sessions').upsert({ code: code(), state, updated_at: new Date().toISOString() });
-    if(error) console.error(error);
+    if(!supabaseClient){state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();store('loto_state',state);persistCache();return;}
+    const op=makeOperation(patch||{});
+    memoryPending.set(op.id,op);store(pendingPrefix()+op.id,op);
+    state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();persistCache();notifySync();
+    if(!sessionStarted){sessionStarted=true;subscribe(code());}
+    return refreshSession();
+  }
+  function bindSyncControls(){
+    if(typeof document==='undefined'||!document.querySelectorAll)return;
+    document.querySelectorAll('[data-sync-refresh]').forEach(button=>{
+      if(button.dataset.syncBound)return;button.dataset.syncBound='1';
+      button.addEventListener('click',async()=>{const result=await ensureSession();if(result?.ok&&syncConflict){alert(syncConflict);syncConflict='';notifySync();}});
+    });
+    notifySync();
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function freshGamePatch(program){ return { drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, miniBingoWon:false, gameActive:true, gameEnded:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function freshGamePatch(program){ return { _syncRoundId:makeId('round'), drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, miniBingoWon:false, gameActive:true, gameEnded:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
   function canStartGame(){ return !state.gameActive; }
   async function stopCurrentGame(){
-    await save({ gameActive:false, gameEnded:true, miniBingoReady:false, miniBingoActive:false, drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), toast:{type:'game_stopped',message:'Loto arrêté depuis l’administration.',at:Date.now(),duration:5000}, history:addLog('stop_game','Loto arrêté manuellement') });
+    await save({ _syncRoundId:makeId('round'), gameActive:false, gameEnded:true, miniBingoReady:false, miniBingoActive:false, drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), toast:{type:'game_stopped',message:'Loto arrêté depuis l’administration.',at:Date.now(),duration:5000}, history:addLog('stop_game','Loto arrêté manuellement') });
   }
   async function markMiniBingoWon(){
     await save({ miniBingoWon:true, miniBingoReady:false, toast:{type:'mini_bingo_won',message:'Mini-bingo indiqué comme gagné.',at:Date.now(),duration:3500}, history:addLog('mini_bingo_won','Mini-bingo gagné') });
@@ -191,7 +362,7 @@
     if(state.gameActive) return false;
     const old = state || {};
     const initial = defaultState();
-    initial.sessionCode = code();
+    initial.sessionCode = code(); initial._syncRoundId=makeId('round');
     initial.lotoName = old.lotoName || initial.lotoName;
     initial.options = old.options || initial.options;
     initial.program = old.program || initial.program;
@@ -273,7 +444,7 @@
     const patch = { ...progress, gameActive:true, gameEnded:false, history:addLog('winner','Gagnant validé', { partie: state.currentPartieIndex, lot: state.currentPrizeIndex }) };
     if(isLastPrize) applyMiniBingoLastNumber(patch);
     if(toast){
-      patch.toast=toast; patch.drawnNumbers=[]; patch.pendingNumber=null; patch.publicCard=null; patch.checkedCards=[];
+      patch._syncRoundId=makeId('round'); patch.toast=toast; patch.drawnNumbers=[]; patch.pendingNumber=null; patch.publicCard=null; patch.checkedCards=[];
     }
     if(isLastPrize && isLastPartie){
       if(state.options?.bingoEnabled && !state.miniBingoWon){ patch.miniBingoReady=true; patch.gameActive=true; patch.gameEnded=false; }
@@ -283,7 +454,7 @@
   }
   async function startMiniBingo(){
     if(state.miniBingoWon) return;
-    await save({ drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], miniBingoReady:false, miniBingoActive:true, gameActive:true, gameEnded:false, toast:{ type:'mini_bingo_start', message:'Mini-bingo lancé.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
+    await save({ _syncRoundId:makeId('round'), drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], miniBingoReady:false, miniBingoActive:true, gameActive:true, gameEnded:false, toast:{ type:'mini_bingo_start', message:'Mini-bingo lancé.', at:Date.now(), duration:5000 }, history:addLog('mini_bingo_start','Lancement Mini-bingo') });
   }
   function nextBingoNumber(n){
     n = Number(n); if(!n || n<1 || n>90) return null;
@@ -462,11 +633,12 @@
   async function hidePublicCard(){ await save({ publicCard:null, cardClosedAt:Date.now(), history:addLog('hide_card','Fermeture carton') }); }
   function renderNumbers(container, opts={}){
     if(!container) return;
-    const drawn = new Set(state.drawnNumbers || []); const pending = state.pendingNumber;
+    const drawn = new Set((state.drawnNumbers || []).map(Number)); const pending = Number(state.pendingNumber) || null;
+    const latest = Number(state.pendingNumber || (state.drawnNumbers || []).slice(-1)[0]) || null;
     container.innerHTML = '';
     for(let i=1;i<=90;i++){
       const b = document.createElement(opts.button ? 'button':'div');
-      b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (opts.button?' clickable':'');
+      b.className = 'num' + (drawn.has(i)?' drawn':'') + (pending===i?' pending':'') + (latest===i?' latest':'') + (opts.button?' clickable':'');
       b.textContent = String(i).padStart(2,'0');
       if(opts.button) b.onclick = () => {
         const drawnNow = new Set(state.drawnNumbers || []);
@@ -474,7 +646,7 @@
           if(confirm('Annuler le numéro en attente '+i+' ?')) cancelPending();
         } else if(drawnNow.has(i)){
           if(confirm('Annuler le numéro '+i+' ?')) cancelNumber(i, 'grid_click');
-        } else drawNumber(i, 'click');
+        } else drawNumber(i, opts.source || 'click');
       };
       container.appendChild(b);
     }
@@ -489,6 +661,6 @@
     const check = () => { if(input.value === String(C.TEAM_PIN || '2580')){ sessionStorage.setItem('loto_team_ok','1'); overlay.remove(); } else overlay.querySelector('#pinErr').textContent = 'PIN incorrect'; };
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
-  function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
+  function pageHeader(){ bindSyncControls(); document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
 })();
