@@ -20,6 +20,8 @@
 .auto-primary:disabled{opacity:.55;cursor:wait}
 .auto-full{width:100%;margin-top:16px}
 .auto-secondary{flex:none;padding:10px 14px;background:#284965;color:#fff;font-size:13px}
+.auto-header-actions{display:flex;flex:none;flex-direction:column;gap:6px}
+.auto-header-actions .auto-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 12px;font-size:12px;text-decoration:none}
 .auto-message{margin:10px 0 0;color:#ffd166;font-weight:800;line-height:1.4}
 .auto-message:empty{display:none}
 .play-screen{display:flex;flex-direction:column;gap:12px}
