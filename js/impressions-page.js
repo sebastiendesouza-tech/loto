@@ -10,7 +10,6 @@ if(linkEl) linkEl.textContent = 'QR Code vers la page joueur';
 function openPrintPage(kind){
   const qr = qrUrl(900);
   const title = 'Loto by SdS';
-  const version = Loto.C.APP_VERSION || '';
   const css = `
     *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#111;background:white} .no-print{margin:16px;text-align:center} .btn{font-size:18px;padding:12px 18px;border:0;border-radius:10px;background:#0b5ed7;color:#fff;cursor:pointer} .hint{font-size:13px;color:#555;margin-top:8px}
     @media print{.no-print{display:none!important} body{margin:0} @page{size:A4 portrait;margin:0}}
@@ -23,12 +22,12 @@ function openPrintPage(kind){
   `;
   let body='';
   if(kind==='a4'){
-    body = `<section class="page"><div class="poster"><h1>${title}</h1><h2>Suivez le tirage en direct sur votre téléphone</h2><img src="${qr}"><p>Scannez ce QR Code</p><p style="font-size:13pt">Aucune application à installer</p><div class="small">${version}</div></div></section>`;
+    body = `<section class="page"><div class="poster"><h1>${title}</h1><h2>Suivez le tirage en direct sur votre téléphone</h2><img src="${qr}"><p>Scannez ce QR Code</p><p style="font-size:13pt">Aucune application à installer</p></div></section>`;
   } else if(kind==='a5'){
-    const card = `<div class="card-a5"><h1>${title}</h1><p>Suivez le tirage en direct</p><img src="${qr}"><p><b>Scannez le QR Code</b></p><p>Aucune application à installer</p><div class="small">${version}</div></div>`;
+    const card = `<div class="card-a5"><h1>${title}</h1><p>Suivez le tirage en direct</p><img src="${qr}"><p><b>Scannez le QR Code</b></p><p>Aucune application à installer</p></div>`;
     body = `<section class="sheet">${card}${card}${card}${card}</section>`;
   } else {
-    body = `<section class="qr-only"><img src="${qr}"><h1>Loto by SdS</h1><p>Suivre le tirage en direct</p><p style="font-size:10pt;color:#555">${version}</p></section>`;
+    body = `<section class="qr-only"><img src="${qr}"><h1>Loto by SdS</h1><p>Suivre le tirage en direct</p></section>`;
   }
   const w = window.open('', '_blank');
   if(!w){ alert('La fenêtre d’impression a été bloquée. Autorise les fenêtres pop-up pour ce site.'); return; }
