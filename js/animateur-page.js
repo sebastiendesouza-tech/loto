@@ -1,7 +1,7 @@
 Loto.pageHeader();Loto.protectPage();
 const grid=document.getElementById('grid'),last=document.getElementById('last'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList'),launchGuard=document.getElementById('launchGuard');
-const voicePause=document.getElementById('voicePause'),voiceMode=document.getElementById('voiceMode'),voicePauseBanner=document.getElementById('voicePauseBanner'),miniBingoWon=document.getElementById('miniBingoWon');
+const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=document.getElementById('voiceMode'),voicePauseBanner=document.getElementById('voicePauseBanner'),miniBingoWon=document.getElementById('miniBingoWon');
 
 let lastCardClosedAt = 0;
 function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
@@ -37,29 +37,21 @@ document.getElementById('winner').onclick=()=>Loto.winner();
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
 if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
 const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
-  const usable = status.connected && status.online && status.ready;
-  if(voicePause){
-    voicePause.disabled = !usable || status.pending;
-    voicePause.classList.toggle('active', usable && status.active);
-    voicePause.classList.toggle('paused', usable && !status.active);
-    voicePause.classList.toggle('unavailable', !usable);
-    voicePause.setAttribute('aria-pressed', String(usable && status.active));
-    voicePause.innerHTML = status.pending ? '⌛<span>MICRO PC<br>COMMANDE EN COURS</span>' :
-      !usable ? '🎤<span>MICRO PC<br>EN ATTENTE</span>' :
-      status.active ? '🎤<span>MICRO PC<br>METTRE EN PAUSE</span>' : '⏸<span>MICRO PC<br>REPRENDRE L’ÉCOUTE</span>';
-  }
-  if(voiceMode){ voiceMode.disabled = !usable || status.pending; voiceMode.value = status.mode; }
+  const connected = status.connected && status.online;
+  if(voiceControlMode){ voiceControlMode.disabled = !connected || status.pending; voiceControlMode.value = status.sourceMode; }
+  if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending; voiceMode.value = status.mode; }
   if(voicePauseBanner){
-    voicePauseBanner.style.display = usable && !status.error && !status.pending ? 'none' : 'block';
+    const waitingForMic = status.sourceMode === 'micro' && !status.ready && !status.error;
+    voicePauseBanner.style.display = connected && !status.error && !status.pending && !waitingForMic ? 'none' : 'block';
     voicePauseBanner.textContent = status.error ? 'Micro PC : ' + status.error :
       !status.connected ? 'Commande du PC déconnectée. Vérifiez Internet sur la tablette.' :
       !status.online ? 'PC non joignable. Ouvrez l’affichage public sur le PC avec la même session.' :
-      !status.ready ? 'Cliquez sur Micro PC sur le PC pour autoriser le microphone.' :
+      waitingForMic ? 'Cliquez une fois sur Micro PC sur le PC pour autoriser le microphone.' :
       status.pending ? 'Commande envoyée : attente de confirmation du PC.' :
       '';
   }
 });
-if(voicePause) voicePause.onclick = () => pcMicrophone.toggle();
+if(voiceControlMode) voiceControlMode.onchange = () => pcMicrophone.setSourceMode(voiceControlMode.value);
 if(voiceMode) voiceMode.onchange = () => pcMicrophone.setMode(voiceMode.value);
 if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mini-bingo a été gagné ?')) await Loto.markMiniBingoWon(); };
 function renderLot(s){if(miniBingoWon) miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none'; if(startMiniBingoBtn) startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none'; if(s.miniBingoReady){currentLot.innerHTML='<b>LOTO PRINCIPAL TERMINÉ</b> · Mini-bingo non gagné : utilise le bouton « Lancer Mini-bingo ».';return;} if(s.gameEnded&&!s.gameActive){currentLot.innerHTML='<b>FIN DU LOTO</b>';return;} if(s.miniBingoActive){currentLot.innerHTML='<b>MINI-BINGO</b> · tirage de départage en cours';return;}const p=Loto.currentPartie();const prize=Loto.currentPrize();if(!p||!prize){currentLot.innerHTML='<b>Lot en cours :</b> partie simple sans programme';return;}const req=Loto.currentRequirement();currentLot.innerHTML=`<b>${p.name||'Partie'}</b> · <span>${Loto.gameModeLabel(p)}</span> · <strong>${req.label}</strong> · <b>LOT : ${prize.label||'Lot non renseigné'}</b>`;}

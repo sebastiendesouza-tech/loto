@@ -111,7 +111,8 @@ Loto.onChange(s=>{
 Loto.ensureSession();
 
 const pcMicrophone = LotoPcMicrophone.connect('host', status => {
-  micBtn.textContent = status.active ? 'Micro PC : actif' : 'Micro PC : en pause';
+  micBtn.textContent = status.sourceMode === 'manual' ? 'Mode manuel' :
+    status.active ? 'Micro PC : actif' : 'Micro PC : en attente';
   micBtn.className = 'public-mic ' + (status.active ? 'red' : 'green');
   micBtn.setAttribute('aria-pressed', String(status.active));
   micBtn.title = status.error ? 'Micro : ' + status.error :
