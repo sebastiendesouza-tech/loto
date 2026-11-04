@@ -23,48 +23,29 @@
     if(engineRunning)return true;
     recognition=new SR();
     let lastFinalIndex=-1;
-    const handledResultIndexes=new Set(),interimTimers=new Map();
+    const handledResultIndexes=new Set();
     recognition.lang='fr-FR';
     recognition.continuous=true;
     recognition.interimResults=true;
     recognition.onstart=()=>{
       lastFinalIndex=-1;
       handledResultIndexes.clear();
-      for(const timer of interimTimers.values())clearTimeout(timer);
-      interimTimers.clear();
       engineRunning=true;
       onStatus&&onStatus(processingEnabled,processingEnabled?'reconnaissance active':'reconnaissance en pause');
     };
     recognition.onresult=e=>{
-      // Chrome may revise a single utterance several times. Only new final
-      // results count as announcements, never interim revisions or replays.
+      // A preliminary transcript can be incomplete (e.g. "le 9" before
+      // "le 90"). Wait for the final transcript before drawing any number.
       for(let i=e.resultIndex;i<e.results.length;i++){
         const result=e.results[i];
-        const transcript=result[0].transcript||'';
-        if(result.isFinal){
-          if(handledResultIndexes.has(i)||i<=lastFinalIndex)continue;
-          lastFinalIndex=i;
-          clearTimeout(interimTimers.get(i));
-          interimTimers.delete(i);
-          handledResultIndexes.add(i);
-          // Consume results received during a pause without counting them later.
-          if(processingEnabled&&Date.now()>=mutedUntil)handle(transcript);
-          continue;
+        if(!result.isFinal)continue;
+        if(handledResultIndexes.has(i)||i<=lastFinalIndex)continue;
+        lastFinalIndex=i;
+        handledResultIndexes.add(i);
+        // Ignore announcements received while the microphone is paused.
+        if(processingEnabled&&Date.now()>=mutedUntil){
+          handle(result[0].transcript||'');
         }
-        if(handledResultIndexes.has(i)||!processingEnabled||Date.now()<mutedUntil)continue;
-        const text=norm(transcript);
-        if(!keywordAccepted(text)||!extractNumbers(text).length)continue;
-        // Interim hypotheses are revised several times for the same spoken
-        // phrase. Count one only after it stays unchanged briefly, once per
-        // result index; this keeps repeat detection quick without double counts.
-        clearTimeout(interimTimers.get(i));
-        const timer=setTimeout(()=>{
-          if(handledResultIndexes.has(i)||!processingEnabled||Date.now()<mutedUntil)return;
-          handledResultIndexes.add(i);
-          interimTimers.delete(i);
-          handle(transcript);
-        },180);
-        interimTimers.set(i,timer);
       }
     };
     recognition.onend=()=>{
