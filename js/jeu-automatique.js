@@ -184,3 +184,11 @@ function render(state){
 Loto.onChange(state=>{
   render(state);
 });
+
+// Charger le tirage déjà enregistré et démarrer son suivi en temps réel.
+Loto.ensureSession().catch(error=>{
+  console.error('Connexion au tirage impossible.',error);
+  const status=$('connectionStatus');
+  status.textContent='Connexion indisponible';
+  status.className='connection-status offline';
+});
