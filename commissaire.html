@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
-</head>
+<link rel="stylesheet" href="css/sync.css?v=20261104"></head>
 <body class="animateur-body commissaire-body">
   <header class="topbar">
     <div><span class="brand" data-title></span></div>
@@ -18,7 +18,7 @@
       <section class="card numbers-card animateur-grid-panel">
         <div id="grid" class="numbers animateur-numbers"></div>
       </section>
-      <aside class="animateur-side-v229">
+      <aside class="animateur-side-v229"><div class="sync-controls"><span data-sync-status role="status" aria-live="polite">Connexion…</span><button type="button" data-sync-refresh>Actualiser</button></div>
         <div class="card animateur-last-card">
           <div class="side-label">Dernier numéro</div>
           <div id="last" class="animateur-last-number">--</div>
@@ -44,7 +44,7 @@
   </main>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=5-carton-101311"></script>
+  <script src="js/core.js?v=20261104-reconnect"></script>
   <script src="js/commissaire-page.js?v=5-carton-101311"></script>
   <script>
     const scanLink=document.getElementById('openCommissaireScan');

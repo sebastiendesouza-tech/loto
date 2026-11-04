@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-5">
-</head>
+<link rel="stylesheet" href="css/sync.css?v=20261104"></head>
 <body class="auto-game-body">
   <header class="auto-header">
     <div class="auto-heading">
@@ -21,6 +21,7 @@
   </header>
 
   <main class="auto-main">
+    <div class="sync-controls"><span data-sync-status role="status" aria-live="polite">Connexion…</span><button type="button" data-sync-refresh>Actualiser</button></div>
     <section id="setup" class="auto-panel setup-panel">
       <h1>Vos cartons</h1>
       <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton, de 101000 à 102999. Laissez les autres cases vides.</p>
@@ -55,7 +56,7 @@
 
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=5-carton-101311"></script>
+  <script src="js/core.js?v=20261104-reconnect"></script>
   <script src="js/jeu-automatique.js?v=5-carton-101311"></script>
 </body>
 </html>
