@@ -1,16 +1,55 @@
-.auto-game-body{min-height:100dvh;background:radial-gradient(ellipse at 50% -5%,#15375a 0,#071421 57%);color:#fff;padding-bottom:env(safe-area-inset-bottom)}
-.auto-header{min-height:64px;display:flex;align-items:center;gap:12px;padding:9px max(14px,env(safe-area-inset-left));background:rgba(6,18,32,.82);border-bottom:1px solid rgba(255,255,255,.1);position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}
-.auto-header>a{flex:0 0 42px;height:42px;display:grid;place-items:center;text-decoration:none;color:#fff;background:#183351;border-radius:14px;font-size:30px;line-height:1}
-.auto-header>div{min-width:0;display:flex;flex-direction:column;gap:5px}.auto-header strong{font-size:16px}.auto-header #gameName{font-size:14px;color:#d4e1ef;overflow-wrap:anywhere}.auto-heading{width:100%}.auto-heading-name{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 6px}.auto-part-label{align-self:flex-start;font-size:12px;font-weight:900;color:#ffd166;background:#203750;border-radius:999px;padding:4px 10px}
-.connection-status{margin-left:auto;flex:none;padding:6px 9px;background:#28425c;border-radius:999px;font-size:10px;font-weight:900}.connection-status.online{background:#12653e;color:#d9ffe9}.connection-status.offline{background:#782b32;color:#ffe6e6}
-.auto-main{width:min(100%,760px);margin:0 auto;padding:16px 12px 32px}.auto-panel{background:linear-gradient(145deg,rgba(21,43,66,.98),rgba(13,30,49,.98));border:1px solid rgba(205,222,239,.14);border-radius:22px;box-shadow:0 15px 40px rgba(0,0,0,.2)}
-.setup-panel{padding:22px 18px}.auto-kicker,.summary-label{color:#ffd166;font-size:11px;font-weight:1000;letter-spacing:.12em}.setup-panel h1{font-size:clamp(26px,7vw,38px);line-height:1.05;margin:10px 0}.auto-intro{color:#bdcddd;line-height:1.45;margin:0 0 22px;font-size:15px}.setup-panel label{display:block;font-weight:900;font-size:15px;margin-bottom:8px}.count-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px}.count-row select,.card-code-fields input{min-height:50px;background:#071421;border:1px solid #35516e;color:#fff;border-radius:14px;font-size:17px}.auto-primary,.auto-secondary,.auto-back{min-height:48px;border:0;border-radius:14px;font-weight:900}.auto-primary{background:#ffd166;color:#151d2b;padding:0 18px}.auto-primary:disabled{opacity:.55}.auto-full{width:100%;margin-top:14px}.codes-heading{display:flex;align-items:center;gap:12px;margin:20px 0 10px}.codes-heading span{font-weight:900}.auto-back{color:#d9e7f6;background:transparent;padding:0 8px;min-height:38px}.card-code-fields{display:grid;gap:9px}.card-code-fields label{margin:0;display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:8px}.code-index{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#213d59;color:#ffd166;font-weight:1000}.card-code-fields input{width:100%;padding:0 13px}.auto-message{min-height:0;margin:8px 0 0;color:#ffd166;font-weight:800}.auto-help{margin:5px 0 0;color:#95a9bf;font-size:12px}
-.play-screen{display:grid;gap:12px}.play-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}.play-summary>div:first-child{display:flex;flex-direction:column;gap:5px}.play-summary #partMode{font-size:17px}.summary-last{align-items:center;text-align:center;min-width:82px}.summary-last span{font-size:10px;color:#aabed2}.summary-last strong{display:grid;place-items:center;margin:3px auto 0;width:48px;height:48px;border-radius:50%;background:#ffd166;color:#111b28;font-size:23px}.auto-alert{padding:15px 16px;text-align:center;border-radius:18px;background:linear-gradient(120deg,#12a15e,#087b52);color:white;font-size:20px;font-weight:1000;box-shadow:0 0 28px rgba(24,205,121,.28)}.auto-alert.loser{background:linear-gradient(120deg,#e7a81e,#b97804);color:#1a1b1e}.cards-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px}.cards-toolbar>strong{font-size:14px}.auto-secondary{padding:0 12px;min-height:39px;background:#203d5b;color:#fff;font-size:12px}.tracked-cards{display:grid;gap:12px}.tracked-card{background:#11263c;border:1px solid #294661;border-radius:18px;overflow:hidden}.tracked-card.card-winning{border:2px solid #39d98a;box-shadow:0 0 22px rgba(57,217,138,.2)}.tracked-card.card-eliminated{opacity:.72}.tracked-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:rgba(255,255,255,.035)}.tracked-card-code{font-size:14px;font-weight:1000;letter-spacing:.03em}.card-state{font-size:10px;font-weight:900;color:#b7c8d9;text-align:right}.card-winning .card-state{color:#72f2ad;font-size:12px}.auto-bingo-grid{width:100%;border-collapse:separate;border-spacing:3px;padding:4px 7px 8px;table-layout:fixed}.auto-bingo-grid td{height:clamp(29px,9vw,54px);width:11.11%;text-align:center;vertical-align:middle;border-radius:8px;background:#1b344e;color:#59718a;font-size:clamp(12px,4vw,20px);font-weight:1000;border:1px solid #29435d}.auto-bingo-grid td.has-number{color:#dce9f6;background:#203b57}.auto-bingo-grid td.is-drawn{background:#ffd166;border-color:#ffe5a3;color:#111a26;box-shadow:0 0 10px rgba(255,209,102,.24)}.auto-bingo-grid td.is-pending{background:#fff1ba;outline:2px solid #ffd166;animation:auto-pulse .8s infinite alternate}.auto-bingo-grid td.empty{background:rgba(5,14,25,.28);border-color:transparent;box-shadow:none}.tracked-card.card-winning .auto-bingo-grid td.is-drawn{background:#34d399;border-color:#b7ffda;color:#062819}
-.auto-footnote{margin:0;color:#91a5bb;font-size:11px;text-align:center;line-height:1.4}@keyframes auto-pulse{to{filter:brightness(1.24)}}
-.play-screen[hidden]{display:none}
+.auto-game-body{min-height:100dvh;overflow-y:auto;background:radial-gradient(ellipse at 50% -5%,#15375a 0,#071421 57%);color:#fff;padding-bottom:env(safe-area-inset-bottom)}
+.auto-game-body [hidden]{display:none!important}
+.auto-game-body .auto-header{display:flex!important;visibility:visible;min-height:78px;align-items:center;gap:12px;padding:12px max(14px,env(safe-area-inset-left));background:#0b2036;border-bottom:1px solid #34516c;position:sticky;top:0;z-index:5}
+.auto-heading{min-width:0;flex:1;display:flex;flex-direction:column;gap:7px}
+.auto-heading-name{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 6px;font-size:16px;line-height:1.3}
+.auto-heading-name strong{font-size:17px;font-weight:900}
+.auto-header #gameName{font-size:15px;color:#d4e1ef;overflow-wrap:anywhere}
+.auto-part-label{align-self:flex-start;font-size:13px;font-weight:900;color:#ffd166;background:#203750;border-radius:999px;padding:4px 10px}
+.auto-main{width:min(100%,760px);margin:0 auto;padding:16px 12px 32px}
+.auto-panel{background:linear-gradient(145deg,#152b42,#0d1e31);border:1px solid #35495e;border-radius:22px;box-shadow:0 15px 40px #0003}
+.setup-panel{padding:22px 18px}
+.setup-panel h1{font-size:30px;line-height:1.1;margin:0 0 12px}
+.auto-intro{color:#bdcddd;line-height:1.45;margin:0 0 20px;font-size:15px}
+.card-code-fields{display:flex;flex-direction:column;gap:10px}
+.card-code-fields label{margin:0;display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:8px}
+.code-index{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#213d59;color:#ffd166;font-weight:900}
+.card-code-fields input{width:100%;min-height:50px;padding:10px 13px;background:#071421;border:1px solid #52708b;color:#fff;border-radius:14px;font-size:17px}
+.auto-primary,.auto-secondary{min-height:46px;border:0;border-radius:14px;font-weight:900}
+.auto-primary{background:#ffd166;color:#151d2b;padding:12px 18px}
+.auto-primary:disabled{opacity:.55;cursor:wait}
+.auto-full{width:100%;margin-top:16px}
+.auto-secondary{flex:none;padding:10px 14px;background:#284965;color:#fff;font-size:13px}
+.auto-message{margin:10px 0 0;color:#ffd166;font-weight:800;line-height:1.4}
+.auto-message:empty{display:none}
+.play-screen{display:flex;flex-direction:column;gap:12px}
+.tracked-cards{display:flex;flex-direction:column;gap:16px;width:100%}
+.tracked-card{width:100%;flex:none;background:#11263c;border:1px solid #294661;border-radius:18px;overflow:hidden}
+.tracked-card.card-winning{border:2px solid #39d98a;box-shadow:0 0 22px #39d98a33}
+.tracked-card.card-eliminated{opacity:.72}
 .tracked-card.card-candidate{border-color:#e7a81e}
-.tracked-card.card-still-in{border-color:#d4941b}.tracked-card.card-unconfirmed{border-color:#6e5322;opacity:.85}
-.auto-game-body #codesForm[hidden]{display:none}
-.auto-playing .play-summary,.auto-playing .cards-toolbar,.auto-playing .auto-footnote{display:none!important}
-@media(min-width:600px){.auto-main{padding:24px 18px}.setup-panel{padding:28px}.tracked-cards{grid-template-columns:1fr 1fr}.auto-bingo-grid td{height:50px}}
-@media(max-width:360px){.auto-main{padding:11px 8px}.setup-panel{padding:18px 13px}.play-summary{padding:12px}.auto-bingo-grid{border-spacing:2px;padding:4px}.auto-bingo-grid td{height:28px;font-size:12px}}
+.tracked-card.card-still-in{border-color:#d4941b}
+.tracked-card.card-unconfirmed{border-color:#6e5322;opacity:.85}
+.tracked-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;background:#ffffff09}
+.tracked-card-code{font-size:16px;font-weight:900;letter-spacing:.02em;overflow-wrap:anywhere}
+.card-state{font-size:11px;font-weight:900;color:#b7c8d9;text-align:right}
+.card-state:empty{display:none}
+.card-winning .card-state{color:#72f2ad}
+.auto-bingo-grid{width:100%;border-collapse:separate;border-spacing:3px;padding:4px 7px 8px;table-layout:fixed}
+.auto-bingo-grid td{height:clamp(34px,10vw,64px);width:11.11%;text-align:center;vertical-align:middle;border-radius:7px;background:#1b344e;color:#59718a;font-size:clamp(16px,4.5vw,30px);font-weight:900;border:1px solid #29435d}
+.auto-bingo-grid td.has-number{color:#dce9f6;background:#203b57}
+.auto-bingo-grid td.is-drawn{background:#ffd166;border-color:#ffe5a3;color:#111a26;box-shadow:0 0 10px #ffd1663d}
+.auto-bingo-grid td.is-pending{background:#fff1ba;outline:2px solid #ffd166;animation:auto-pulse .8s infinite alternate}
+.auto-bingo-grid td.empty{background:#050e1947;border-color:transparent;box-shadow:none}
+.tracked-card.card-winning .auto-bingo-grid td.is-drawn{background:#34d399;border-color:#b7ffda;color:#062819}
+.auto-alert{padding:14px 16px;text-align:center;border-radius:18px;background:#126142;color:#fff;font-size:17px;font-weight:900}
+.auto-alert.loser{background:#e7a81e;color:#1a1b1e}
+.winner-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#020914dc;padding:20px}
+.winner-dialog{width:min(100%,440px);max-height:85dvh;overflow:auto;padding:26px 22px;border:2px solid #ffd166;border-radius:24px;background:#102a40;text-align:center;box-shadow:0 12px 70px #0008}
+.winner-symbol{font-size:64px;line-height:1;color:#ffd166}
+.winner-dialog h2{margin:16px 0;font-size:32px;line-height:1.15;color:#fff}
+.winner-codes{margin:18px 0;font-size:clamp(26px,8vw,38px);font-weight:900;color:#ffd166;overflow-wrap:anywhere;white-space:pre-line;line-height:1.3}
+.auto-game-body.winner-open{overflow:hidden}
+@keyframes auto-pulse{to{filter:brightness(1.24)}}
+@media(min-width:600px){.auto-main{padding:24px 18px}.setup-panel{padding:28px}}
+@media(max-width:360px){.auto-main{padding:11px 8px}.setup-panel{padding:18px 13px}.auto-bingo-grid{border-spacing:2px;padding:4px}.auto-bingo-grid td{height:32px;font-size:15px}.auto-secondary{padding:10px}.auto-header #gameName{font-size:13px}}
