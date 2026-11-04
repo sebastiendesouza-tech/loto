@@ -203,12 +203,13 @@
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
-  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystere') return 'Bingo mystère'; return 'À la ligne'; }
+  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystere') return 'Bingo mystère'; if(m === 'perdant') return 'Partie du perdant'; return 'À la ligne'; }
   function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
   function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
     const mode = partie?.gameMode || 'ligne';
     if(mode === 'bingoMystere') return 'Bingo mystère';
     if(mode === 'carton') return 'Carton plein';
+    if(mode === 'perdant') return 'Aucun numéro tiré sur le carton';
     if(prizeIndex === 0) return '1 ligne';
     if(prizeIndex === 1) return '2 lignes';
     return 'Carton plein';
@@ -217,7 +218,7 @@
     const partie = currentPartie();
     const prizeIndex = state.currentPrizeIndex || 0;
     const mode = partie?.gameMode || 'ligne';
-    const full = mode === 'carton' || mode === 'bingoMystere' || prizeIndex >= 2;
+    const full = mode === 'carton' || mode === 'bingoMystere' || (mode !== 'perdant' && prizeIndex >= 2);
     const requiredLines = full ? 3 : (prizeIndex === 0 ? 1 : 2);
     return {
       mode,
@@ -225,7 +226,7 @@
       label: stepLabel(partie, prizeIndex),
       requiredLines,
       full,
-      lastNumberRequired: state.options?.lastNumberRequired !== false
+      lastNumberRequired: mode !== 'perdant' && state.options?.lastNumberRequired !== false
     };
   }
   function nextProgress(){
@@ -351,10 +352,15 @@
     const lastOnWinningLine = completeLines.some(l => l.hasLast);
     const lastOnCard = last ? lignes.flat().map(Number).includes(Number(last)) : false;
     const lastRuleOk = !req.lastNumberRequired || (req.full ? lastOnCard : lastOnWinningLine);
-    const valid = requirementReached && lastRuleOk;
+    const loserMode = req.mode === 'perdant';
+    const hitsOnCard = lignes.flat().map(Number).filter(n => after.has(n));
+    const stillInGame = loserMode && hitsOnCard.length === 0;
+    const valid = loserMode ? false : requirementReached && lastRuleOk;
 
     const messages = [];
-    if(!requirementReached){
+    if(loserMode){
+      if(!stillInGame) messages.push('Carton perdant : numéro tiré présent');
+    } else if(!requirementReached){
       if(req.full){
         messages.push('Carton plein incomplet');
       } else {
@@ -371,15 +377,17 @@
     }
 
     let reason = '';
-    if(valid) reason = 'Gain valide';
+    if(loserMode && stillInGame) reason = 'Carton encore en jeu';
+    else if(valid) reason = 'Gain valide';
     else if(messages.length) reason = messages[0];
     else reason = 'Non valide';
 
-    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, valid, reason, messages };
+    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, loserMode, stillInGame, hitsOnCard, valid, reason, messages };
   }
   function cardFailureLabel(result){
-    if(!result || result.valid) return '';
+    if(!result || result.valid || (result.loserMode && result.winnerEligible)) return '';
     if(result.salesTrackingEnabled && !result.soldForCurrentLoto) return 'Carton non vendu pour ce loto';
+    if(result.loserMode) return result.stillInGame ? (result.reason || 'Carton encore en jeu') : 'Carton perdant : un numéro tiré est présent';
     const requirement=result.requirement || currentRequirement();
     if(!result.requirementReached) return requirement.full ? 'Carton incomplet' : 'Ligne incomplète';
     if(requirement.lastNumberRequired) return 'Manque le dernier numéro';
@@ -409,6 +417,33 @@
         result.salesStatus = 'controle_indisponible';
         result.messages = ['Suivi des ventes indisponible : contrôle non bloquant', ...(result.messages || [])];
       }
+    }
+    if(result.loserMode && result.stillInGame && result.salesTrackingEnabled && supabaseClient && result.soldForCurrentLoto){
+      try{
+        const lotoId = state.program?.id || state.sessionCode || code();
+        const {data:sales,error:salesError}=await supabaseClient.from('loto_carton_sales').select('numero').eq('loto_id',lotoId).eq('status','vendu');
+        if(salesError) throw salesError;
+        const numbers=[...new Set((sales||[]).map(x=>Number(x.numero)).filter(Number.isFinite))];
+        let cards=[];
+        for(let i=0;i<numbers.length;i+=100){
+          const {data,error}=await supabaseClient.from('loto_cartons').select('numero,lignes').eq('actif',true).in('numero',numbers.slice(i,i+100));
+          if(error) throw error;
+          cards=cards.concat(data||[]);
+        }
+        const drawn=new Set([...(state.drawnNumbers||[]),...(state.pendingNumber?[state.pendingNumber]:[])].map(Number));
+        const remaining=cards.filter(c=>(c.lignes||[]).flat().every(n=>!drawn.has(Number(n))));
+        result.remainingCards=remaining.length;
+        result.winnerEligible=remaining.length===1 && Number(remaining[0].numero)===Number(card.numero);
+        if(result.winnerEligible){ result.valid=true; result.reason='Dernier carton en jeu'; }
+        else if(remaining.length>1) result.reason=`Encore ${remaining.length} cartons en jeu`;
+        else result.reason='Aucun carton encore en jeu';
+      }catch(e){
+        result.winnerCheckAvailable=false;
+        result.reason='Carton encore en jeu · contrôle des ventes indisponible';
+      }
+    } else if(result.loserMode && result.stillInGame){
+      result.winnerCheckAvailable=false;
+      result.reason='Carton encore en jeu · suivi des ventes requis pour confirmer le dernier';
     }
     const checked = [{...result, at:new Date().toISOString()}, ...(state.checkedCards || [])].slice(0,50);
     await save({ checkedCards: checked, history:addLog('check','Contrôle carton ' + (card.external_code || card.carton_code || numero), result) });

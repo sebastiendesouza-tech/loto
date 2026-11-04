@@ -30,11 +30,15 @@ function renderCard(card){
   overlay.style.display='block';
   const req = card.requirement || {};
   const failureLabel = Loto.cardFailureLabel(card);
+  const unsold = card.salesTrackingEnabled && !card.soldForCurrentLoto;
+  const status = card.loserMode
+    ? (unsold ? 'CARTON NON VENDU' : card.winnerEligible ? 'GAGNANT · DERNIER CARTON' : card.stillInGame ? 'ENCORE EN JEU' : 'ÉLIMINÉ')
+    : (card.valid ? 'GAIN VALIDE' : 'NON VALIDE');
   overlay.innerHTML = `
     <div class="public-card-overlay-inner">
       <h1>Carton ${esc(card.numero)}</h1>
       <p class="public-card-req">${esc(req.label || '')}</p>
-      <p class="${card.valid ? 'ok' : 'bad'} public-card-status">${card.valid ? 'GAIN VALIDE' : 'NON VALIDE'}</p>
+      <p class="${card.valid || (card.stillInGame && !unsold) ? 'ok' : 'bad'} public-card-status">${status}</p>
       ${renderPublicCardGrid(card)}
       ${failureLabel ? `<ul class="public-diagnostic-list"><li>${esc(failureLabel)}</li></ul>` : ''}
     </div>`;
