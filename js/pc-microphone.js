@@ -15,7 +15,7 @@
       const online = connected && !!remote && Date.now() - lastSeen < STALE_MS;
       return host ? { connected, online:true, ready:initialized, active:LotoVoice.isActive(), sourceMode, mode:LotoVoice.getMode(), error, pending:false }
         : { connected, online, ready:online && remote.ready, active:online && remote.active,
-            sourceMode:online ? remote.sourceMode : 'micro', mode:online ? remote.mode : 'le',
+            sourceMode:pending?.action === 'source-mode' ? pending.value : (online ? remote.sourceMode : 'micro'), mode:online ? remote.mode : 'le',
             error:error || (online ? remote.error : ''), pending:!!pending };
     }
     function notify(){ if(!closed) render(snapshot()); }
