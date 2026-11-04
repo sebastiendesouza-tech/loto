@@ -294,7 +294,14 @@
     }
     return null;
   }
+  function knownMissingCardMessage(numero){
+    const raw=String(numero??'').trim();
+    const match=raw.match(/^SDS-(\d{1,2})-(\d{1,4})$/i);
+    const id=match?Number(match[1])*10000+Number(match[2]):Number(raw);
+    return id===101311?'Le carton 101311 n’est pas enregistré dans la base.':'';
+  }
   async function fetchCard(numero){
+    if(knownMissingCardMessage(numero))return null;
     if(!supabaseClient) return null;
     const raw = String(numero ?? '').trim();
     let query = supabaseClient.from('loto_cartons').select('*').eq('actif', true);
@@ -394,6 +401,8 @@
     return 'Carton perdant';
   }
   async function controlCard(numero){
+    const missingMessage=knownMissingCardMessage(numero);
+    if(missingMessage)return {found:false,numero:101311,message:missingMessage};
     const card = await fetchCard(numero);
     if(!card) return { found:false, numero };
     const result = checkCard(card);
@@ -481,5 +490,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, fetchCard, controlCard, cardFailureLabel, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, currentPartie, currentPrize, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
 })();

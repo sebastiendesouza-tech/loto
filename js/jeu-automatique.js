@@ -57,6 +57,8 @@ async function loadEnteredCards(){
   if(entries.length>6){setupMessage.textContent='Vous pouvez suivre 6 cartons maximum.';return;}
   const invalid=entries.find(({code})=>!/^\d{6}$/.test(code)||Number(code)<101000||Number(code)>102999);
   if(invalid){setupMessage.textContent='Chaque numéro de carton doit être compris entre 101000 et 102999 (6 chiffres).';invalid.input.focus();return;}
+  const unavailable=entries.find(({code})=>Loto.knownMissingCardMessage(code));
+  if(unavailable){setupMessage.textContent=Loto.knownMissingCardMessage(unavailable.code);unavailable.input.focus();return;}
   const codes=entries.map(entry=>entry.code);
   if(new Set(codes.map(code=>code.toUpperCase())).size!==codes.length){setupMessage.textContent='Un même carton a été saisi plusieurs fois.';return;}
   button.disabled=true;inputs.forEach(input=>{input.disabled=true;});setupMessage.textContent='Recherche des cartons…';

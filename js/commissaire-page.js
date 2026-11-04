@@ -56,7 +56,8 @@ function renderResult(payload){
 
   if(!payload.found){
     lastResult = null;
-    result.innerHTML = '<div class="simple-control-result invalid"><div class="simple-control-status bad">NON VALIDE</div></div>';
+    const message=payload.message||Loto.knownMissingCardMessage(payload.numero)||`Carton ${payload.numero||''} non enregistré dans la base.`;
+    result.innerHTML = `<div class="simple-control-result invalid"><div class="simple-control-status bad">NON VALIDE</div><p class="bad">${esc(message)}</p></div>`;
     showBtn.style.display = 'none';
     if(publicCardActions) publicCardActions.style.display = 'none';
     return;

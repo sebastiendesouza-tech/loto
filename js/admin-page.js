@@ -140,7 +140,7 @@ async function testCard(){
   const n=document.getElementById('testCard').value; const out=document.getElementById('testCardResult');
   if(!n) return;
   const c=await Loto.fetchCard?.(n);
-  if(!c){out.innerHTML='<span class="bad">Carton introuvable.</span>'; return;}
+  if(!c){out.innerHTML='<span class="bad">'+esc(Loto.knownMissingCardMessage(n)||'Carton introuvable.')+'</span>'; return;}
   out.innerHTML=`<b>Carton ${c.numero}</b> · ${esc(c.serie||'STANDARD')}<br>` + c.lignes.map((l,i)=>`Ligne ${i+1} : ${l.join(' - ')}`).join('<br>');
 }
 document.getElementById('importDefaultCartons')?.addEventListener('click',importDefaultCartons);
