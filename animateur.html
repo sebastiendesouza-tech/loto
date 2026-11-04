@@ -17,7 +17,7 @@
         <div id="last" class="animateur-last-number">--</div>
       </div>
       <div id="currentLot" class="card current-lot compact-lot"></div>
-      <div class="card"><div class="toolbar"><label>Mode de reconnaissance du PC<select id="voiceMode"><option value="free">Libre</option><option value="le" selected>Mot-clé « le »</option><option value="numero">Mot-clé « numéro »</option></select></label><button id="miniBingoWon" class="secondary" style="display:none">Mini-bingo gagné</button><button id="startMiniBingo" class="green" style="display:none">Lancer Mini-bingo</button></div></div>
+      <div class="card"><div class="toolbar"><label>Mode de tirage<select id="voiceControlMode"><option value="micro" selected>Micro : tirage vocal</option><option value="manual">Manuel : clic sur les numéros</option></select></label><label>Reconnaissance vocale<select id="voiceMode"><option value="free">Libre</option><option value="le" selected>Mot-clé « le »</option><option value="numero">Mot-clé « numéro »</option></select></label><button id="miniBingoWon" class="secondary" style="display:none">Mini-bingo gagné</button><button id="startMiniBingo" class="green" style="display:none">Lancer Mini-bingo</button></div></div>
       <div class="card animateur-control-card">
         <h3>Contrôle carton</h3>
         <div class="toolbar control-toolbar-v229">
@@ -31,7 +31,6 @@
   </div>
   <div class="card history-card"><h3>Historique</h3><div id="history" class="history"></div></div>
 </main>
-<button id="voicePause" type="button" class="voice-fab paused" aria-label="Commander la reconnaissance des numéros sur le PC" disabled>🎤<span>MICRO PC<br>EN ATTENTE</span></button>
-<div id="voicePauseBanner" class="voice-pause-banner" role="status">Activez Micro PC sur l’affichage public du PC. La voix reste diffusée dans l’enceinte pendant les pauses.</div>
+<div id="voicePauseBanner" class="voice-pause-banner" role="status" style="display:none"></div>
 <div id="launchModal" class="modal-soft" style="display:none"><div class="modal-panel"><h2>Lancer un loto</h2><p>Choisis un loto enregistré ou démarre une partie simple.</p><div id="launchGuard" class="notice" style="display:none"></div><div id="launchList"></div><p class="toolbar"><button id="closeLaunch" class="secondary">Fermer</button><button id="modalBlankGame">Nouvelle partie simple</button></p></div></div>
 <script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js"></script><script src="js/pc-microphone.js"></script><script src="js/animateur-page.js"></script></body></html>
