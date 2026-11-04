@@ -495,9 +495,19 @@
 .player-lot-row small{grid-column:1/-1;color:#c7d8ee;font-weight:700;}
 .player-lot-row.active{border:2px solid #f2a900;background:#12365f;}
 .player-lot-row.won{opacity:.5;}
-.commissaire-commandbar{justify-content:space-between;}
 .commissaire-control-toolbar{grid-template-columns:minmax(0,1fr) auto;}
 .commissaire-scan-toolbar{margin-top:7px;}
+.commissaire-body .commissaire-lot-card{display:block;flex:0 1 auto;min-height:80px;max-height:30vh;overflow:auto;padding:12px;background:#0b1d36;border-color:#29466b;color:#fff;}
+.commissaire-lot-title{font-size:clamp(16px,2vw,22px);font-weight:1000;margin-bottom:4px;}
+.commissaire-lot-mode{font-size:13px;color:#c7d8ee;margin-bottom:9px;}
+.commissaire-prize-list{display:flex;flex-direction:column;gap:6px;}
+.commissaire-prize-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid #29466b;border-radius:10px;background:#102946;}
+.commissaire-prize-row strong{color:#fff;}
+.commissaire-prize-row span{color:#f2a900;font-weight:900;}
+.commissaire-prize-row small{color:#c7d8ee;font-weight:800;text-align:right;}
+.commissaire-prize-row.active{background:#12365f;border:2px solid #ffc629;}
+.commissaire-prize-row.won{opacity:.55;}
+@media(max-width:760px){.commissaire-body .commissaire-lot-card{max-height:none;}.commissaire-lot-title{font-size:18px;}}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
 button.danger{background:#a92a2a;color:#fff;border-color:#a92a2a}
 #saveMsg.notice{position:fixed;top:18px;right:18px;z-index:9999;max-width:360px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
