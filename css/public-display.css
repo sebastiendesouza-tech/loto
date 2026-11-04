@@ -15,9 +15,9 @@
 .public-projection .public-grid-v213 .num.pending,
 .public-projection .public-grid-v213 .num.current{background:#ff8c24;color:#101b2b;border-color:#fff0c5;box-shadow:0 0 22px rgba(255,140,36,.9),0 0 40px rgba(255,140,36,.42),inset 0 0 0 3px #fff1cd;animation:none;}
 .public-projection .public-side-v213{display:flex;flex-direction:column;gap:var(--display-gap);min-width:0;min-height:0;}
-.public-projection .public-last-card{flex:0 0 32%;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#102b4b;border:1px solid #456486;border-radius:16px;padding:10px;}
+.public-projection .public-last-card{flex:0 0 42%;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#102b4b;border:1px solid #456486;border-radius:16px;padding:10px;overflow:hidden;}
 .public-projection .public-last-label{text-transform:uppercase;letter-spacing:.12em;font-size:clamp(13px,1.7vmin,22px);font-weight:700;color:#c7d8ee;}
-.public-projection .public-number-v213{flex:1;width:100%;background:none;border-radius:0;font-size:clamp(100px,19vmin,230px);line-height:1;font-variant-numeric:tabular-nums;color:#ffc629;}
+.public-projection .public-number-v213{flex:1;min-width:0;width:100%;background:none;border-radius:0;font-size:clamp(140px,27vmin,320px);line-height:.86;font-variant-numeric:tabular-nums;color:#ffc629;white-space:nowrap;}
 .public-projection .public-info-card{flex:1;min-height:0;overflow:auto;padding:clamp(10px,1.5vmin,18px);border-radius:16px;}
 .public-projection .public-game-title{font-size:clamp(18px,2.6vmin,32px);margin:0 0 4px;}
 .public-projection .public-game-mode{font-size:clamp(13px,1.8vmin,23px);margin:0 0 10px;}
@@ -27,10 +27,6 @@
 .public-projection .public-prize-condition{font-size:clamp(12px,1.7vmin,21px);}
 .public-projection .public-prize-row.active{box-shadow:none;transform:none;border:2px solid #ffc629;}
 .public-projection .public-prize-row.won{opacity:.6;}
-.public-projection .public-qr-card{flex:0 0 auto;padding:clamp(7px,1vmin,12px);border-radius:16px;}
-.public-projection .qr-title{display:block;font-size:clamp(13px,1.8vmin,21px);margin:0 0 6px;}
-.public-projection .qr-holder{min-height:0;}
-.public-projection .qr-holder img,.public-projection .qr-holder canvas{width:clamp(96px,18vmin,190px)!important;height:clamp(96px,18vmin,190px)!important;max-width:100%!important;padding:6px;border-radius:8px;}
 .public-projection .public-bingo-card{flex:0 0 auto;max-height:16%;overflow:auto;padding:8px;}
 .public-projection .public-bingo-card h3{font-size:14px;margin:0 0 5px;}
 .public-projection .public-bingo-card .pill{font-size:13px;padding:3px 7px;}
@@ -51,10 +47,9 @@
   .public-projection .public-part-header{font-size:17px;padding-left:10px;}
   .public-projection .public-mic{grid-column:2;grid-row:1;}
   .public-projection .public-layout-v213{height:auto;min-height:calc(100dvh - var(--header-height));grid-template-columns:minmax(0,1fr);grid-template-rows:65dvh auto;}
-  .public-projection .public-side-v213{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;}
-  .public-projection .public-last-card{grid-row:1;grid-column:1;min-height:155px;}
-  .public-projection .public-info-card{grid-row:1 / 3;grid-column:2;overflow:visible;}
-  .public-projection .public-qr-card{grid-row:2;grid-column:1;}
-  .public-projection .public-number-v213{font-size:100px;}
+  .public-projection .public-side-v213{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;}
+  .public-projection .public-last-card{grid-row:1;grid-column:1;min-height:220px;}
+  .public-projection .public-info-card{grid-row:2;grid-column:1;overflow:visible;}
+  .public-projection .public-number-v213{font-size:clamp(160px,38vmin,260px);}
   .public-projection .public-bingo-card{grid-column:1 / -1;max-height:none;}
 }
