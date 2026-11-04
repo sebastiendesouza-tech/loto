@@ -12,9 +12,11 @@
 </head>
 <body class="auto-game-body">
   <header class="auto-header">
-    <a href="index.html" aria-label="Retour à l'accueil">‹</a>
-    <div><strong data-title>Loto by SdS</strong><span id="gameName">Chargement du loto…</span></div>
-    <span id="connectionStatus" class="connection-status">Connexion…</span>
+    <div class="auto-heading">
+      <div class="auto-heading-name"><strong data-title>Loto by SdS</strong><span aria-hidden="true">-</span><span id="gameName">Chargement du loto…</span></div>
+      <span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span>
+    </div>
+    <span id="connectionStatus" class="connection-status" hidden>Connexion…</span>
   </header>
 
   <main class="auto-main">
