@@ -7,21 +7,28 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/public-display.css">
 </head>
-<body class="public-body public-v213">
+<body class="public-body public-v213 public-projection">
   <header class="public-topbar">
     <div class="public-brand"><span data-title></span> <span data-version></span></div>
-    <div id="publicPartHeader" class="public-part-header">Partie --/--</div>
+    <div class="public-heading">
+      <div class="public-loto-name" data-loto-name>Loto by SdS</div>
+      <div id="publicPartHeader" class="public-part-header">Partie --/--</div>
+    </div>
     <button id="micBtn" class="public-mic green">Micro PC</button>
   </header>
 
   <main class="public-layout-v213">
     <section class="public-main-v213">
-      <div id="last" class="public-number-v213">--</div>
       <div class="public-grid-v213"><div id="grid" class="numbers"></div></div>
     </section>
 
     <aside class="public-side-v213">
+      <section class="public-last-card" aria-label="Dernier numéro annoncé">
+        <div class="public-last-label">Dernier numéro</div>
+        <div id="last" class="public-number-v213" aria-live="polite">--</div>
+      </section>
       <div class="public-info-card">
         <div id="publicGameTitle" class="public-game-title">Partie n°--</div>
         <div id="publicGameMode" class="public-game-mode">Jeu : --</div>
