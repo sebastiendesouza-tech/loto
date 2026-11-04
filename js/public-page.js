@@ -3,8 +3,6 @@ Loto.protectPage();
 
 const grid = document.getElementById('grid');
 const last = document.getElementById('last');
-const qr = document.getElementById('qr');
-const playerLink = document.getElementById('playerLink');
 const micBtn = document.getElementById('micBtn');
 const overlay = document.getElementById('cardOverlay');
 const bingoBox = document.getElementById('bingoBox');
@@ -13,13 +11,6 @@ const publicGameTitle = document.getElementById('publicGameTitle');
 const publicGameMode = document.getElementById('publicGameMode');
 const publicStep = document.getElementById('publicStep');
 const publicLot = document.getElementById('publicLot');
-
-let lastQrUrl = '';
-
-function playerUrl(){
-  const base = Loto.C.PLAYER_URL || (location.origin + location.pathname.replace('public.html','joueur.html'));
-  return base + '?s=' + encodeURIComponent(Loto.code());
-}
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function esc(s){ return String(s ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
@@ -96,22 +87,6 @@ function renderBingo(s){
   bingoBox.innerHTML=`<h3>Mini-bingo</h3><div class="history">${(s.bingoNumbers||[]).slice(-20).reverse().map(n=>`<span class="pill bingo-pill">${String(n).padStart(2,'0')}</span>`).join('')}</div>`;
 }
 
-function renderQr(){
-  const url = playerUrl();
-  playerLink.textContent = 'Scannez pour suivre le tirage';
-  if(url === lastQrUrl && qr.childNodes.length) return;
-  lastQrUrl = url;
-  qr.innerHTML = '';
-
-  // QR fiable sur GitHub Pages : image externe directe, sans afficher l'URL longue.
-  const img = document.createElement('img');
-  img.alt = 'QR Code joueur';
-  img.width = 240;
-  img.height = 240;
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(url);
-  qr.appendChild(img);
-}
-
 function renderToast(s){
   let el = document.getElementById('publicToast');
   if(!el){ el = document.createElement('div'); el.id='publicToast'; el.className='loto-toast public-toast'; document.body.appendChild(el); }
@@ -130,7 +105,6 @@ Loto.onChange(s=>{
   renderCard(s.publicCard);
   renderLots(s);
   renderBingo(s);
-  renderQr();
   renderToast(s);
 });
 
