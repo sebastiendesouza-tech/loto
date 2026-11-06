@@ -2,7 +2,7 @@
   let recognition=null, engineRunning=false, processingEnabled=false;
   let lastVoiceNumber=null,lastVoiceAt=0,mutedUntil=0;
   let mode=localStorage.getItem('loto_voice_mode')||'le';
-  const REECOUTE_DELAY_MS=350,SAME_NUMBER_GUARD_MS=5000,INTERIM_STABLE_MS=500;
+  const REECOUTE_DELAY_MS=350,SAME_NUMBER_GUARD_MS=5000,INTERIM_STABLE_MS=200,INTERIM_PREFIX_MS=500;
   let interimTimer=null,interimCandidate=null;
   function clearInterim(){clearTimeout(interimTimer);interimTimer=null;interimCandidate=null;}
   const units=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf'];
@@ -14,6 +14,8 @@
   const alt=Array.from(phraseToNumber.keys()).sort((a,b)=>b.length-a.length).map(v=>v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
   const wordRegex=new RegExp('\\b('+alt+')\\b','g');
   function extractNumbers(text){const t=norm(text),found=[];let m;const dr=/\b([1-9]|[1-8][0-9]|90)\b/g;while((m=dr.exec(t)))found.push({index:m.index,n:Number(m[1])});while((m=wordRegex.exec(t))){const n=phraseToNumber.get(norm(m[1]));if(n)found.push({index:m.index,n});}found.sort((a,b)=>a.index-b.index);return found.map(x=>x.n);}
+  // Single digits and round tens can still become longer French numbers.
+  function interimDelay(n){return n<10||n===10||(n>=20&&n<=80&&n%10===0)?INTERIM_PREFIX_MS:INTERIM_STABLE_MS;}
   function keywordAccepted(t){if(mode==='free')return true;if(mode==='numero')return /\bnumero\b/.test(t);return /\ble\b/.test(t);}
   async function validateVoiceNumber(n){const now=Date.now();if(!processingEnabled||now<mutedUntil)return;if(lastVoiceNumber===n&&now-lastVoiceAt<SAME_NUMBER_GUARD_MS)return;lastVoiceNumber=n;lastVoiceAt=now;clearInterim();mutedUntil=now+REECOUTE_DELAY_MS;await Loto.setPendingNumber(n);}
   async function handle(text){if(!processingEnabled||Date.now()<mutedUntil)return;const t=norm(text);if(!t||!keywordAccepted(t))return;const nums=extractNumbers(t);if(!nums.length)return;await validateVoiceNumber(nums[0]);}
@@ -55,13 +57,14 @@
           continue;
         }
         if(!processingEnabled||Date.now()<mutedUntil){clearInterim();continue;}
-        // Restart the stability delay on every text revision: "le 9" may
-        // still become "le 90". Consume each speech segment only once.
-        if(interimCandidate?.index===i&&interimCandidate.text===text)continue;
+        const number=keywordAccepted(text)?extractNumbers(text)[0]:null;
+        // Formatting revisions ("42" -> "quarante deux") do not restart the
+        // delay. Changes in the detected number always do; prefixes wait longer.
+        if(number&&interimCandidate?.index===i&&interimCandidate.number===number)continue;
         clearInterim();
-        if(!keywordAccepted(text)||!extractNumbers(text).length)continue;
-        interimCandidate={index:i,text};
-        interimTimer=setTimeout(()=>accept(i,text),INTERIM_STABLE_MS);
+        if(!number)continue;
+        interimCandidate={index:i,number};
+        interimTimer=setTimeout(()=>accept(i,text),interimDelay(number));
       }
     };
     recognition.onend=()=>{
@@ -87,5 +90,5 @@
   function pause(onStatus){processingEnabled=false;clearInterim();lastVoiceNumber=null;onStatus&&onStatus(false,'reconnaissance en pause');}
   function toggle(onStatus){processingEnabled?pause(onStatus):resume(onStatus);}
   function setMode(v){mode=['free','le','numero'].includes(v)?v:'le';localStorage.setItem('loto_voice_mode',mode);clearInterim();}
-  window.LotoVoice={start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS};
+  window.LotoVoice={start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS,INTERIM_PREFIX_MS};
 })();
