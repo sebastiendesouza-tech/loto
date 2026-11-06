@@ -14,7 +14,13 @@
     const status=$('dashLotoStatus'); if(status){status.textContent=p.id?'Loto actif':'Aucun loto actif';status.className='dashboard-status '+(p.id?'good':'neutral');}
     set('dashSync',s.updatedAt?new Date(s.updatedAt).toLocaleTimeString('fr-FR'):'—');
   }
-  async function refreshStats(){
+  let statsFlight=null;
+  function refreshStats(){
+    if(statsFlight)return statsFlight;
+    statsFlight=readStats().catch(()=>set('dashDbState','Lecture impossible')).finally(()=>{statsFlight=null;});
+    return statsFlight;
+  }
+  async function readStats(){
     const client=Loto.supabaseClient,s=Loto.state(),p=s.program||{},lotoId=p.id||s.sessionCode||Loto.code();
     if(!client){set('dashDbState','Supabase non configuré');return;}
     const [{count:created,error:e1},{data:sales,error:e2}]=await Promise.all([
@@ -57,7 +63,7 @@
     btn.disabled=false;
   }
   $('runIntegrity')?.addEventListener('click',runIntegrity);
-  $('refreshDashboard')?.addEventListener('click',refreshStats);
+  Loto.onSyncChange(status=>{if(status.connected&&status.state!=='syncing')void refreshStats();});
   Loto.onChange(s=>{Loto.pageHeader();renderState(s);});
   Loto.ensureSession().then(()=>{renderState(Loto.state());refreshStats();});
   Loto.protectPage();

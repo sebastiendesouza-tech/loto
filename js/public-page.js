@@ -156,14 +156,3 @@ publicNextPartie.onclick=async()=>{
   }catch(error){alert('Impossible de passer à la suite : '+(error.message||error));}
   finally{publicProgressBusy=false;renderPublicProgress(Loto.state());}
 };
-
-// Persistent notice: it never blocks listening and stays until closed or refreshed.
-const connectionRestoredPopup=document.getElementById('connectionRestoredPopup');
-let lastRecoveryNotice=0;
-Loto.onSyncChange(status=>{
-  if(!status.connected||!status.reconnectAvailable){connectionRestoredPopup.hidden=true;return;}
-  if(status.reconnectId!==lastRecoveryNotice){
-    lastRecoveryNotice=status.reconnectId;connectionRestoredPopup.hidden=false;
-  }
-});
-document.getElementById('closeConnectionRestored').onclick=()=>{connectionRestoredPopup.hidden=true;};
