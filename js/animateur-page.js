@@ -111,12 +111,9 @@ function renderLot(s){
   const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
   if(!p){currentLot.innerHTML=`<div class="commissaire-lot-title">Partie simple</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
-  const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
+  const prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
-  const name=String(p.name||'').trim();
-  const generic=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/^partie(?:\s*(?:n(?:umero|[°ºo])?\s*)?0*(\d+))?$/i);
-  const suffix=name&&!(generic&&(!generic[1]||Number(generic[1])===partIndex+1))?' · '+esc(name):'';
-  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length}${suffix}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+  currentLot.innerHTML=`<div class="commissaire-lot-title">${esc(Loto.partieLabel(s))}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
     const cls=i<prizeIndex?'won':i===prizeIndex&&!lotoEnded&&!s.miniBingoReady?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';

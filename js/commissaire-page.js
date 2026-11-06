@@ -41,9 +41,9 @@ function renderLot(s){
   const p = Loto.currentPartie();
   if(!p){ currentLot.innerHTML = '<div class="commissaire-lot-title">Aucun lot programmé</div><div class="commissaire-lot-mode">Partie simple</div>'; return; }
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(x=>x&&x.enabled!==false);
-  const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
+  const prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
-  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} · ${esc(p.name||'Partie')}</div><div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+  currentLot.innerHTML=`<div class="commissaire-lot-title">${esc(Loto.partieLabel(s))}</div><div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
     const cls=i<prizeIndex?'won':i===prizeIndex?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO': 'CARTON PLEIN';
