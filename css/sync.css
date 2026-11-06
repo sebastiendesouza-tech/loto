@@ -35,3 +35,5 @@
 
 .sync-controls-single{justify-content:flex-end}
 .sync-controls-single .spectator-connection .connection-tooltip{left:auto;right:0}
+
+.animateur-commandbar button:disabled{opacity:.5;cursor:not-allowed}
