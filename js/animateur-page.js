@@ -4,6 +4,8 @@ const launchModal=document.getElementById('launchModal'),launchList=document.get
 const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=document.getElementById('voiceMode'),voicePauseBanner=document.getElementById('voicePauseBanner'),miniBingoWon=document.getElementById('miniBingoWon');
 
 const launchLotoButton=document.getElementById('launchLoto');
+const simpleGameButton=document.getElementById('newGame');
+const voiceListeningButton=document.getElementById('toggleVoiceListening');
 const animateurMenuLink=document.getElementById('animateurMenuLink');
 if(animateurMenuLink)animateurMenuLink.href='index.html?s='+encodeURIComponent(Loto.code());
 let animateurSessionReady=false;
@@ -19,6 +21,8 @@ function startProgram(program){
 function drawLaunchList(){
   const blocked=!Loto.canStartGame();
   launchLotoButton.disabled=!animateurSessionReady||blocked;
+  simpleGameButton.disabled=!animateurSessionReady||blocked;
+  simpleGameButton.title=!animateurSessionReady?'Chargement du loto…':blocked?'Un loto est déjà en cours.':'Créer une partie simple';
   launchLotoButton.title=!animateurSessionReady?'Chargement du loto…':blocked?'Un loto est déjà en cours.':'Lancer un loto enregistré';
   document.getElementById('modalBlankGame').disabled=!animateurSessionReady||blocked;
   if(launchGuard){launchGuard.style.display=blocked?'block':'none';launchGuard.textContent=blocked?'Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration > Lotos enregistrés.':'';}
@@ -29,8 +33,8 @@ function drawLaunchList(){
 }
 launchLotoButton.onclick=()=>{if(launchLotoButton.disabled||!Loto.canStartGame())return;drawLaunchList();launchModal.style.display='flex';};
 document.getElementById('closeLaunch').onclick=()=>launchModal.style.display='none';
-document.getElementById('modalBlankGame').onclick=async()=>{ if(!Loto.canStartGame()){alert('Une partie est déjà en cours.');return;} if(confirm('Créer une nouvelle partie simple ?')){ await Loto.newGame(); launchModal.style.display='none'; } };
-document.getElementById('newGame').onclick=async()=>{ if(!Loto.canStartGame()){alert('Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration.');return;} if(confirm('Créer une nouvelle partie simple ?')) await Loto.newGame(); };
+document.getElementById('modalBlankGame').onclick=async()=>{ if(document.getElementById('modalBlankGame').disabled)return; if(!Loto.canStartGame()){alert('Une partie est déjà en cours.');return;} if(confirm('Créer une nouvelle partie simple ?')){ await Loto.newGame(); launchModal.style.display='none'; } };
+simpleGameButton.onclick=async()=>{ if(simpleGameButton.disabled)return; if(!Loto.canStartGame()){alert('Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration.');return;} if(confirm('Créer une nouvelle partie simple ?')) await Loto.newGame(); };
 const cancelPendingBtn=document.getElementById('cancelPending'); if(cancelPendingBtn) cancelPendingBtn.onclick=()=>Loto.cancelPending();
 document.getElementById('animHidePublic').onclick=()=>Loto.hidePublicCard();
 function pad(n){return String(n).padStart(2,'0');}
@@ -41,6 +45,11 @@ function renderAnimCard(payload){if(!animCardResult)return; if(!payload){animCar
 document.getElementById('animCheckBtn').onclick=async()=>{if(!animCardNumber.value)return; const payload=await Loto.controlCard(animCardNumber.value); renderAnimCard(payload); if(payload?.found) await Loto.showPublicCard(payload.result);};
 animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animCheckBtn').click();};
 const nextPartieButton=document.getElementById('winner');
+let animateurProgressBusy=false;
+function renderAnimateurProgress(s){
+  nextPartieButton.textContent=s.miniBingoReady?'Fin du loto':Loto.progressLabel(s);
+  nextPartieButton.disabled=animateurProgressBusy||!s.gameActive||!!s.gameEnded||!!s.miniBingoReady;
+}
 nextPartieButton.onclick=async()=>{
   if(nextPartieButton.disabled)return;
   const s=Loto.state(),parties=s.program?.parties||[],pi=Number(s.currentPartieIndex||0),li=Number(s.currentPrizeIndex||0);
@@ -53,14 +62,21 @@ nextPartieButton.onclick=async()=>{
   else if(s.options?.bingoEnabled&&!s.miniBingoWon)question='Terminer la dernière partie et préparer le mini-bingo ?\nLes numéros du tirage actuel seront remis à zéro.';
   else question='Terminer cette partie et le loto ?\nLes numéros du tirage actuel seront remis à zéro.';
   if(!confirm(question))return;
-  nextPartieButton.disabled=true;
-  try{await Loto.winner();}finally{nextPartieButton.disabled=false;}
+  animateurProgressBusy=true;renderAnimateurProgress(s);
+  try{await Loto.winner();}finally{animateurProgressBusy=false;renderAnimateurProgress(Loto.state());}
 };
 const startMiniBingoBtn=document.getElementById('startMiniBingo');
-if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>Loto.startMiniBingo();
+if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>{if(confirm('Lancer le Mini-bingo ?\nLes numéros de la partie précédente seront remis à zéro.'))return Loto.startMiniBingo();};
 let legacyModeUpdateScheduled=false;
 const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   const connected = status.connected && status.online;
+  if(voiceListeningButton){
+    voiceListeningButton.disabled=!connected||!status.ready||status.pending||status.sourceMode==='manual';
+    voiceListeningButton.textContent=status.pending?'Commande en cours…':status.active?'Mettre l’écoute en pause':'Reprendre l’écoute';
+    voiceListeningButton.className=(status.active?'red':'green')+' voice-listening-button animateur-micro-dock';
+    voiceListeningButton.setAttribute('aria-pressed',String(!!status.active));
+    voiceListeningButton.title=!connected?'Le PC n’est pas joignable.':!status.ready?'Activez Micro PC sur l’affichage public du PC.':status.sourceMode==='manual'?'Choisissez Vocal pour reprendre l’écoute.':status.active?'Suspendre la reconnaissance des numéros sur le PC':'Reprendre la reconnaissance des numéros sur le PC';
+  }
   if(voiceControlMode){ voiceControlMode.disabled = !connected || status.pending; voiceControlMode.value = status.sourceMode; }
   if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending; voiceMode.value = status.mode==='numero'?'numero':'le'; }
   if(status.mode==='free'&&connected&&status.ready&&!status.pending&&!status.error&&!legacyModeUpdateScheduled){
@@ -78,6 +94,7 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
       '';
   }
 });
+if(voiceListeningButton)voiceListeningButton.onclick=()=>{if(!voiceListeningButton.disabled)void pcMicrophone.toggle();};
 if(voiceControlMode) voiceControlMode.onchange = () => pcMicrophone.setSourceMode(voiceControlMode.value);
 if(voiceMode) voiceMode.onchange = () => pcMicrophone.setMode(voiceMode.value);
 if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mini-bingo a été gagné ?')) await Loto.markMiniBingoWon(); };
@@ -96,7 +113,10 @@ function renderLot(s){
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const partIndex=Number(s.currentPartieIndex||0),prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
-  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length} · ${esc(p.name||'Partie')}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+  const name=String(p.name||'').trim();
+  const generic=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/^partie(?:\s*(?:n(?:umero|[°ºo])?\s*)?0*(\d+))?$/i);
+  const suffix=name&&!(generic&&(!generic[1]||Number(generic[1])===partIndex+1))?' · '+esc(name):'';
+  currentLot.innerHTML=`<div class="commissaire-lot-title">Partie n°${partIndex+1} / ${(s.program?.parties||[]).length}${suffix}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
     const cls=i<prizeIndex?'won':i===prizeIndex&&!lotoEnded&&!s.miniBingoReady?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
@@ -109,6 +129,7 @@ Loto.onChange(s=>{
   last.textContent=Loto.lastNumber();
   history.innerHTML=(s.drawnNumbers||[]).slice().reverse().map(n=>`<span class="pill">${String(n).padStart(2,'0')}</span>`).join('');
   renderLot(s);
+  renderAnimateurProgress(s);
   if(s.publicCard){
     renderAnimCard({found:true,result:s.publicCard});
   } else if(Number(s.cardClosedAt||0) && Number(s.cardClosedAt||0)!==lastCardClosedAt){

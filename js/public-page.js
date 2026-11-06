@@ -134,8 +134,8 @@ const pcMicrophone = LotoPcMicrophone.connect('host', status => {
 micBtn.onclick = () => pcMicrophone.toggle();
 
 function renderPublicProgress(s){
-  publicNextPartie.disabled=publicProgressBusy||!s.gameActive||s.gameEnded;
-  publicNextPartie.textContent=s.miniBingoReady?'Lancer Mini-bingo':'Partie suivante';
+  publicNextPartie.disabled=publicProgressBusy||!s.gameActive||!!s.gameEnded;
+  publicNextPartie.textContent=Loto.progressLabel(s);
 }
 publicNextPartie.onclick=async()=>{
   if(publicNextPartie.disabled||publicProgressBusy)return;
