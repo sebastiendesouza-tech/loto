@@ -3,6 +3,10 @@ const grid=document.getElementById('grid'),last=document.getElementById('last'),
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList'),launchGuard=document.getElementById('launchGuard');
 const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=document.getElementById('voiceMode'),voicePauseBanner=document.getElementById('voicePauseBanner'),miniBingoWon=document.getElementById('miniBingoWon');
 
+const launchLotoButton=document.getElementById('launchLoto');
+const animateurMenuLink=document.getElementById('animateurMenuLink');
+if(animateurMenuLink)animateurMenuLink.href='index.html?s='+encodeURIComponent(Loto.code());
+let animateurSessionReady=false;
 let lastCardClosedAt = 0;
 function programTitle(program){return (program?.title||'').trim() || 'Loto sans nom';}
 function esc(v){return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
@@ -14,13 +18,16 @@ function startProgram(program){
 }
 function drawLaunchList(){
   const blocked=!Loto.canStartGame();
+  launchLotoButton.disabled=!animateurSessionReady||blocked;
+  launchLotoButton.title=!animateurSessionReady?'Chargement du loto…':blocked?'Un loto est déjà en cours.':'Lancer un loto enregistré';
+  document.getElementById('modalBlankGame').disabled=!animateurSessionReady||blocked;
   if(launchGuard){launchGuard.style.display=blocked?'block':'none';launchGuard.textContent=blocked?'Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration > Lotos enregistrés.':'';}
   const list=Loto.state().savedPrograms||[];
   if(!list.length){ launchList.innerHTML='<p>Aucun loto enregistré. Utilise “Partie simple” ou prépare un loto dans Administration.</p>'; return; }
   launchList.innerHTML=list.map((p,i)=>`<div class="saved-row"><div><b>${esc(programTitle(p))}</b><br><span class="muted">${esc(p.date||'Sans date')} · ${(p.parties||[]).length} partie(s)</span></div><button data-start="${i}" class="green" ${blocked?'disabled':''}>Lancer</button></div>`).join('');
   launchList.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>startProgram(list[Number(b.dataset.start)]));
 }
-document.getElementById('launchLoto').onclick=()=>{drawLaunchList();launchModal.style.display='flex';};
+launchLotoButton.onclick=()=>{if(launchLotoButton.disabled||!Loto.canStartGame())return;drawLaunchList();launchModal.style.display='flex';};
 document.getElementById('closeLaunch').onclick=()=>launchModal.style.display='none';
 document.getElementById('modalBlankGame').onclick=async()=>{ if(!Loto.canStartGame()){alert('Une partie est déjà en cours.');return;} if(confirm('Créer une nouvelle partie simple ?')){ await Loto.newGame(); launchModal.style.display='none'; } };
 document.getElementById('newGame').onclick=async()=>{ if(!Loto.canStartGame()){alert('Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration.');return;} if(confirm('Créer une nouvelle partie simple ?')) await Loto.newGame(); };
@@ -110,4 +117,4 @@ Loto.onChange(s=>{
   }
   drawLaunchList();
 });
-Loto.ensureSession();
+Loto.ensureSession().then(()=>{animateurSessionReady=true;drawLaunchList();}).catch(()=>{launchLotoButton.disabled=true;launchLotoButton.title='Impossible de charger le loto.';});
