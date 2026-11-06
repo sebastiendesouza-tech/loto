@@ -8,3 +8,9 @@
 .public-projection .sync-controls{margin-top:auto;flex-shrink:0}
 .public-projection .public-grid-v213 button.num{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;padding:0;cursor:pointer}
 .public-projection .public-grid-v213 button.num:focus-visible{outline:3px solid #fff;outline-offset:-3px}
+
+.public-backup-controls{gap:8px;padding:8px}
+.public-backup-buttons{display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end;min-width:0}
+.public-backup-buttons button{padding:6px 8px;font-size:12px;white-space:nowrap}
+.connection-light{display:inline-block;width:16px;height:16px;flex:0 0 16px;border-radius:50%;background:#dc2626;border:2px solid #ffc4c4;box-shadow:0 0 9px #dc262680}
+.connection-light[data-connected="true"]{background:#22c55e;border-color:#b6ffd0;box-shadow:0 0 9px #22c55e80}
