@@ -9,19 +9,19 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-5">
-<link rel="stylesheet" href="css/sync.css?v=20261106-connection-recovery"></head>
+<link rel="stylesheet" href="css/sync.css?v=20261106-spectator-light"></head>
 <body class="auto-game-body">
   <header class="auto-header">
     <div class="auto-heading">
       <div class="auto-heading-name"><strong data-title>Loto by SdS</strong><span aria-hidden="true">-</span><span id="gameName">Chargement du loto…</span></div>
-      <span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span>
+      <div class="spectator-part-row"><span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span><button type="button" class="spectator-connection" data-connection-info aria-label="Non connecté. Vérifiez votre connexion Internet." title="Non connecté. Vérifiez votre connexion Internet." aria-describedby="autoConnectionTooltip" aria-expanded="false"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" data-connected="false" aria-hidden="true"></span><span id="autoConnectionTooltip" class="connection-tooltip" data-connection-tooltip role="tooltip">Non connecté. Vérifiez votre connexion Internet.</span></button></div>
     </div>
     <nav class="auto-header-actions" aria-label="Navigation"><a id="returnToPlayer" class="auto-secondary" href="joueur.html">Retour</a><button id="editCards" class="auto-secondary" type="button" hidden>Modifier</button></nav>
     <span id="connectionStatus" hidden>Connexion…</span>
   </header>
 
   <main class="auto-main">
-    <div class="sync-controls"><span data-sync-status role="status" aria-live="polite">Connexion…</span><button type="button" data-sync-refresh>Actualiser</button></div>
+    
     <section id="setup" class="auto-panel setup-panel">
       <h1>Vos cartons</h1>
       <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton, de 101000 à 102999. Laissez les autres cases vides.</p>
@@ -56,7 +56,7 @@
 
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=20261106-connection-recovery"></script>
+  <script src="js/core.js?v=20261106-spectator-light"></script>
   <script src="js/jeu-automatique.js?v=5-carton-101311"></script>
 </body>
 </html>
