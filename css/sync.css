@@ -37,3 +37,12 @@
 .sync-controls-single .spectator-connection .connection-tooltip{left:auto;right:0}
 
 .animateur-commandbar button:disabled{opacity:.5;cursor:not-allowed}
+
+.brand-with-connection{display:inline-flex;align-items:center;gap:4px;min-width:0}
+.brand-with-connection .spectator-connection{flex:0 0 44px;width:44px;height:44px;padding:0}
+.brand-with-connection .connection-tooltip{right:auto;left:0}
+.player .brand-with-connection{display:flex;justify-content:center}
+.player .brand-with-connection .connection-tooltip{right:0;left:auto}
+@media(max-width:360px){.player .title.has-cards-link{padding-left:94px;padding-right:48px}.player-cards-link{padding:8px;font-size:11px}.player-lots-button{padding:7px 8px;font-size:12px}}
+
+#commissaireScanActions[hidden]{display:none!important}
