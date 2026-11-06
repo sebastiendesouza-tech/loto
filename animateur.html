@@ -1,5 +1,5 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animateur</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css?v=5-animateur-confirmation-3"><link rel="stylesheet" href="css/sync.css?v=20261106-brand-light"><link rel="stylesheet" href="css/animateur-controls.css?v=20261106-brand-light"></head><body class="animateur-body">
-<header class="topbar"><div class="brand-with-connection"><span class="brand" data-title></span><button type="button" class="spectator-connection" data-connection-info aria-label="Non connecté. Vérifiez votre connexion Internet." title="Non connecté. Vérifiez votre connexion Internet." aria-describedby="animateurConnectionTooltip" aria-expanded="false"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" data-connected="false" aria-hidden="true"></span><span id="animateurConnectionTooltip" class="connection-tooltip" data-connection-tooltip role="tooltip">Non connecté. Vérifiez votre connexion Internet.</span></button></div><div class="session"><span data-loto-name>Loto by SdS</span></div></header>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animateur</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="css/app.css?v=5-animateur-confirmation-3"><link rel="stylesheet" href="css/sync.css?v=20261106-display-options"><link rel="stylesheet" href="css/animateur-controls.css?v=20261106-display-options"></head><body class="animateur-body">
+<header class="topbar"><div class="brand-with-connection"><span class="brand" data-title></span><button type="button" class="spectator-connection" data-connection-info aria-label="Non connecté. Vérifiez votre connexion Internet." title="Non connecté. Vérifiez votre connexion Internet." aria-describedby="animateurConnectionTooltip" aria-expanded="false"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" data-connected="false" aria-hidden="true"></span><span id="animateurConnectionTooltip" class="connection-tooltip" data-connection-tooltip role="tooltip">Non connecté. Vérifiez votre connexion Internet.</span></button></div><div class="session"><span data-loto-name>Loto by SdS</span> · Animateur</div></header>
 <main class="wrap animateur-wrap-v229">
   <div class="animateur-main-v229">
     <section class="card numbers-card animateur-grid-panel">
@@ -12,6 +12,7 @@
     <button id="newGame" class="secondary" disabled>Partie simple</button>
     <button id="winner" class="green" disabled>Lot suivant</button>
     <a id="animateurMenuLink" class="btn light" href="index.html" target="_blank" rel="noopener noreferrer">Menu</a>
+    <div class="animateur-voice-controls"><label>Tirage<select id="voiceControlMode"><option value="micro" selected>Vocal</option><option value="manual">Manuel</option></select></label><label>Mot-clé<select id="voiceMode"><option value="le" selected>Le</option><option value="numero">Numéro</option></select></label><button id="miniBingoWon" class="secondary" style="display:none">Mini-bingo gagné</button><button id="startMiniBingo" class="green" style="display:none">Lancer Mini-bingo</button></div>
     
   </div>
       <div class="card animateur-last-card">
@@ -19,7 +20,7 @@
         <div id="last" class="animateur-last-number">--</div>
       </div>
       <section id="currentLot" class="card animateur-lot-card" aria-label="Partie et lots"></section>
-      <div class="card"><div class="animateur-voice-controls"><label>Tirage<select id="voiceControlMode"><option value="micro" selected>Vocal</option><option value="manual">Manuel</option></select></label><label>Mot-clé<select id="voiceMode"><option value="le" selected>Le</option><option value="numero">Numéro</option></select></label><button id="miniBingoWon" class="secondary" style="display:none">Mini-bingo gagné</button><button id="startMiniBingo" class="green" style="display:none">Lancer Mini-bingo</button></div></div>
+
       <div class="card animateur-control-card">
         <h3>Contrôle carton</h3>
         <div class="toolbar control-toolbar-v229">
@@ -37,4 +38,4 @@
 </main>
 <div id="voicePauseBanner" class="voice-pause-banner" role="status" style="display:none"></div>
 <div id="launchModal" class="modal-soft" style="display:none"><div class="modal-panel"><h2>Lancer un loto</h2><p>Choisis un loto enregistré ou démarre une partie simple.</p><div id="launchGuard" class="notice" style="display:none"></div><div id="launchList"></div><p class="toolbar"><button id="closeLaunch" class="secondary">Fermer</button><button id="modalBlankGame">Nouvelle partie simple</button></p></div></div>
-<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js?v=20261106-brand-light"></script><script src="js/pc-microphone.js"></script><script src="js/animateur-page.js?v=20261106-brand-light"></script></body></html>
+<script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/core.js?v=20261106-display-options"></script><script src="js/pc-microphone.js"></script><script src="js/animateur-page.js?v=20261106-brand-light"></script></body></html>
