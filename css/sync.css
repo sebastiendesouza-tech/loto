@@ -33,3 +33,6 @@
 @media(hover:none){.spectator-connection:hover:not(.is-open):not(:focus-visible) .connection-tooltip{display:none}}
 
 .auto-heading .connection-tooltip{left:50%;right:auto;transform:translateX(-50%)}
+
+.sync-controls .spectator-connection{padding:0;background:transparent;border:0}
+.sync-controls .spectator-connection .connection-tooltip{left:0;right:auto}
