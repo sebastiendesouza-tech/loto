@@ -8,7 +8,7 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/public-display.css">
-<link rel="stylesheet" href="css/sync.css?v=20261104"></head>
+<link rel="stylesheet" href="css/sync.css?v=20261106-public-backup"></head>
 <body class="public-body public-v213 public-projection">
   <header class="public-topbar">
     <div class="public-brand"><span data-title></span></div>
@@ -36,7 +36,7 @@
         <div id="publicLot" class="public-lot">LOT : --</div>
       </div>
 
-      <div class="sync-controls"><span data-sync-status role="status" aria-live="polite">Connexion…</span><button type="button" data-sync-refresh>Actualiser</button></div>
+      <div class="sync-controls public-backup-controls"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" role="img" aria-label="Connexion en cours" title="Connexion en cours"></span><div class="public-backup-buttons"><button type="button" data-sync-refresh>Actualiser</button><button type="button" id="publicNextPartie" disabled>Partie suivante</button></div></div>
       <div class="public-bingo-card" id="bingoBox" style="display:none"></div>
     </aside>
   </main>
@@ -45,9 +45,9 @@
 
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=20261104-reconnect"></script>
+  <script src="js/core.js?v=20261106-public-backup"></script>
   <script src="js/voice.js?v=20261104-fast-stable"></script>
   <script src="js/pc-microphone.js"></script>
-  <script src="js/public-page.js?v=20261104-reconnect"></script>
+  <script src="js/public-page.js?v=20261106-public-backup"></script>
 </body>
 </html>
