@@ -14,7 +14,7 @@
     checkedCards: [],
     currentPartieIndex: 0,
     currentPrizeIndex: 0,
-    options: { showLots: false, bingoEnabled: false, showBingo: false, miniBingoSource: 'first', prevalidateSeconds: 6, lastNumberRequired: true },
+    options: { showCommissaireScanner: false, showLots: false, bingoEnabled: false, showBingo: false, miniBingoSource: 'first', prevalidateSeconds: 6, lastNumberRequired: true },
     bingoNumbers: [],
     miniBingoTakenParties: [],
     miniBingoReady: false,

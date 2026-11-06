@@ -9,6 +9,7 @@ const showBtn = document.getElementById('showPublic');
 const hideBtn = document.getElementById('hidePublic');
 const publicCardActions = document.getElementById('publicCardActions');
 const currentLot = document.getElementById('currentLot');
+const scanActions=document.getElementById('commissaireScanActions');
 let lastResult = null;
 let lastCardClosedAt = 0;
 
@@ -91,6 +92,7 @@ showBtn.onclick = () => lastResult && Loto.showPublicCard(lastResult);
 hideBtn.onclick = async () => { await Loto.hidePublicCard(); if(publicCardActions) publicCardActions.style.display = 'none'; };
 
 Loto.onChange((s) => {
+  if(scanActions)scanActions.hidden=!s.options?.showCommissaireScanner;
   Loto.pageHeader();
   Loto.renderNumbers(grid);
   last.textContent = Loto.lastNumber();
