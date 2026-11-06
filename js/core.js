@@ -51,6 +51,12 @@
   // Persist individual changes, rather than overwriting a newer remote game.
   let serverState=null, serverStamp='', sessionStarted=false, syncFlight=null;
   let syncReady=false, syncError='', syncConflict='', storageError=false;
+  let serverReachable=false,connectionInterrupted=false,reconnectAvailable=false,reconnectId=0;
+  function connectionLost(message){serverReachable=false;connectionInterrupted=true;reconnectAvailable=false;syncError=message;}
+  function connectionConfirmed(){
+    serverReachable=true;syncError='';
+    if(connectionInterrupted){reconnectAvailable=true;reconnectId++;connectionInterrupted=false;}
+  }
   let retryTimer=null, pollTimer=null, lastReadAt=0, sequence=0;
   const memoryPending=new Map(),syncListeners=[];
   const writerId=(window.crypto?.randomUUID?.()||('pc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)));
@@ -73,14 +79,35 @@
   function syncStatus(){
     const pending=pendingChanges().length;
     const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
-    return {state:syncConflict||storageError?'attention':offline||syncError?'offline':syncFlight?'syncing':pending?'pending':syncReady?'online':'waiting',pending,message:syncConflict||(storageError?'Sauvegarde locale indisponible. Gardez cette page ouverte.':syncError)};
+    return {connected:serverReachable&&!offline,reconnectAvailable,reconnectId,state:syncConflict||storageError?'attention':offline||syncError?'offline':syncFlight?'syncing':pending?'pending':syncReady?'online':'waiting',pending,message:syncConflict||(storageError?'Sauvegarde locale indisponible. Gardez cette page ouverte.':syncError)};
   }
   function notifySync(){
     const status=syncStatus();syncListeners.forEach(fn=>fn(status));
     if(typeof document==='undefined'||!document.querySelectorAll)return;
     const labels={attention:'À vérifier',offline:'Hors connexion',syncing:'Actualisation…',pending:'En attente',online:'À jour',waiting:'Connexion…'};
-    document.querySelectorAll('[data-sync-status]').forEach(el=>{el.textContent=labels[status.state]+(status.pending?` · ${status.pending} en attente`:'');el.dataset.state=status.state;el.title=status.message||'';});
-    document.querySelectorAll('[data-sync-refresh]').forEach(button=>{button.disabled=!!syncFlight;button.title=status.message||'Relire le tirage et transmettre les changements en attente';});
+    document.querySelectorAll('[data-sync-status]').forEach(el=>{
+      el.dataset.state=status.state;
+      if(el.hasAttribute?.('data-sync-light')||document.body?.classList.contains('public-projection')){
+        el.classList?.add('connection-light');
+        const connected=status.connected;
+        el.dataset.connected=String(connected);
+        const label=(connected?'Connecté':'Connexion interrompue')+(status.pending?` · ${status.pending} changement(s) en attente`:'');
+        el.textContent='';el.setAttribute('role','img');el.setAttribute('aria-label',label);el.title=label+(status.message?' — '+status.message:'');
+      }else{
+        el.textContent=labels[status.state]+(status.pending?` · ${status.pending} en attente`:'');el.title=status.message||'';
+      }
+    });
+    document.querySelectorAll('[data-connection-info]').forEach(button=>{
+      const label=status.connected?'Connecté':'Non connecté. Vérifiez votre connexion Internet.';
+      button.title=label;button.setAttribute('aria-label',label);
+      const tooltip=button.querySelector('[data-connection-tooltip]');
+      if(tooltip)tooltip.textContent=label;
+    });
+    document.querySelectorAll('[data-sync-refresh]').forEach(button=>{
+      const reconnectOnly=!!button.hasAttribute?.('data-sync-reconnect-only')||!!document.body?.classList.contains('public-projection');
+      button.disabled=!!syncFlight||(reconnectOnly&&(!status.connected||!status.reconnectAvailable));
+      button.title=reconnectOnly?(status.connected?(status.reconnectAvailable?'Connexion revenue : vous pouvez actualiser':'La mise à jour du tirage est automatique'):'Actualisation disponible au retour de la connexion'):(status.message||'Relire le tirage et transmettre les changements en attente');
+    });
   }
   function onSyncChange(fn){syncListeners.push(fn);fn(syncStatus());return ()=>{const i=syncListeners.indexOf(fn);if(i>=0)syncListeners.splice(i,1);};}
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -111,7 +138,8 @@
       }else{const d=difference(state[key],value);if(d)changes[key]=d;}
     }
     const previousLogs=new Set((state.history||[]).map(logKey));
-    const time=Date.now();
+    // Preserve creation order across a page restart, even within the same millisecond.
+    const time=pendingChanges().reduce((latest,op)=>Math.max(latest,Number(op.time||0)+1),Date.now());
     return {id:writerId+'_'+(++sequence),sequence,time,session:code(),phase:phase(state),prize:Number(state.currentPrizeIndex||0),type,data:log?.data||{},pending:state.pendingNumber||null,changes,logs:(patch.history||[]).filter(entry=>!previousLogs.has(logKey(entry)))};
   }
   function applyOperation(base,op){
@@ -183,7 +211,7 @@
   async function readServer(){
     const {data,error}=await sessionRequest(supabaseClient.from('loto_app_sessions').select('state,updated_at').eq('code',code()).maybeSingle());
     if(error)throw error;
-    lastReadAt=Date.now();return data;
+    lastReadAt=Date.now();connectionConfirmed();return data;
   }
   async function synchronize(){
     let row=await readServer();
@@ -214,11 +242,12 @@
   function refreshSession(){
     if(syncFlight)return syncFlight;
     if(!supabaseClient){
-      if(remoteConfigured){syncError='Service de connexion indisponible. Le tirage reste sauvegardé sur cet appareil.';notifySync();return Promise.resolve({ok:false});}
+      if(remoteConfigured){connectionLost('Service de connexion indisponible. Le tirage reste sauvegardé sur cet appareil.');notifySync();return Promise.resolve({ok:false});}
+      if(typeof navigator==='undefined'||navigator.onLine!==false)connectionConfirmed();
       syncReady=true;notifySync();return Promise.resolve({ok:true});
     }
-    if(typeof navigator!=='undefined'&&navigator.onLine===false){syncError='Connexion interrompue. Les changements restent enregistrés sur cet appareil.';notifySync();retry();return Promise.resolve({ok:false});}
-    syncFlight=Promise.resolve().then(synchronize).catch(error=>{syncError='Connexion indisponible. Les changements restent en attente.';console.warn('Synchronisation du loto en attente.',error);retry();return {ok:false,error};}).finally(()=>{syncFlight=null;notifySync();});
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){connectionLost('Connexion interrompue. Les changements restent enregistrés sur cet appareil.');notifySync();retry();return Promise.resolve({ok:false});}
+    syncFlight=Promise.resolve().then(synchronize).catch(error=>{connectionLost('Connexion indisponible. Les changements restent en attente.');console.warn('Synchronisation du loto en attente.',error);retry();return {ok:false,error};}).finally(()=>{syncFlight=null;notifySync();});
     notifySync();return syncFlight;
   }
   function subscribe(sessionCode){
@@ -226,11 +255,14 @@
     const current=supabaseClient.channel('loto_session_'+sessionCode);
     channel=current;
     current.on('postgres_changes',{event:'*',schema:'public',table:'loto_app_sessions',filter:'code=eq.'+sessionCode},payload=>{
-      if(payload.new?.state){showRemote(payload.new);syncError='';syncReady=true;notifySync();}
-    }).subscribe(status=>{
+      if(payload.new?.state){showRemote(payload.new);connectionConfirmed();syncReady=true;notifySync();}
+    }).on('broadcast',{event:'session-refresh'},()=>{void refreshSession();}).subscribe(status=>{
       if(channel!==current)return;
-      if(status==='SUBSCRIBED'){syncError='';void refreshSession();}
-      else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){syncError='Connexion interrompue. Reconnexion en cours.';notifySync();retry();}
+      if(status==='SUBSCRIBED'){void refreshSession();}
+      else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){
+        // A failed live channel does not imply the session server is unreachable.
+        void refreshSession();retry();
+      }
     });
   }
   async function ensureSession(){
@@ -239,7 +271,7 @@
       hydrateCache();subscribe(code());
       if(window.addEventListener){
         window.addEventListener('online',()=>void refreshSession());
-        window.addEventListener('offline',()=>{syncError='Connexion interrompue.';notifySync();});
+        window.addEventListener('offline',()=>{connectionLost('Connexion interrompue.');notifySync();});
         window.addEventListener('pageshow',()=>void refreshSession());
         window.addEventListener('focus',()=>void refreshSession());
         window.addEventListener('storage',event=>{if(event.key?.startsWith(pendingPrefix()))void refreshSession();});
@@ -250,18 +282,36 @@
     return refreshSession();
   }
   async function save(patch){
-    if(!remoteConfigured&&!supabaseClient){state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();store('loto_state',state);persistCache();return;}
+    if(!remoteConfigured&&!supabaseClient){state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});store('loto_state',state);persistCache();notify();return;}
     const op=makeOperation(patch||{});
     memoryPending.set(op.id,op);store(pendingPrefix()+op.id,op);
-    state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});notify();persistCache();notifySync();
+    state=Object.assign({},state,patch||{},{updatedAt:new Date().toISOString(),appVersion:C.APP_VERSION});persistCache();notify();notifySync();
     if(!sessionStarted){sessionStarted=true;subscribe(code());}
     return refreshSession();
   }
   function bindSyncControls(){
     if(typeof document==='undefined'||!document.querySelectorAll)return;
+    document.querySelectorAll('[data-connection-info]').forEach(button=>{
+      if(button.dataset.connectionBound)return;button.dataset.connectionBound='1';
+      button.addEventListener('click',()=>{
+        const open=button.getAttribute('aria-expanded')!=='true';
+        button.classList.toggle('is-open',open);button.setAttribute('aria-expanded',String(open));
+      });
+      button.addEventListener('blur',()=>{button.classList.remove('is-open');button.setAttribute('aria-expanded','false');});
+    });
     document.querySelectorAll('[data-sync-refresh]').forEach(button=>{
       if(button.dataset.syncBound)return;button.dataset.syncBound='1';
-      button.addEventListener('click',async()=>{const result=await ensureSession();if(result?.ok&&syncConflict){alert(syncConflict);syncConflict='';notifySync();}});
+      button.addEventListener('click',async()=>{
+        if(button.disabled)return;
+        const result=await ensureSession();
+        if(result?.ok&&!pendingChanges().length){
+          reconnectAvailable=false;
+          if(syncConflict){alert(syncConflict);syncConflict='';}
+          notifySync();
+          // Wake connected screens immediately; polling also catches missed broadcasts.
+          if(channel?.send)void channel.send({type:'broadcast',event:'session-refresh',payload:{session:code()}}).catch(()=>{});
+        }
+      });
     });
     notifySync();
   }

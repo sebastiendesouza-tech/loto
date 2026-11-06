@@ -4,6 +4,8 @@ Loto.protectPage();
 const grid = document.getElementById('grid');
 const last = document.getElementById('last');
 const micBtn = document.getElementById('micBtn');
+const publicNextPartie = document.getElementById('publicNextPartie');
+let publicProgressBusy=false;
 const overlay = document.getElementById('cardOverlay');
 const bingoBox = document.getElementById('bingoBox');
 const publicPartHeader = document.getElementById('publicPartHeader');
@@ -113,6 +115,7 @@ Loto.onChange(s=>{
   renderCard(s.publicCard);
   renderLots(s);
   renderBingo(s);
+  renderPublicProgress(s);
   renderToast(s);
 });
 
@@ -129,3 +132,38 @@ const pcMicrophone = LotoPcMicrophone.connect('host', status => {
       'Reconnaissance locale. Connexion à la tablette indisponible.');
 });
 micBtn.onclick = () => pcMicrophone.toggle();
+
+function renderPublicProgress(s){
+  publicNextPartie.disabled=publicProgressBusy||!s.gameActive||s.gameEnded;
+  publicNextPartie.textContent=s.miniBingoReady?'Lancer Mini-bingo':'Partie suivante';
+}
+publicNextPartie.onclick=async()=>{
+  if(publicNextPartie.disabled||publicProgressBusy)return;
+  const s=Loto.state(),parties=s.program?.parties||[],pi=Number(s.currentPartieIndex||0),li=Number(s.currentPrizeIndex||0);
+  const prizes=(parties[pi]?.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
+  let question;
+  if(s.miniBingoReady)question='Lancer le Mini-bingo ?\nLes numéros de la partie précédente seront remis à zéro.';
+  else if(s.miniBingoActive)question='Terminer le Mini-bingo et le loto ?\nLes numéros du tirage seront effacés.';
+  else if(li<prizes.length-1)question=`Passer au lot suivant de la partie n°${pi+1} ?\nLes numéros déjà tirés seront conservés.`;
+  else if(pi<parties.length-1)question=`Passer à la partie n°${pi+2} ?\nLes numéros du tirage actuel seront remis à zéro.`;
+  else if(s.options?.bingoEnabled&&!s.miniBingoWon)question='Terminer la dernière partie et préparer le Mini-bingo ?\nLes numéros du tirage actuel seront remis à zéro.';
+  else question='Terminer cette partie et le loto ?\nLes numéros du tirage actuel seront remis à zéro.';
+  if(!confirm(question))return;
+  publicProgressBusy=true;renderPublicProgress(s);
+  try{
+    if(s.miniBingoReady)await Loto.startMiniBingo();
+    else await Loto.winner();
+  }catch(error){alert('Impossible de passer à la suite : '+(error.message||error));}
+  finally{publicProgressBusy=false;renderPublicProgress(Loto.state());}
+};
+
+// Persistent notice: it never blocks listening and stays until closed or refreshed.
+const connectionRestoredPopup=document.getElementById('connectionRestoredPopup');
+let lastRecoveryNotice=0;
+Loto.onSyncChange(status=>{
+  if(!status.connected||!status.reconnectAvailable){connectionRestoredPopup.hidden=true;return;}
+  if(status.reconnectId!==lastRecoveryNotice){
+    lastRecoveryNotice=status.reconnectId;connectionRestoredPopup.hidden=false;
+  }
+});
+document.getElementById('closeConnectionRestored').onclick=()=>{connectionRestoredPopup.hidden=true;};
