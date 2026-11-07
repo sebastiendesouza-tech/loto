@@ -95,7 +95,6 @@
 .mystery-card b{font-size:clamp(23px,3vw,38px);font-weight:900}
 .mystery-board button.available:hover:not(:disabled){background:#209b51;outline:2px solid #fff}
 .mystery-board button:disabled{cursor:default;opacity:1}
-.mystery-last-choice{font-size:14px;line-height:1.3;padding-top:6px;overflow-wrap:anywhere}
 .mystery-travel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:180px;padding:18px 10px;border:2px solid #ffc629;border-radius:12px;background:#12365f;color:#fff;text-align:center}
 .mystery-travel small{font-size:14px;font-weight:800;color:#ffd166}
 .mystery-travel strong{font-size:clamp(25px,3vw,38px);line-height:1.15;color:#ffd166}
