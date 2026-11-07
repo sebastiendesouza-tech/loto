@@ -106,3 +106,7 @@
 .animateur-body .mystery-card b{font-size:26px}
 .animateur-body 
 .mystery-round-rule{display:inline-block;font-size:14px;font-weight:700;margin-left:8px;white-space:nowrap;vertical-align:middle}
+
+.player-presence-count{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;min-width:42px;justify-content:center;margin-left:7px;padding:3px 7px;border:1px solid #ffffff35;border-radius:8px;background:#ffffff0a;color:inherit;font-size:14px;font-weight:800;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.player-presence-count svg{flex:0 0 auto}
+.player-presence-count[data-state="waiting"]{opacity:.7}
