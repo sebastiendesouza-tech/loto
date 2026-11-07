@@ -3,9 +3,9 @@
   let lastVoiceNumber=null,lastVoiceAt=0;
   let mode=localStorage.getItem('loto_voice_mode')||'le';
   const REECOUTE_DELAY_MS=0,SAME_NUMBER_GUARD_MS=5000,INTERIM_STABLE_MS=200;
-  let interimTimer=null,interimCandidate=null,keywordContext=null;
+  let interimTimer=null,interimCandidate=null,keywordContext=null,cardContext=null;
   function clearInterim(){clearTimeout(interimTimer);interimTimer=null;interimCandidate=null;}
-  function clearSpeechContext(){clearInterim();keywordContext=null;}
+  function clearSpeechContext(){clearInterim();keywordContext=null;cardContext=null;}
   const units=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf'];
   const teens={10:'dix',11:'onze',12:'douze',13:'treize',14:'quatorze',15:'quinze',16:'seize',17:'dix sept',18:'dix huit',19:'dix neuf'};
   const tens={20:'vingt',30:'trente',40:'quarante',50:'cinquante',60:'soixante'};
@@ -15,6 +15,40 @@
   const alt=Array.from(phraseToNumber.keys()).sort((a,b)=>b.length-a.length).map(v=>v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
   const wordRegex=new RegExp('\\b('+alt+')\\b','g');
   function extractNumbers(text){const t=norm(text),found=[];let m;const dr=/\b([1-9]|[1-8][0-9]|90)\b/g;while((m=dr.exec(t)))found.push({index:m.index,n:Number(m[1])});while((m=wordRegex.exec(t))){const n=phraseToNumber.get(norm(m[1]));if(n)found.push({index:m.index,n});}found.sort((a,b)=>a.index-b.index);return found.map(x=>x.n);}
+  // Card commands use exactly three suffix digits; never reuse the draw parser.
+  function cardWords(text){return norm(text).replace(/\bcents\b/g,'cent').replace(/\bvingts\b/g,'vingt').replace(/\bet\b/g,' ').replace(/\s+/g,' ').trim();}
+  function cardFrench(n){
+    if(n===0)return 'zero';
+    if(n<100)return n<=90?frenchNumber(n):'quatre vingt '+frenchNumber(n-80);
+    const hundreds=Math.floor(n/100),rest=n%100;
+    return (hundreds===1?'':units[hundreds]+' ')+'cent'+(rest?' '+cardFrench(rest):'');
+  }
+  const cardPhrases=new Map();
+  for(let n=100;n<=999;n++)cardPhrases.set(cardWords(cardFrench(n)),String(n));
+  for(let n=10;n<100;n++)cardPhrases.set(cardWords('zero '+cardFrench(n)),String(n).padStart(3,'0'));
+  function parseCardSuffix(text){
+    const t=norm(text).replace(/[.,;:!?]/g,' ').replace(/\s+/g,' ').trim();
+    if(/^[0-9 ]+$/.test(t)){
+      const digits=t.replace(/ /g,'');return /^\d{3}$/.test(digits)?digits:null;
+    }
+    const digitTokens=t.split(' ').map(word=>word==='zero'?'0':/^[0-9]$/.test(word)?word:units.indexOf(word)>0?String(units.indexOf(word)):null);
+    if(digitTokens.length===3&&digitTokens.every(v=>v!==null))return digitTokens.join('');
+    return cardPhrases.get(cardWords(t))||null;
+  }
+  let lastCardCode=null,lastCardAt=0,cardRequest=0;
+  async function controlVoiceCard(suffix,onStatus){
+    const code=Loto.cardNumberPrefix()+suffix,now=Date.now();
+    if(lastCardCode===code&&now-lastCardAt<SAME_NUMBER_GUARD_MS)return;
+    lastCardCode=code;lastCardAt=now;const request=++cardRequest;
+    try{
+      const payload=await Loto.controlCard(code);
+      if(request!==cardRequest)return;
+      if(payload?.found){await Loto.showPublicCard(payload.result);onStatus&&onStatus(processingEnabled,'reconnaissance active');}
+      else onStatus&&onStatus(processingEnabled,payload?.message||'Carton '+code+' introuvable.');
+    }catch{
+      if(request===cardRequest)onStatus&&onStatus(processingEnabled,'Contrôle du carton '+code+' impossible. Vérifiez la connexion et réessayez.');
+    }
+  }
   // An interim "7" can become "71" well after a fixed stability delay.
   // Only final transcripts may accept a number that can still be extended.
   function isNumberPrefix(n){return n<10||n===10||(n>=20&&n<=80&&n%10===0);}
@@ -37,7 +71,23 @@
     if(engineRunning)return true;
     recognition=new SR();
     let lastFinalIndex=-1;
-    const handledCommands=new Set();
+    const handledCommands=new Set(),cardResults=new Set(),ignoredCardResults=new Set();
+    function cardCommand(raw,index,final){
+      const starts=/\bcontrole(?:r|z)?\b/.test(raw);
+      const context=cardContext&&Date.now()-cardContext.at<8000?cardContext:null;
+      if(!starts&&!context&&!cardResults.has(index))return false;
+      cardResults.add(index);clearInterim();keywordContext=null;
+      const text=starts?raw:context?context.text+' '+raw:raw;
+      if(!final)return true;
+      const match=text.match(/^(?:le )?controle(?:r|z)?(?: le)? carton\b(.*)$/);
+      const suffix=match&&parseCardSuffix(match[1]);
+      if(suffix){cardContext=null;void controlVoiceCard(suffix,onStatus);}
+      else{
+        cardContext={text,at:Date.now()};
+        onStatus&&onStatus(processingEnabled,'Dites « Contrôle carton » puis les trois derniers chiffres.');
+      }
+      return true;
+    }
     function accept(index,ordinal,number){
       const key=index+':'+ordinal;
       if(handledCommands.has(key)||!processingEnabled||!number)return;
@@ -51,7 +101,7 @@
     recognition.onstart=()=>{
       clearSpeechContext();
       lastFinalIndex=-1;
-      handledCommands.clear();
+      handledCommands.clear();cardResults.clear();ignoredCardResults.clear();
       engineRunning=true;
       onStatus&&onStatus(processingEnabled,processingEnabled?'reconnaissance active':'reconnaissance en pause');
     };
@@ -60,6 +110,16 @@
         const result=e.results[i];
         if(i<=lastFinalIndex)continue;
         const raw=norm(result[0]?.transcript||'');
+        if(ignoredCardResults.has(i)){
+          clearSpeechContext();if(result.isFinal)lastFinalIndex=i;continue;
+        }
+        if(processingEnabled&&cardCommand(raw,i,result.isFinal)){
+          if(result.isFinal)lastFinalIndex=i;
+          continue;
+        }
+        if(!processingEnabled&&(/\bcontrole(?:r|z)?\b/.test(raw)||cardContext||cardResults.has(i))){
+          clearSpeechContext();cardResults.add(i);ignoredCardResults.add(i);if(result.isFinal)lastFinalIndex=i;continue;
+        }
         let text=raw;
         // Some speech results split the keyword and number into separate segments.
         if(!keywordAccepted(raw)&&keywordContext&&Date.now()-keywordContext.at<2500
@@ -118,5 +178,5 @@
   function pause(onStatus){processingEnabled=false;clearSpeechContext();lastVoiceNumber=null;onStatus&&onStatus(false,'reconnaissance en pause');}
   function toggle(onStatus){processingEnabled?pause(onStatus):resume(onStatus);}
   function setMode(v){mode=['free','le','numero'].includes(v)?v:'le';localStorage.setItem('loto_voice_mode',mode);clearSpeechContext();}
-  window.LotoVoice={start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS};
+  window.LotoVoice={start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,parseCardSuffix,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS};
 })();
