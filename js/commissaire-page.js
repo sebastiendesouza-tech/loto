@@ -12,6 +12,7 @@ const currentLot = document.getElementById('currentLot');
 const scanActions=document.getElementById('commissaireScanActions');
 let lastResult = null;
 let lastCardClosedAt = 0;
+const cartonNumberInput=LotoCardNumberInput.bind(input,document.getElementById('commissaireCardPrefix'));
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function drawnSet(){ return new Set([...(Loto.state().drawnNumbers || []), ...(Loto.state().pendingNumber ? [Loto.state().pendingNumber] : [])].map(Number)); }
@@ -82,8 +83,8 @@ function renderResult(payload){
 }
 
 document.getElementById('checkBtn').onclick = async () => {
-  if(!input.value) return;
-  const payload = await Loto.controlCard(input.value);
+  const code=cartonNumberInput.read();if(!code)return;
+  const payload = await Loto.controlCard(code);
   renderResult(payload);
   if(payload?.found) await Loto.showPublicCard(payload.result);
 };
@@ -114,7 +115,7 @@ function renderLastScanFromStorage(){
     const payload = JSON.parse(raw);
     if(payload?.found){
       renderResult(payload);
-      if(input) input.value = payload.result?.numero || payload.numero || '';
+      if(input)cartonNumberInput.setFullNumber(payload.result?.numero||payload.numero||'');
     }else{
       renderResult({ found:false, numero: payload?.numero || payload?.scannedCode || '' });
     }

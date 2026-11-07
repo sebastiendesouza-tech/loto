@@ -43,16 +43,9 @@ function drawnSet(){return new Set([...(Loto.state().drawnNumbers||[]),...(Loto.
 function cardMiniHtml(r){const drawn=drawnSet(); const lastNum=Number(r.lastNumber||0); return `<div class="mini-card compact-mini">${(r.lignes||[]).map((line,i)=>`<div class="mini-card-line ${r.lineResults?.[i]?.ok?'complete':''}">${line.map(n=>`<span class="mini-card-num ${drawn.has(Number(n))?'hit':'miss'}${Number(n)===lastNum?' last-hit':''}">${pad(n)}</span>`).join('')}</div>`).join('')}</div>`;}
 function diagnosticHtml(r){const label=Loto.cardFailureLabel(r);return label?`<ul class="diagnostic-list"><li>${esc(label)}</li></ul>`:'';}
 function renderAnimCard(payload){if(!animCardResult)return; if(!payload){animCardResult.innerHTML='';return;} if(!payload.found){animCardResult.innerHTML=`<p class="bad">${esc(payload.message||Loto.knownMissingCardMessage(payload.numero)||("Carton "+payload.numero+" non enregistré dans la base."))}</p>`;return;} const r=payload.result; const loser=r.loserMode; const unsold=r.salesTrackingEnabled&&!r.soldForCurrentLoto; const status=loser?(unsold?'<span class="bad">CARTON NON VENDU</span>':r.winnerEligible?'<span class="ok">GAGNANT · DERNIER CARTON</span>':r.stillInGame?'<span class="ok">ENCORE EN JEU</span>':'<span class="bad">ÉLIMINÉ</span>'):(r.valid?'<span class="ok">GAIN VALIDE</span>':'<span class="bad">NON VALIDE</span>'); animCardResult.innerHTML=`<div class="control-card-result ${r.valid||r.stillInGame&&!unsold?'valid':'invalid'}"><b>Carton ${esc(r.numero)}</b> · ${status}${cardMiniHtml(r)}${diagnosticHtml(r)}</div>`;}
-animCardNumber.oninput=()=>{
-  animCardNumber.value=animCardNumber.value.replace(/\D/g,'').slice(0,6);
-  animCardNumber.setCustomValidity('');
-};
+const cartonNumberInput=LotoCardNumberInput.bind(animCardNumber,document.getElementById('animateurCardPrefix'));
 document.getElementById('animCheckBtn').onclick=async()=>{
-  const code=animCardNumber.value.trim();
-  if(!/^\d{6}$/.test(code)){
-    animCardNumber.setCustomValidity('Saisissez exactement 6 chiffres.');animCardNumber.reportValidity();animCardNumber.focus();return;
-  }
-  animCardNumber.setCustomValidity('');
+  const code=cartonNumberInput.read();if(!code)return;
   const payload=await Loto.controlCard(code);renderAnimCard(payload);if(payload?.found)await Loto.showPublicCard(payload.result);
 };
 animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animCheckBtn').click();};
