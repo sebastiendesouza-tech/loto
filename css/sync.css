@@ -84,3 +84,6 @@
 .public-control-dialog .carton-number-field{margin-top:8px}
 .public-control-dialog .carton-number-prefix,.public-control-dialog input{font-size:24px;padding-top:12px;padding-bottom:12px}
 .public-control-message{color:#132033;font-weight:600}
+
+/* Startup is still being checked; it is not yet a detected interruption. */
+.connection-light[data-connection-known="false"],.connection-light[data-state="waiting"]:not([data-connection-known="true"]),.public-projection [data-sync-status][data-connection-known="false"],.public-projection [data-sync-status][data-state="waiting"]:not([data-connection-known="true"]){background:#94a3b8;border-color:#dbe3ec;box-shadow:none}
