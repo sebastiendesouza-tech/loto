@@ -4,8 +4,8 @@ const lotsBtn=document.getElementById('playerLotsBtn'),lotsPanel=document.getEle
 const cardsLink=document.getElementById('playerCardsLink');
 let previous=null;
 function partRule(mode,index){
-  if(mode==='perdant') return 'Aucun numéro tiré sur le carton';
-  if(mode==='carton'||mode==='bingoMystere') return 'Carton plein';
+  if(Loto.isLoserMode(mode)) return 'Aucun numéro tiré sur le carton';
+  if(mode==='carton'||Loto.isMysteryMode(mode)) return 'Carton plein';
   return index===0?'1 ligne':index===1?'2 lignes':'Carton plein';
 }
 function renderLots(s){
@@ -19,12 +19,12 @@ function renderLots(s){
   lotsTitle.textContent=partie?`Lots · Partie ${partIndex+1}/${parties.length}`:'Lots de la partie';
   lotsBtn.disabled=!partie||!prizes.length;
   if(!partie||!prizes.length){lotsContent.innerHTML='<p>Aucun lot renseigné pour cette partie.</p>';return;}
-  if(partie.gameMode==='bingoMystere'&&!s.miniBingoActive&&!s.miniBingoReady){
+  if(Loto.isMysteryMode(partie.gameMode)&&!s.miniBingoActive&&!s.miniBingoReady){
     LotoMysteryBoard.render(lotsContent,{state:s});return;
   }
   lotsContent.innerHTML=`<div class="player-lots-list">${prizes.map((prize,i)=>{
     const state=i<(s.currentPrizeIndex||0)?'won':i===(s.currentPrizeIndex||0)?'active':'upcoming';
-    const label=partie.gameMode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
+    const label=Loto.isMysteryMode(partie.gameMode)?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     return `<article class="player-lot-row ${state}"><strong>${label}</strong><span>${String(prize.label||'Lot non renseigné').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}</span><small>${partRule(partie.gameMode||'ligne',i)}</small></article>`;
   }).join('')}</div>`;
 }

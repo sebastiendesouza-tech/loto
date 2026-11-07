@@ -71,7 +71,7 @@ Loto.onSyncChange(status=>{
   publicControlButton.hidden=status.connected||!status.connectionKnown;
   publicNextPartie.hidden=publicControlButton.hidden;
   if(status.connected)closeControlDialog();
-  if(Loto.currentPartie()?.gameMode==='bingoMystere')renderLots(Loto.state());
+  if(Loto.isMysteryMode(Loto.currentPartie()?.gameMode))renderLots(Loto.state());
 });
 document.getElementById('publicControlForm').onsubmit=async event=>{
   event.preventDefault();if(publicControlBusy)return;
@@ -110,8 +110,8 @@ function renderLots(s){
   publicGameTitle.textContent = s.miniBingoActive ? 'Mini-bingo' : (total ? `Partie n°${index}` : 'Partie simple');
   const mode = partie?.gameMode || 'ligne';
   const requirement = Loto.currentRequirement();
-  const rule = mode === 'perdant' ? 'Aucun numéro tiré sur le carton'
-    : mode === 'carton' || mode === 'bingoMystere' ? 'Carton plein'
+  const rule = Loto.isLoserMode(mode) ? 'Aucun numéro tiré sur le carton'
+    : mode === 'carton' || Loto.isMysteryMode(mode) ? 'Carton plein'
     : requirement.label;
   publicGameMode.textContent = s.miniBingoActive ? 'Jeu : Mini-bingo' : (partie ? `Jeu : ${rule}` : 'Jeu : tirage simple');
 
@@ -121,7 +121,7 @@ function renderLots(s){
     return;
   }
 
-  if(mode==='bingoMystere'&&!s.miniBingoActive&&!s.miniBingoReady){
+  if(Loto.isMysteryMode(mode)&&!s.miniBingoActive&&!s.miniBingoReady){
     publicStep.textContent='';const status=Loto.syncStatus();
     LotoMysteryBoard.render(publicLot,{state:s,interactive:!status.connected&&status.connectionKnown});return;
   }
@@ -130,8 +130,8 @@ function renderLots(s){
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
     const cls = i < currentPrizeIndex ? 'won' : (i === currentPrizeIndex ? 'active' : 'upcoming');
     const lot = (p.label || 'Lot non renseigné').trim();
-    const lotLabel = mode === 'bingoMystere' ? 'LOT' : ordinalLabel(i);
-    const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : mode === 'bingoMystere' ? '<span class="public-prize-condition">CARTON PLEIN</span>' : '';
+    const lotLabel = Loto.isMysteryMode(mode) ? 'LOT' : ordinalLabel(i);
+    const step = mode === 'ligne' ? `<span class="public-prize-condition">${stepLabelFor(partie,i)}</span>` : Loto.isMysteryMode(mode) ? '<span class="public-prize-condition">CARTON PLEIN</span>' : '';
     return `<div class="public-prize-row ${cls}"><div class="public-prize-line"><span class="public-prize-label">${lotLabel} :</span> <span class="public-prize-value">${esc(lot)}</span>${step}</div></div>`;
   }).join('')}</div>`;
 }

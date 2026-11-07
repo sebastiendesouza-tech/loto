@@ -115,18 +115,18 @@ function renderLot(s){
   const lotoEnded=!!s.gameEnded&&!s.gameActive&&lastPartie&&lastPrize;
   const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
   if(!p){animateurPartTitle.textContent='Partie simple';currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
-  if(p.gameMode==='bingoMystere'){
+  if(Loto.isMysteryMode(p.gameMode)){
     animateurPartTitle.textContent=Loto.partieLabel(s);
     LotoMysteryBoard.render(currentLot,{state:s,interactive:true});return;
   }
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const prizeIndex=Number(s.currentPrizeIndex||0);
-  const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
+  const rule=Loto.isLoserMode(mode)?'Aucun numéro tiré sur le carton':mode==='carton'||Loto.isMysteryMode(mode)?'Carton plein':Loto.currentRequirement().label;
   animateurPartTitle.textContent=Loto.partieLabel(s);
   currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
     const cls=i<prizeIndex?'won':i===prizeIndex&&!lotoEnded&&!s.miniBingoReady?'active':'upcoming';
-    const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
-    const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
+    const label=Loto.isMysteryMode(mode)?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
+    const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):Loto.isLoserMode(mode)?'AUCUN NUMÉRO':'CARTON PLEIN';
     return `<div class="commissaire-prize-row ${cls}"><div><strong>${label} :</strong> <span>${esc(prize.label||'Lot non renseigné')}</span></div><small>${condition}</small></div>`;
   }).join('')||'<p>Aucun lot renseigné.</p>'}</div>`;
 }

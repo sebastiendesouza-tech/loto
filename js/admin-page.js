@@ -15,7 +15,7 @@ const prizeTypes=['Lot 1','Lot 2','Lot 3'];
 function defaultPrize(i,label=''){return {type:prizeTypes[i] || 'Lot',label,enabled:true};}
 function normalizePartiePrizes(partie){
   partie.gameMode ||= 'ligne';
-  if(partie.gameMode === 'bingoMystere'){
+  if(Loto.isMysteryMode(partie.gameMode)){
     Object.assign(partie,Loto.normalizeMysteryPartie(partie));
   } else if(partie.gameMode === 'perdant'){
     partie.prizes = [partie.prizes?.[0] || {type:'Lot du perdant',label:'',enabled:true}];
@@ -38,13 +38,13 @@ function drawParties(){
   const s=Loto.state(); const parties=s.program?.parties||[]; partieCount.value=parties.length||Number(partieCount.value||6);
   partiesList.innerHTML=parties.map((p,i)=>{
     const mode=p.gameMode||'ligne';
-    const mysteryRank=parties.slice(0,i).filter(partie=>partie.gameMode==='bingoMystere').length;
-    const prizeInputs = mode === 'bingoMystere'
+    const mysteryRank=parties.slice(0,i).filter(partie=>Loto.isMysteryMode(partie.gameMode)).length;
+    const prizeInputs = Loto.isMysteryMode(mode)
       ? `<div class="one-col"><div><label>${mysteryRank>=9?'10e partie — Voyage':'Lot du carton mystère '+(mysteryRank+1)}</label><input data-p="${i}" data-prize="0" value="${esc(mysteryRank>=9?'Séjour au Cap':p.prizes?.[0]?.label||'')}" placeholder="Nom du lot mystère" ${mysteryRank>=9?'readonly':''}></div><p class="muted">${mysteryRank>=9?'Un seul lot pour cette partie : Séjour au Cap.':'Un seul gagnant par partie. Il choisit librement un carton parmi les neuf encore verts, quel que soit le numéro de sa partie.'}</p></div>`
-      : mode === 'perdant' 
-      ? `<div class="one-col"><div><label>${mode === 'perdant' ? 'Lot du perdant' : 'Lot bingo mystère'}</label><input data-p="${i}" data-prize="0" placeholder="Nom du lot" value="${esc(p.prizes?.[0]?.label||'')}"></div></div>`
+      : Loto.isLoserMode(mode) 
+      ? `<div class="one-col"><div><label>${Loto.isLoserMode(mode) ? 'Lot du perdant' : 'Lot bingo mystère'}</label><input data-p="${i}" data-prize="0" placeholder="Nom du lot" value="${esc(p.prizes?.[0]?.label||'')}"></div></div>`
       : `<div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value="${esc(p.prizes?.[pi]?.label||'')}"></div>`).join('')}</div>`;
-    return `<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="${esc(p.name||('Partie '+(i+1)))}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" ${mode==='ligne'?'selected':''}>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton" ${mode==='carton'?'selected':''}>Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere" ${mode==='bingoMystere'?'selected':''}>Bingo mystère : 1 lot par partie, choix libre du carton</option><option value="perdant" ${mode==='perdant'?'selected':''}>Partie du perdant : le dernier carton sans numéro tiré gagne</option></select></label></div>${mode==='perdant'?'<p class="muted">Active le suivi des ventes pour que le contrôle puisse confirmer le dernier carton encore en jeu.</p>':''}${prizeInputs}</div>`;
+    return `<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="${esc(p.name||('Partie '+(i+1)))}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" ${mode==='ligne'?'selected':''}>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton" ${mode==='carton'?'selected':''}>Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere" ${mode==='bingoMystere'?'selected':''}>Bingo mystère : carton plein, choix libre du carton</option><option value="bingoMysterePerdant" ${mode==='bingoMysterePerdant'?'selected':''}>Bingo mystère : jeu du perdant</option><option value="perdant" ${mode==='perdant'?'selected':''}>Partie du perdant : le dernier carton sans numéro tiré gagne</option></select></label></div>${Loto.isLoserMode(mode)?'<p class="muted">Active le suivi des ventes pour que le contrôle puisse confirmer le dernier carton encore en jeu.</p>':''}${prizeInputs}</div>`;
   }).join('')||'<p>Aucune partie.</p>';
   partiesList.querySelectorAll('select[data-f="gameMode"]').forEach(sel=>sel.onchange=()=>{const program=readProgram(); Loto.save({program});});
 }
@@ -57,7 +57,7 @@ function readProgram(){
     if(inp.dataset.prize){const pi=Number(inp.dataset.prize); parties[p].prizes[pi] ||= defaultPrize(pi); parties[p].prizes[pi].enabled=true; parties[p].prizes[pi].label=inp.value;}
   });
   parties.forEach((partie,i)=>{partie.name ||= 'Partie '+(i+1); normalizePartiePrizes(partie);});
-  return {id:Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,bingo_enabled:!!bingoEnabled?.checked,show_bingo:!!showBingo?.checked,mini_bingo_source:document.querySelector('input[name=\"miniBingoSource\"]:checked')?.value||'first',createdAt:new Date().toISOString()};
+  return {id:s.program?.id||Loto.makeId('loto'),title:lotoName.value||'',date:lotoDate.value||'',parties,sales_tracking_enabled:!!salesTrackingEnabled?.checked,validation_voucher_enabled:!!document.getElementById('validationVoucherEnabled')?.checked,bingo_enabled:!!bingoEnabled?.checked,show_bingo:!!showBingo?.checked,mini_bingo_source:document.querySelector('input[name=\"miniBingoSource\"]:checked')?.value||'first',createdAt:s.program?.createdAt||new Date().toISOString()};
 }
 function normalizedProgramForSave(){const p=readProgram(); const current=Loto.state().program || {}; p.id=current.id || p.id; p.createdAt=current.createdAt || p.createdAt; p.updatedAt=new Date().toISOString(); return p;}
 async function saveProgramToList({start=false}={}){
@@ -78,7 +78,7 @@ function resetLotoForm(){
   lotoName.value=''; lotoDate.value=''; partieCount.value=6; showLots.checked=false; lastNumberRequired.checked=true; salesTrackingEnabled.checked=false;
   const voucher=document.getElementById('validationVoucherEnabled'); if(voucher) voucher.checked=false; bingoEnabled.checked=false; showBingo.checked=false; prevalidate.value=6;
   const first=document.querySelector('input[name="miniBingoSource"][value="first"]'); if(first) first.checked=true;
-  partiesList.innerHTML=''; for(let i=0;i<6;i++){const p=defaultPartie(i); partiesList.insertAdjacentHTML('beforeend',`<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="Partie ${i+1}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" selected>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton">Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere">Bingo mystère : 1 lot par partie, choix libre du carton</option><option value="perdant">Partie du perdant : le dernier carton sans numéro tiré gagne</option></select></label></div><div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value=""></div>`).join('')}</div></div>`);}
+  partiesList.innerHTML=''; for(let i=0;i<6;i++){const p=defaultPartie(i); partiesList.insertAdjacentHTML('beforeend',`<div class="card partie-edit"><h3>Partie ${i+1}</h3><div class="two-cols"><label>Nom<input data-p="${i}" data-f="name" value="Partie ${i+1}"></label><label>Mode de jeu<select data-p="${i}" data-f="gameMode"><option value="ligne" selected>À la ligne : lot 1 = 1 ligne, lot 2 = 2 lignes, lot 3 = carton plein</option><option value="carton">Carton plein : chaque lot se joue au carton plein</option><option value="bingoMystere">Bingo mystère : carton plein, choix libre du carton</option><option value="bingoMysterePerdant">Bingo mystère : jeu du perdant</option><option value="perdant">Partie du perdant : le dernier carton sans numéro tiré gagne</option></select></label></div><div class="three-cols">${prizeTypes.map((t,pi)=>`<div><label>${t}</label><input data-p="${i}" data-prize="${pi}" placeholder="Nom du ${t.toLowerCase()}" value=""></div>`).join('')}</div></div>`);}
 }
 function drawActiveGameControl(){
   if(!activeGameControl) return;
