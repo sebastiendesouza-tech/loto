@@ -1,5 +1,6 @@
 Loto.pageHeader();Loto.protectPage();
 const grid=document.getElementById('grid'),last=document.getElementById('last'),history=document.getElementById('history'),currentLot=document.getElementById('currentLot'),animCardNumber=document.getElementById('animCardNumber'),animCardResult=document.getElementById('animCardResult');
+const animateurPartTitle=document.getElementById('animateurPartTitle');
 const launchModal=document.getElementById('launchModal'),launchList=document.getElementById('launchList'),launchGuard=document.getElementById('launchGuard');
 const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=document.getElementById('voiceMode'),voicePauseBanner=document.getElementById('voicePauseBanner'),miniBingoWon=document.getElementById('miniBingoWon');
 
@@ -42,7 +43,18 @@ function drawnSet(){return new Set([...(Loto.state().drawnNumbers||[]),...(Loto.
 function cardMiniHtml(r){const drawn=drawnSet(); const lastNum=Number(r.lastNumber||0); return `<div class="mini-card compact-mini">${(r.lignes||[]).map((line,i)=>`<div class="mini-card-line ${r.lineResults?.[i]?.ok?'complete':''}">${line.map(n=>`<span class="mini-card-num ${drawn.has(Number(n))?'hit':'miss'}${Number(n)===lastNum?' last-hit':''}">${pad(n)}</span>`).join('')}</div>`).join('')}</div>`;}
 function diagnosticHtml(r){const label=Loto.cardFailureLabel(r);return label?`<ul class="diagnostic-list"><li>${esc(label)}</li></ul>`:'';}
 function renderAnimCard(payload){if(!animCardResult)return; if(!payload){animCardResult.innerHTML='';return;} if(!payload.found){animCardResult.innerHTML=`<p class="bad">${esc(payload.message||Loto.knownMissingCardMessage(payload.numero)||("Carton "+payload.numero+" non enregistré dans la base."))}</p>`;return;} const r=payload.result; const loser=r.loserMode; const unsold=r.salesTrackingEnabled&&!r.soldForCurrentLoto; const status=loser?(unsold?'<span class="bad">CARTON NON VENDU</span>':r.winnerEligible?'<span class="ok">GAGNANT · DERNIER CARTON</span>':r.stillInGame?'<span class="ok">ENCORE EN JEU</span>':'<span class="bad">ÉLIMINÉ</span>'):(r.valid?'<span class="ok">GAIN VALIDE</span>':'<span class="bad">NON VALIDE</span>'); animCardResult.innerHTML=`<div class="control-card-result ${r.valid||r.stillInGame&&!unsold?'valid':'invalid'}"><b>Carton ${esc(r.numero)}</b> · ${status}${cardMiniHtml(r)}${diagnosticHtml(r)}</div>`;}
-document.getElementById('animCheckBtn').onclick=async()=>{if(!animCardNumber.value)return; const payload=await Loto.controlCard(animCardNumber.value); renderAnimCard(payload); if(payload?.found) await Loto.showPublicCard(payload.result);};
+animCardNumber.oninput=()=>{
+  animCardNumber.value=animCardNumber.value.replace(/\D/g,'').slice(0,6);
+  animCardNumber.setCustomValidity('');
+};
+document.getElementById('animCheckBtn').onclick=async()=>{
+  const code=animCardNumber.value.trim();
+  if(!/^\d{6}$/.test(code)){
+    animCardNumber.setCustomValidity('Saisissez exactement 6 chiffres.');animCardNumber.reportValidity();animCardNumber.focus();return;
+  }
+  animCardNumber.setCustomValidity('');
+  const payload=await Loto.controlCard(code);renderAnimCard(payload);if(payload?.found)await Loto.showPublicCard(payload.result);
+};
 animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animCheckBtn').click();};
 const nextPartieButton=document.getElementById('winner');
 let animateurProgressBusy=false;
@@ -101,7 +113,7 @@ if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mi
 function renderLot(s){
   if(miniBingoWon)miniBingoWon.style.display=(s.options?.bingoEnabled&&!s.miniBingoWon&&!s.miniBingoActive&&s.gameActive)?'inline-flex':'none';
   if(startMiniBingoBtn)startMiniBingoBtn.style.display=s.miniBingoReady?'inline-flex':'none';
-  if(s.miniBingoActive){currentLot.innerHTML='<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>';return;}
+  if(s.miniBingoActive){animateurPartTitle.textContent='MINI-BINGO';currentLot.innerHTML='<div class="commissaire-lot-mode">Tirage de départage en cours</div>';return;}
   const p=Loto.currentPartie();
   const parties=s.program?.parties||[];
   const lastPartie=!parties.length||Number(s.currentPartieIndex||0)>=parties.length-1;
@@ -109,11 +121,12 @@ function renderLot(s){
   const lastPrize=!prizeCount||Number(s.currentPrizeIndex||0)>=prizeCount-1;
   const lotoEnded=!!s.gameEnded&&!s.gameActive&&lastPartie&&lastPrize;
   const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
-  if(!p){currentLot.innerHTML=`<div class="commissaire-lot-title">Partie simple</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
+  if(!p){animateurPartTitle.textContent='Partie simple';currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;
-  currentLot.innerHTML=`<div class="commissaire-lot-title">${esc(Loto.partieLabel(s))}</div>${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
+  animateurPartTitle.textContent=Loto.partieLabel(s);
+  currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Jeu : ${esc(rule)}</div><div class="commissaire-prize-list">${prizes.map((prize,i)=>{
     const cls=i<prizeIndex?'won':i===prizeIndex&&!lotoEnded&&!s.miniBingoReady?'active':'upcoming';
     const label=mode==='bingoMystere'?'LOT':`${i+1}${i===0?'er':'e'} LOT`;
     const condition=mode==='ligne'?(i===0?'1 LIGNE':i===1?'2 LIGNES':'CARTON PLEIN'):mode==='perdant'?'AUCUN NUMÉRO':'CARTON PLEIN';
