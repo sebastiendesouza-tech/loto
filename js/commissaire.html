@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Commissaire</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/sync.css?v=20261107-mystery-compact"></head>
+<body class="animateur-body commissaire-body">
+  <header class="topbar">
+    <div class="brand-with-connection"><span class="brand" data-title></span><button type="button" class="spectator-connection" data-connection-info aria-label="Non connecté. Vérifiez votre connexion Internet." title="Non connecté. Vérifiez votre connexion Internet." aria-describedby="commissaireConnectionTooltip" aria-expanded="false"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" data-connected="false" aria-hidden="true"></span><span id="commissaireConnectionTooltip" class="connection-tooltip" data-connection-tooltip role="tooltip">Non connecté. Vérifiez votre connexion Internet.</span></button></div>
+    <div class="session"><span data-loto-name>Loto by SdS</span> · Commissaire</div>
+  </header>
+  <main class="wrap animateur-wrap-v229">
+    <div class="animateur-main-v229">
+      <section class="card numbers-card animateur-grid-panel">
+        <div id="grid" class="numbers animateur-numbers"></div>
+      </section>
+      <aside class="animateur-side-v229">
+        <div class="card animateur-last-card">
+          <div class="side-label">Dernier numéro</div>
+          <div id="last" class="animateur-last-number">--</div>
+        </div>
+        <div id="currentLot" class="card commissaire-lot-card"></div>
+        <div class="card animateur-control-card commissaire-control-card">
+          <h3>Contrôle carton</h3>
+          <div class="toolbar control-toolbar-v229 commissaire-control-toolbar">
+            <div class="carton-number-field"><span id="commissaireCardPrefix" class="carton-number-prefix" aria-hidden="true">101</span><input id="cardNumber" type="text" inputmode="numeric" autocomplete="off" minlength="3" maxlength="3" pattern="[0-9]{3}" placeholder="000" aria-label="Trois derniers chiffres du carton, série 101"></div>
+            <button id="checkBtn">Contrôler</button>
+          </div>
+          <div id="commissaireScanActions" class="toolbar no-print commissaire-scan-toolbar" hidden>
+            <a class="btn green" id="openCommissaireScan" href="scan.html?mode=commissaire">Scanner un carton</a>
+          </div>
+          <div id="result" class="result-box compact-result"></div>
+          <div class="toolbar no-print" id="publicCardActions" style="display:none">
+            <button id="showPublic">Afficher au public</button>
+            <button id="hidePublic" class="secondary">Fermer l’affichage public</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/core.js?v=20261107-mystery-rounds"></script>
+  <script src="js/card-number-input.js?v=20261107-card-series"></script><script src="js/mystery-board.js?v=20261107-mystery-compact"></script><script src="js/commissaire-page.js?v=20261107-mystery-rounds"></script>
+  <script>
+    const scanLink=document.getElementById('openCommissaireScan');
+    if(scanLink) scanLink.href=new URL('scan.html?mode=commissaire',location.href).href;
+  </script>
+</body>
+</html>
