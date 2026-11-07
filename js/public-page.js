@@ -69,6 +69,7 @@ publicControlButton.onclick=()=>{
 document.getElementById('publicControlCancel').onclick=closeControlDialog;
 Loto.onSyncChange(status=>{
   publicControlButton.hidden=status.connected||!status.connectionKnown;
+  publicNextPartie.hidden=publicControlButton.hidden;
   if(status.connected)closeControlDialog();
 });
 document.getElementById('publicControlForm').onsubmit=async event=>{
