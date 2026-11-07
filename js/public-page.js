@@ -38,6 +38,7 @@ function renderCard(card){
     : (card.valid ? 'GAIN VALIDE' : 'NON VALIDE');
   overlay.innerHTML = `
     <div class="public-card-overlay-inner">
+      <div class="public-card-closebar"><button id="publicCloseCard" class="secondary" type="button" aria-label="Fermer le carton contrôlé">Fermer</button></div>
       <h1>Carton ${esc(card.numero)}</h1>
       <p class="public-card-req">${esc(Loto.cardControlMode(card))}</p>
       <div class="card-control-summary">
@@ -46,6 +47,10 @@ function renderCard(card){
       </div>
       ${renderPublicCardGrid(card)}
     </div>`;
+  document.getElementById('publicCloseCard').onclick=async()=>{
+    overlay.style.display='none';
+    await Loto.hidePublicCard();
+  };
 }
 
 function ordinalLabel(i){
