@@ -19,8 +19,9 @@ function esc(s){ return String(s ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','
 function renderPublicCardGrid(card){
   const drawn = new Set([...(Loto.state().drawnNumbers || []), ...(Loto.state().pendingNumber ? [Loto.state().pendingNumber] : [])].map(Number));
   const lastNum = Number(card.lastNumber || 0);
-  return `<div class="public-card-grid">${(card.lignes || []).map((line, i) =>
-    `<div class="public-card-line ${card.lineResults?.[i]?.ok ? 'complete' : ''}">${line.map(n => {
+  return `<div class="public-card-grid">${Loto.cardGridRows(card).map((line, i) =>
+    `<div class="public-card-line card-nine-columns ${card.lineResults?.[i]?.ok ? 'complete' : ''}">${line.map(n => {
+      if(n===null)return '<span class="public-card-num empty" aria-hidden="true"></span>';
       const cls = drawn.has(Number(n)) ? 'hit' : 'miss';
       const lastCls = Number(n) === lastNum ? ' last-hit' : '';
       return `<span class="public-card-num ${cls}${lastCls}">${pad(n)}</span>`;
@@ -30,8 +31,7 @@ function renderPublicCardGrid(card){
 function renderCard(card){
   if(!card){ overlay.style.display='none'; return; }
   overlay.style.display='block';
-  const req = card.requirement || {};
-  const failureLabel = Loto.cardFailureLabel(card);
+  const reasons = Loto.cardFailureReasons(card);
   const unsold = card.salesTrackingEnabled && !card.soldForCurrentLoto;
   const status = card.loserMode
     ? (unsold ? 'CARTON NON VENDU' : card.winnerEligible ? 'GAGNANT · DERNIER CARTON' : card.stillInGame ? 'ENCORE EN JEU' : 'ÉLIMINÉ')
@@ -39,10 +39,12 @@ function renderCard(card){
   overlay.innerHTML = `
     <div class="public-card-overlay-inner">
       <h1>Carton ${esc(card.numero)}</h1>
-      <p class="public-card-req">${esc(req.label || '')}</p>
-      <p class="${card.valid || (card.stillInGame && !unsold) ? 'ok' : 'bad'} public-card-status">${status}</p>
+      <p class="public-card-req">${esc(Loto.cardControlMode(card))}</p>
+      <div class="card-control-summary">
+        <p class="${card.valid || (card.stillInGame && !unsold) ? 'ok' : 'bad'} public-card-status">${status}</p>
+        ${reasons.length ? `<ul class="card-control-reasons">${reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>` : ''}
+      </div>
       ${renderPublicCardGrid(card)}
-      ${failureLabel ? `<ul class="public-diagnostic-list"><li>${esc(failureLabel)}</li></ul>` : ''}
     </div>`;
 }
 

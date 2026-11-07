@@ -588,6 +588,25 @@
     }
     return null;
   }
+  function cardGridRows(card){
+    const lines=card?.lignes||[];
+    const saved=card?.grille;
+    if(Array.isArray(saved)&&saved.length===3&&saved.every((row,i)=>Array.isArray(row)&&row.length===9&&
+      row.filter(n=>Number(n)>0).map(Number).sort((a,b)=>a-b).join(',')===(lines[i]||[]).map(Number).sort((a,b)=>a-b).join(','))){
+      return saved.map(row=>row.map(n=>Number(n)>0?Number(n):null));
+    }
+    return Array.from({length:3},(_,r)=>{
+      const row=Array(9).fill(null),numbers=(lines[r]||[]).map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=90).sort((a,b)=>a-b);
+      let previous=-1;
+      numbers.forEach((n,i)=>{
+        // Old imported rows may contain two numbers in one decade. Keep both
+        // visible rather than overwriting one of the original card numbers.
+        const column=Math.max(previous+1,Math.min(Math.min(8,Math.floor(n/10)),9-(numbers.length-i)));
+        row[column]=n;previous=column;
+      });
+      return row;
+    });
+  }
   function checkCard(card){
     const allDrawn = [...(state.drawnNumbers || [])].map(Number);
     const pending = state.pendingNumber ? Number(state.pendingNumber) : null;
@@ -652,16 +671,29 @@
     else if(messages.length) reason = messages[0];
     else reason = 'Non valide';
 
-    return { numero:card.numero, serie:card.serie, lignes, lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, loserMode, stillInGame, hitsOnCard, valid, reason, messages };
+    return { numero:card.numero, serie:card.serie, lignes, grille:cardGridRows(card), lineResults, okLines, okLinesBefore, full: okLines === 3, missing: allMissing, requirement:req, lastNumber:last, requirementReached, lastCompletesGain, loserMode, stillInGame, hitsOnCard, valid, reason, messages };
+  }
+  function cardControlMode(result){
+    const req=result?.requirement||currentRequirement();
+    if(result?.loserMode||req.mode==='perdant')return 'Jeu du perdant';
+    if(req.full||req.mode==='carton'||req.mode==='bingoMystere')return 'Carton plein';
+    return Number(req.requiredLines)===2||Number(req.prizeIndex)===1?'2 lignes':'1 ligne';
   }
   function cardFailureLabel(result){
     if(!result || result.valid || (result.loserMode && result.winnerEligible)) return '';
     if(result.salesTrackingEnabled && !result.soldForCurrentLoto) return 'Carton non vendu pour ce loto';
-    if(result.loserMode) return result.stillInGame ? (result.reason || 'Carton encore en jeu') : 'Carton perdant : un numéro tiré est présent';
-    const requirement=result.requirement || currentRequirement();
-    if(!result.requirementReached) return requirement.full ? 'Carton incomplet' : 'Ligne incomplète';
-    if(requirement.lastNumberRequired) return 'Manque le dernier numéro';
-    return 'Carton perdant';
+    const mode=cardControlMode(result);
+    if(mode==='Jeu du perdant')return result.stillInGame?'':'Numéro tiré';
+    if(!result.requirementReached){
+      if(mode==='Carton plein')return 'Carton incomplet';
+      return mode==='2 lignes'?'Pas 2 lignes complètes':'Pas de ligne complète';
+    }
+    const requirement=result.requirement||currentRequirement();
+    return requirement.lastNumberRequired?'Manque le dernier numéro':'';
+  }
+  function cardFailureReasons(result){
+    const label=cardFailureLabel(result);
+    return label?[label]:[];
   }
   async function controlCard(numero){
     const missingMessage=knownMissingCardMessage(numero);
@@ -753,5 +785,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ bindSyncControls(); document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, showPublicCard, hidePublicCard, checkCard, protectPage, pageHeader, normalizeProgram, programSettings };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, cardFailureReasons, cardControlMode, showPublicCard, hidePublicCard, checkCard, cardGridRows, protectPage, pageHeader, normalizeProgram, programSettings };
 })();

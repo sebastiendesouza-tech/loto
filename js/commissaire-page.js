@@ -21,8 +21,9 @@ function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<
 function cardGridHtml(r){
   const drawn = drawnSet();
   const lastNum = Number(r.lastNumber || 0);
-  return `<div class="mini-card">${(r.lignes || []).map((line, i) =>
-    `<div class="mini-card-line ${r.lineResults?.[i]?.ok ? 'complete' : ''}">${line.map(n => {
+  return `<div class="mini-card">${Loto.cardGridRows(r).map((line, i) =>
+    `<div class="mini-card-line card-nine-columns ${r.lineResults?.[i]?.ok ? 'complete' : ''}">${line.map(n => {
+      if(n===null)return '<span class="mini-card-num empty" aria-hidden="true"></span>';
       const cls = drawn.has(Number(n)) ? 'hit' : 'miss';
       const lastCls = Number(n) === lastNum ? ' last-hit' : '';
       return `<span class="mini-card-num ${cls}${lastCls}">${pad(n)}</span>`;
@@ -31,8 +32,8 @@ function cardGridHtml(r){
 }
 
 function diagnosticHtml(r){
-  const label = Loto.cardFailureLabel(r);
-  return label ? `<ul class="diagnostic-list"><li>${esc(label)}</li></ul>` : '';
+  const reasons=Loto.cardFailureReasons(r);
+  return reasons.length?`<ul class="card-control-reasons">${reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:'';
 }
 
 
@@ -59,7 +60,7 @@ function renderResult(payload){
   if(!payload.found){
     lastResult = null;
     const message=payload.message||Loto.knownMissingCardMessage(payload.numero)||`Carton ${payload.numero||''} non enregistré dans la base.`;
-    result.innerHTML = `<div class="simple-control-result invalid"><div class="simple-control-status bad">NON VALIDE</div><p class="bad">${esc(message)}</p></div>`;
+    result.innerHTML = `<div class="simple-control-result invalid"><div class="card-control-summary"><div class="simple-control-status bad">NON VALIDE</div><p class="card-control-reasons">${esc(message)}</p></div></div>`;
     showBtn.style.display = 'none';
     if(publicCardActions) publicCardActions.style.display = 'none';
     return;
@@ -74,9 +75,9 @@ function renderResult(payload){
   const good = r.valid || (r.stillInGame && !unsold);
   result.innerHTML = `
     <div class="simple-control-result ${good ? 'valid' : 'invalid'}">
-      <div class="simple-control-status ${good ? 'ok' : 'bad'}">${status}</div>
+      <div class="controlled-card-heading"><b>Carton ${esc(r.numero)}</b><p class="controlled-card-mode">${esc(Loto.cardControlMode(r))}</p></div>
+      <div class="card-control-summary"><div class="simple-control-status ${good ? 'ok' : 'bad'}">${status}</div>${diagnosticHtml(r)}</div>
       ${cardGridHtml(r)}
-      ${diagnosticHtml(r)}
     </div>`;
   showBtn.style.display = 'inline-flex';
   if(publicCardActions) publicCardActions.style.display = 'flex';
