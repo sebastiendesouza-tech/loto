@@ -79,7 +79,7 @@
   function syncStatus(){
     const pending=pendingChanges().length;
     const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
-    return {connected:serverReachable&&!offline,reconnectAvailable,reconnectId,state:syncConflict||storageError?'attention':offline||syncError?'offline':syncFlight?'syncing':pending?'pending':syncReady?'online':'waiting',pending,message:syncConflict||(storageError?'Sauvegarde locale indisponible. Gardez cette page ouverte.':syncError)};
+    return {connected:serverReachable&&!offline,connectionKnown:serverReachable||connectionInterrupted||offline,reconnectAvailable,reconnectId,state:syncConflict||storageError?'attention':offline||syncError?'offline':syncFlight?'syncing':pending?'pending':syncReady?'online':'waiting',pending,message:syncConflict||(storageError?'Sauvegarde locale indisponible. Gardez cette page ouverte.':syncError)};
   }
   function notifySync(){
     const status=syncStatus();syncListeners.forEach(fn=>fn(status));
@@ -90,15 +90,15 @@
       if(el.hasAttribute?.('data-sync-light')||document.body?.classList.contains('public-projection')){
         el.classList?.add('connection-light');
         const connected=status.connected;
-        el.dataset.connected=String(connected);
-        const label=(connected?'Connecté':'Connexion interrompue')+(status.pending?` · ${status.pending} changement(s) en attente`:'');
+        el.dataset.connected=String(connected);el.dataset.connectionKnown=String(status.connectionKnown);
+        const label=(!status.connectionKnown?'Connexion en cours':connected?'Connecté':'Connexion interrompue')+(status.pending?` · ${status.pending} changement(s) en attente`:'');
         el.textContent='';el.setAttribute('role','img');el.setAttribute('aria-label',label);el.title=label+(status.message?' — '+status.message:'');
       }else{
         el.textContent=labels[status.state]+(status.pending?` · ${status.pending} en attente`:'');el.title=status.message||'';
       }
     });
     document.querySelectorAll('[data-connection-info]').forEach(button=>{
-      const label=status.connected?'Connecté':'Non connecté. Vérifiez votre connexion Internet.';
+      const label=!status.connectionKnown?'Connexion en cours':status.connected?'Connecté':'Non connecté. Vérifiez votre connexion Internet.';
       button.title=label;button.setAttribute('aria-label',label);
       const tooltip=button.querySelector('[data-connection-tooltip]');
       if(tooltip)tooltip.textContent=label;
