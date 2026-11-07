@@ -4,7 +4,7 @@
     const info=Loto.mysteryState(state);
     if(!info.active)return;
     if(info.travel){
-      container.innerHTML='<div class="mystery-travel"><small>10e LOT · VOYAGE</small><strong>Séjour au Cap</strong><span>Carton plein</span></div>';
+      container.innerHTML='<div class="mystery-travel"><small>SUPER QUINE · VOYAGE</small><strong>Séjour au Cap</strong><span>Carton plein</span></div>';
       return;
     }
     const canPick=interactive&&info.awaitingChoice;

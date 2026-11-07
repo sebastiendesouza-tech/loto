@@ -38,9 +38,11 @@
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
   function onChange(fn){ listeners.push(fn); fn(state); return () => listeners = listeners.filter(x => x !== fn); }
-  function isMysteryMode(mode){return mode==='bingoMystere'||mode==='bingoMysterePerdant';}
+  function isMysteryChoiceMode(mode){return mode==='bingoMystere'||mode==='bingoMysterePerdant';}
+  function isMysteryMode(mode){return isMysteryChoiceMode(mode)||mode==='bingoMystereSuperQuine';}
   function isLoserMode(mode){return mode==='perdant'||mode==='bingoMysterePerdant';}
   function normalizeMysteryPartie(partie,travel=false){
+    travel=travel||partie.gameMode==='bingoMystereSuperQuine';
     return {...partie,prizes:[{...(partie.prizes?.[0]||{}),type:travel?'Voyage':'Bingo mystère',label:travel?'Séjour au Cap':String(partie.prizes?.[0]?.label||''),enabled:true}]};
   }
   function normalizeProgram(program){
@@ -48,7 +50,7 @@
     const sales = p.sales_tracking_enabled ?? p.suivi_ventes ?? p.track_sales ?? false;
     const voucher = p.validation_voucher_enabled ?? p.bon_validation ?? p.use_validation_ticket ?? false;
     let rank=0;
-    p.parties=(p.parties||[]).map(partie=>isMysteryMode(partie.gameMode)?normalizeMysteryPartie(partie,rank++>=9):partie);
+    p.parties=(p.parties||[]).map(partie=>isMysteryMode(partie.gameMode)?normalizeMysteryPartie(partie,isMysteryChoiceMode(partie.gameMode)&&rank++>=9):partie);
     p.sales_tracking_enabled = !!sales;
     p.validation_voucher_enabled = !!voucher;
     return p;
@@ -483,10 +485,11 @@
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
   function visiblePrizes(partie){ return (isMysteryMode(partie?.gameMode)?normalizeMysteryPartie(partie).prizes:partie?.prizes || []).filter(x => x && x.enabled !== false); }
-  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMysterePerdant') return 'Bingo mystère : jeu du perdant'; if(m === 'bingoMystere') return 'Bingo mystère : carton plein'; if(m === 'perdant') return 'Partie du perdant'; return 'À la ligne'; }
+  function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystereSuperQuine') return 'Bingo mystère : super quine'; if(m === 'bingoMysterePerdant') return 'Bingo mystère : jeu du perdant'; if(m === 'bingoMystere') return 'Bingo mystère : carton plein'; if(m === 'perdant') return 'Partie du perdant'; return 'À la ligne'; }
   function currentPrize(){ const p=currentPartie(),mystery=mysteryState();if(mystery.travel)return {type:'Voyage',label:'Séjour au Cap',enabled:true};if(mystery.active&&mystery.assigned)return {type:'Bingo mystère',label:mystery.prizes[mystery.assigned-1].label||'Lot mystère',enabled:true};return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
   function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
     const mode = partie?.gameMode || 'ligne';
+    if(mode === 'bingoMystereSuperQuine') return 'Carton plein';
     if(mode === 'bingoMystere') return 'Bingo mystère';
     if(mode === 'carton') return 'Carton plein';
     if(isLoserMode(mode)) return 'Aucun numéro tiré sur le carton';
@@ -499,7 +502,7 @@
     const prizeIndex = state.currentPrizeIndex || 0;
     const mode = partie?.gameMode || 'ligne';
     const loser=isLoserMode(mode);
-    const full = !loser&&(mode === 'carton' || mode === 'bingoMystere' || prizeIndex >= 2);
+    const full = !loser&&(mode === 'carton' || isMysteryMode(mode) || prizeIndex >= 2);
     const requiredLines = full ? 3 : (prizeIndex === 0 ? 1 : 2);
     return {
       mode:loser?'perdant':mode,
@@ -513,11 +516,12 @@
   function mysteryState(s=state){
     const pi=Number(s.currentPartieIndex||0),parts=s.program?.parties||[],partie=parts[pi];
     const active=isMysteryMode(partie?.gameMode)&&!s.miniBingoActive&&!s.miniBingoReady;
-    const mysteryParts=parts.filter(part=>isMysteryMode(part.gameMode));
-    const rank=parts.slice(0,pi).filter(part=>isMysteryMode(part.gameMode)).length;
+    const mysteryParts=parts.filter(part=>isMysteryChoiceMode(part.gameMode));
+    const rank=parts.slice(0,pi).filter(part=>isMysteryChoiceMode(part.gameMode)).length;
     const selected=Array.from({length:9},(_,i)=>i+1).filter(slot=>s.mysterySelections?.[slot]===true);
     const assigned=Number(s.mysteryWinners?.[pi])||null;
-    return {active,selected,count:selected.length,travel:active&&rank>=9,assigned,awaitingChoice:active&&rank<9&&!assigned&&s.gameActive&&!s.gameEnded,prizes:Array.from({length:9},(_,i)=>({label:mysteryParts[i]?.prizes?.[0]?.label||''})),lastSlot:assigned};
+    const travel=active&&(partie.gameMode==='bingoMystereSuperQuine'||rank>=9);
+    return {active,selected,count:selected.length,travel,assigned,awaitingChoice:active&&!travel&&!assigned&&s.gameActive&&!s.gameEnded,prizes:Array.from({length:9},(_,i)=>({label:mysteryParts[i]?.prizes?.[0]?.label||''})),lastSlot:assigned};
   }
   async function pickMysteryCard(slot){
     const info=mysteryState();slot=Number(slot);
@@ -721,7 +725,7 @@
   function cardControlMode(result){
     const req=result?.requirement||currentRequirement();
     if(result?.loserMode||isLoserMode(req.mode))return 'Jeu du perdant';
-    if(req.full||req.mode==='carton'||req.mode==='bingoMystere')return 'Carton plein';
+    if(req.full||req.mode==='carton'||isMysteryMode(req.mode))return 'Carton plein';
     return Number(req.requiredLines)===2||Number(req.prizeIndex)===1?'2 lignes':'1 ligne';
   }
   function cardFailureLabel(result){
@@ -830,5 +834,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ bindSyncControls(); document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, cardFailureReasons, cardControlMode, showPublicCard, hidePublicCard, checkCard, cardGridRows, protectPage, pageHeader, normalizeProgram, isMysteryMode, isLoserMode, normalizeMysteryPartie, mysteryState, pickMysteryCard, programSettings };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, cardFailureReasons, cardControlMode, showPublicCard, hidePublicCard, checkCard, cardGridRows, protectPage, pageHeader, normalizeProgram, isMysteryMode, isMysteryChoiceMode, isLoserMode, normalizeMysteryPartie, mysteryState, pickMysteryCard, programSettings };
 })();
