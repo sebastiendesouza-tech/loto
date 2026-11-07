@@ -116,7 +116,7 @@ function renderLot(s){
   const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
   if(!p){animateurPartTitle.textContent='Partie simple';currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
   if(Loto.isMysteryMode(p.gameMode)){
-    animateurPartTitle.innerHTML=esc(Loto.partieLabel(s))+'<span class="mystery-round-rule">'+(Loto.isLoserMode(p.gameMode)?'Jeu du perdant':'Carton plein')+'</span>';
+    animateurPartTitle.innerHTML=esc(Loto.partieLabel(s))+'<span class="mystery-round-rule">- '+(Loto.isLoserMode(p.gameMode)?'Jeu du perdant':'Carton plein')+'</span>';
     LotoMysteryBoard.render(currentLot,{state:s,interactive:true});return;
   }
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
