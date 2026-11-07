@@ -9,10 +9,10 @@
       return;
     }
     const canPick=interactive&&info.awaitingChoice;
-    container.innerHTML=`<div class="mystery-board-title">Bingo mystère</div><div class="mystery-board" aria-label="Neuf cartons mystères">${Array.from({length:9},(_,i)=>{
+    container.innerHTML=`<div class="mystery-board" aria-label="Neuf cartons mystères">${Array.from({length:9},(_,i)=>{
       const slot=i+1,selected=info.selected.includes(slot),label='Carton '+slot+(selected?' · déjà choisi':' · disponible');
-      return canPick?`<button type="button" class="mystery-card ${selected?'chosen':'available'}" data-mystery-slot="${slot}" aria-label="${label}" ${selected||busy.has(container)?'disabled':''}><b>${slot}</b><small>${selected?'Choisi':'Mystère'}</small></button>`:`<div class="mystery-card ${selected?'chosen':'available'}" aria-label="${label}"><b>${slot}</b><small>${selected?'Choisi':'Mystère'}</small></div>`;
-    }).join('')}</div><div class="mystery-board-count">${info.count} / 9 cartons choisis${info.assigned?' · Choix de cette partie effectué':''}</div>${info.lastSlot?`<div class="mystery-last-choice">Carton ${info.lastSlot} : <strong>${esc(info.prizes[info.lastSlot-1]?.label||'Lot mystère')}</strong></div>`:''}`;
+      return canPick?`<button type="button" class="mystery-card ${selected?'chosen':'available'}" data-mystery-slot="${slot}" aria-label="${label}" ${selected||busy.has(container)?'disabled':''}><b>${slot}</b></button>`:`<div class="mystery-card ${selected?'chosen':'available'}" aria-label="${label}"><b>${slot}</b></div>`;
+    }).join('')}</div>${info.lastSlot?`<div class="mystery-last-choice">Carton ${info.lastSlot} : <strong>${esc(info.prizes[info.lastSlot-1]?.label||'Lot mystère')}</strong></div>`:''}`;
     container.querySelectorAll('[data-mystery-slot]').forEach(button=>{
       button.onclick=async()=>{
         if(button.disabled||busy.has(container))return;
