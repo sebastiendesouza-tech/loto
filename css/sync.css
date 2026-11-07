@@ -46,3 +46,8 @@
 @media(max-width:360px){.player .title.has-cards-link{padding-left:94px;padding-right:48px}.player-cards-link{padding:8px;font-size:11px}.player-lots-button{padding:7px 8px;font-size:12px}}
 
 #commissaireScanActions[hidden]{display:none!important}
+
+.carton-number-field{display:flex;align-items:center;min-width:0;max-width:100%;border:1px solid #d7dee8;border-radius:10px;background:#fff;overflow:hidden}
+.carton-number-prefix{flex:0 0 auto;padding:7px 0 7px 6px;font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;color:#132033}
+.carton-number-field input{flex:1 1 auto;min-width:0;width:100%;border:0;border-radius:0;background:transparent;font-size:14px;padding:7px 6px;font-variant-numeric:tabular-nums}
+.carton-number-field:focus-within{outline:2px solid #175da8;outline-offset:1px}
