@@ -74,3 +74,13 @@
 
 .controlled-card-heading{text-align:center;color:#132033;font-size:18px;font-weight:800}
 .controlled-card-heading .controlled-card-mode{color:#132033;font-size:15px;font-weight:700;line-height:1.3;margin:3px 0 8px}
+
+.public-card-closebar{display:flex;justify-content:flex-end;position:sticky;top:0;z-index:1;background:#fff;margin-bottom:4px}
+.public-card-closebar>button{min-height:38px;padding:6px 14px;font-size:14px;line-height:1.2;border-radius:8px}
+
+#publicControlCard[hidden],.public-control-dialog[hidden],.public-control-message[hidden]{display:none!important}
+.public-control-dialog{display:flex;z-index:60;background:#0009;color:#132033}
+.public-control-dialog .modal-panel{width:min(420px,90vw);background:#fff;color:#132033}
+.public-control-dialog .carton-number-field{margin-top:8px}
+.public-control-dialog .carton-number-prefix,.public-control-dialog input{font-size:24px;padding-top:12px;padding-bottom:12px}
+.public-control-message{color:#132033;font-weight:600}
