@@ -53,6 +53,38 @@ function renderCard(card){
   };
 }
 
+const publicControlButton=document.getElementById('publicControlCard');
+const publicControlDialog=document.getElementById('publicControlDialog');
+const publicControlInput=document.getElementById('publicCardSuffix');
+const publicControlMessage=document.getElementById('publicControlMessage');
+const publicControlSubmit=document.getElementById('publicControlSubmit');
+const publicControlNumber=LotoCardNumberInput.bind(publicControlInput,document.getElementById('publicCardPrefix'));
+let publicControlBusy=false;
+function closeControlDialog(){publicControlDialog.hidden=true;}
+publicControlButton.onclick=()=>{
+  if(publicControlButton.hidden)return;
+  publicControlMessage.hidden=true;publicControlInput.value='';publicControlInput.setCustomValidity('');
+  publicControlDialog.hidden=false;publicControlInput.focus();
+};
+document.getElementById('publicControlCancel').onclick=closeControlDialog;
+Loto.onSyncChange(status=>{
+  publicControlButton.hidden=!!status.connected;
+  if(status.connected)closeControlDialog();
+});
+document.getElementById('publicControlForm').onsubmit=async event=>{
+  event.preventDefault();if(publicControlBusy)return;
+  const code=publicControlNumber.read();if(!code)return;
+  publicControlBusy=true;publicControlSubmit.disabled=true;publicControlMessage.hidden=true;
+  try{
+    const payload=await LotoOfflineCards.control(code);
+    if(!payload?.found){publicControlMessage.textContent=payload?.message||'Carton non disponible sur ce PC.';publicControlMessage.hidden=false;return;}
+    await Loto.showPublicCard(payload.result);closeControlDialog();
+  }catch{
+    publicControlMessage.textContent='Contrôle indisponible. Réessayez.';publicControlMessage.hidden=false;
+  }finally{publicControlBusy=false;publicControlSubmit.disabled=false;}
+};
+publicControlDialog.onkeydown=event=>{if(event.key==='Escape')closeControlDialog();};
+
 function ordinalLabel(i){
   return i === 0 ? '1er LOT' : (i + 1) + 'e LOT';
 }
