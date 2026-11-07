@@ -894,7 +894,8 @@ async function saveManualSheet(){
     if(dupGrids&&dupGrids.length) throw new Error('Carton déjà existant avec les mêmes 15 numéros : '+(dupGrids[0].external_code||dupGrids[0].carton_code||dupGrids[0].numero));
     const internals=await nextManualCardInternalBatch(client, cards.length);
     const now=new Date().toISOString();
-    const rows=cards.map((c,i)=>({numero:internals[i].numero,carton_code:internals[i].code,association_id:cleanAssociationId('99'),card_order:internals[i].numero%10000,external_code:c.externalCode,external_code_type:'manuel',numbers_signature:c.signature,serie:'IMPORT_PLANCHE_6',lignes:c.lignes,grille:c.grid,qr_payload:c.externalCode,status:'disponible',ocr_quality:100,origine:'Saisie planche 6 cartons',actif:true,updated_at:now}));
+    const savedSheetCode='SDSP-99-'+String(internals[0].numero%10000).padStart(4,'0');
+    const rows=cards.map((c,i)=>({sheet_code:savedSheetCode,sheet_position:i+1,support_type:'P6',numero:internals[i].numero,carton_code:internals[i].code,association_id:cleanAssociationId('99'),card_order:internals[i].numero%10000,external_code:c.externalCode,external_code_type:'manuel',numbers_signature:c.signature,serie:'IMPORT_PLANCHE_6',lignes:c.lignes,grille:c.grid,qr_payload:c.externalCode,status:'disponible',ocr_quality:100,origine:'Saisie planche 6 cartons',actif:true,updated_at:now}));
     const {error}=await client.from('loto_cartons').insert(rows); if(error) throw error;
     sheetStatus('Planche enregistrée : 6 cartons ajoutés.', true); cartonStatus('Planche enregistrée : 6 cartons.', true); refreshCartonCount();
     for(let i=1;i<=6;i++){ const id=document.getElementById('sheetCardCode'+i); const nums=document.getElementById('sheetCardNumbers'+i); if(id) id.value=''; if(nums) nums.value=''; }
