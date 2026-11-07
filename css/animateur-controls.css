@@ -1,7 +1,7 @@
 /* Animateur: keep the number grid on the left and every command on the right. */
 .animateur-body{--animateur-tile-size:clamp(64px,7vw,96px)}
 .animateur-sidebar-content>.animateur-commandbar{height:auto;min-height:0;flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px;overflow:visible}
-.animateur-command-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,var(--animateur-tile-size)));justify-content:center;gap:8px}
+.animateur-command-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));justify-content:center;gap:8px}
 .animateur-commandbar .animateur-command-tiles>button,.animateur-commandbar .animateur-command-tiles>.btn{width:100%;aspect-ratio:1;min-width:0;min-height:0;padding:7px;white-space:normal;justify-content:center;text-align:center;font-size:clamp(11px,1.15vw,15px);line-height:1.2;border-radius:8px}
 .animateur-last-progress .animateur-progress-button{flex:0 0 auto;width:var(--animateur-tile-size);height:var(--animateur-tile-size);min-width:0;min-height:0;padding:6px;border:2px solid #ffc629;border-radius:8px;background:#12365f;color:#ffd166;white-space:normal;justify-content:center;text-align:center;font-size:clamp(11px,1.15vw,15px);font-weight:900;line-height:1.2}
 .animateur-last-progress .animateur-progress-button:hover:not(:disabled){background:#1c4978}
@@ -11,13 +11,11 @@
 
 .animateur-body:not(.commissaire-body) .animateur-side-v229{overflow:hidden}
 .animateur-sidebar-content{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;overflow:auto}
-.animateur-micro-dock{flex:0 0 auto;width:100%;min-height:80px;padding:16px;font-size:clamp(18px,2vw,25px);font-weight:900;line-height:1.2;border-radius:14px;justify-content:center;text-align:center;touch-action:manipulation}
-.animateur-micro-dock:disabled{opacity:.55;cursor:not-allowed}
-@media(max-width:760px){.animateur-body:not(.commissaire-body) .animateur-side-v229{overflow:visible}.animateur-sidebar-content{overflow:visible;flex:none}.animateur-micro-dock{position:sticky;bottom:8px;z-index:20}}
+@media(max-width:760px){.animateur-body:not(.commissaire-body) .animateur-side-v229{overflow:visible}.animateur-sidebar-content{overflow:visible;flex:none}}
 
 .animateur-commandbar>.animateur-voice-controls{border-top:1px solid #d7dee8;padding-top:8px;margin-top:2px}
 
-/* All three prizes stay visible; the sidebar scrolls above the fixed microphone. */
+/* Prize details remain visible in the scrolling sidebar. */
 .animateur-body .animateur-lot-card{max-height:none;overflow:visible}
 .animateur-lot-content .commissaire-prize-row>div{min-width:0;flex:1;overflow-wrap:anywhere}
 .animateur-lot-content .commissaire-prize-row small{flex:0 0 auto;max-width:82px}
@@ -27,3 +25,5 @@
 .animateur-control-card .control-toolbar-v229{grid-template-columns:minmax(0,1fr) auto auto;gap:6px}
 .animateur-control-card .control-toolbar-v229 input{grid-column:auto;min-width:0;width:100%;max-width:none;padding:7px 6px;font-size:14px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
 .animateur-control-card .result-box:empty{margin-top:0}
+
+.animateur-command-tiles .animateur-micro-button{touch-action:manipulation}
