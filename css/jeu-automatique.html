@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#071421">
+  <title>Jeu automatique - Loto by SdS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/jeu-automatique.css?v=5-auto-20261104-5">
+<link rel="stylesheet" href="css/sync.css?v=20261107-mystery-next-confirm"></head>
+<body class="auto-game-body">
+  <header class="auto-header">
+    <div class="auto-heading">
+      <div class="auto-heading-name"><strong data-title>Loto by SdS</strong><span aria-hidden="true">-</span><span id="gameName">Chargement du loto…</span></div>
+      <div class="spectator-part-row"><span id="autoPartLabel" class="auto-part-label" aria-live="polite">Partie —</span><button type="button" class="spectator-connection" data-connection-info aria-label="Non connecté. Vérifiez votre connexion Internet." title="Non connecté. Vérifiez votre connexion Internet." aria-describedby="autoConnectionTooltip" aria-expanded="false"><span class="connection-light" data-sync-status data-sync-light data-state="waiting" data-connected="false" aria-hidden="true"></span><span id="autoConnectionTooltip" class="connection-tooltip" data-connection-tooltip role="tooltip">Non connecté. Vérifiez votre connexion Internet.</span></button></div>
+    </div>
+    <nav class="auto-header-actions" aria-label="Navigation"><a id="returnToPlayer" class="auto-secondary" href="joueur.html">Retour</a><button id="editCards" class="auto-secondary" type="button" hidden>Modifier</button></nav>
+    <span id="connectionStatus" hidden>Connexion…</span>
+  </header>
+
+  <main class="auto-main">
+    
+    <section id="setup" class="auto-panel setup-panel">
+      <h1>Vos cartons</h1>
+      <p class="auto-intro">Saisissez jusqu’à 6 numéros de carton, de 101000 à 102999. Laissez les autres cases vides.</p>
+      <form id="codesForm" novalidate>
+        <div id="cardCodeFields" class="card-code-fields">
+          <label><span class="code-index">1</span><input id="cardCode1" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 1" aria-label="Numéro du carton 1"></label>
+          <label><span class="code-index">2</span><input id="cardCode2" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 2" aria-label="Numéro du carton 2"></label>
+          <label><span class="code-index">3</span><input id="cardCode3" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 3" aria-label="Numéro du carton 3"></label>
+          <label><span class="code-index">4</span><input id="cardCode4" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 4" aria-label="Numéro du carton 4"></label>
+          <label><span class="code-index">5</span><input id="cardCode5" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 5" aria-label="Numéro du carton 5"></label>
+          <label><span class="code-index">6</span><input id="cardCode6" name="cardCode" type="text" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="10[12][0-9]{3}" title="Numéro de carton entre 101000 et 102999" placeholder="Numéro du carton 6" aria-label="Numéro du carton 6"></label>
+        </div>
+        <button id="loadCards" class="auto-primary auto-full" type="submit">Valider mes cartons</button>
+      </form>
+      <p id="setupMessage" class="auto-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="play" class="play-screen" hidden>
+      <div id="autoAlert" class="auto-alert" role="status" aria-live="polite" hidden></div>
+      <div id="trackedCards" class="tracked-cards"></div>
+    </section>
+  </main>
+
+  <div id="winnerModal" class="winner-modal" role="dialog" aria-modal="true" aria-labelledby="winnerTitle" aria-describedby="winnerCodes" hidden>
+    <section class="winner-dialog">
+      <div class="winner-symbol" aria-hidden="true">★</div>
+      <h2 id="winnerTitle">Carton gagnant !</h2>
+      <p id="winnerCodes" class="winner-codes"></p>
+      <button id="winnerClose" class="auto-primary auto-full" type="button">Fermer</button>
+    </section>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/core.js?v=20261107-mystery-loser"></script>
+  <script src="js/jeu-automatique.js?v=5-carton-101311"></script>
+</body>
+</html>
