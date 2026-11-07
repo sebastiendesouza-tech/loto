@@ -220,7 +220,7 @@
       const legacy=read('loto_state');
       if(legacy&&(!legacy.sessionCode||legacy.sessionCode===code()))mergeState(legacy);
     }
-    if(cached?.state){serverState=cached.remote||cached.state;serverStamp=cached.stamp||'';let view=clone(serverState);for(const op of pendingChanges())view=applyOperation(view,op).state;mergeState(view);}
+    if(cached?.state){serverState=!remoteConfigured&&!supabaseClient?cached.state:cached.remote||cached.state;serverStamp=cached.stamp||'';let view=clone(serverState);for(const op of pendingChanges())view=applyOperation(view,op).state;mergeState(view);}
   }
   function retry(){
     if(retryTimer||!sessionStarted||!supabaseClient)return;
@@ -783,6 +783,10 @@
           if(error) throw error;
           cards=cards.concat(data||[]);
         }
+        // A missing sold card could still be in play: never announce a winner
+        // from a partial list, even when the requests themselves succeeded.
+        const received=new Set(cards.map(card=>Number(card.numero)));
+        if(numbers.some(numero=>!received.has(numero)))throw new Error('Cartons vendus manquants dans le contrôle');
         const drawn=new Set([...(state.drawnNumbers||[]),...(state.pendingNumber?[state.pendingNumber]:[])].map(Number));
         const remaining=cards.filter(c=>(c.lignes||[]).flat().every(n=>!drawn.has(Number(n))));
         result.remainingCards=remaining.length;
