@@ -78,7 +78,7 @@
 .public-card-closebar{display:flex;justify-content:flex-end;position:sticky;top:0;z-index:1;background:#fff;margin-bottom:4px}
 .public-card-closebar>button{min-height:38px;padding:6px 14px;font-size:14px;line-height:1.2;border-radius:8px}
 
-#publicControlCard[hidden],.public-control-dialog[hidden],.public-control-message[hidden]{display:none!important}
+#publicNextPartie[hidden],#publicControlCard[hidden],.public-control-dialog[hidden],.public-control-message[hidden]{display:none!important}
 .public-control-dialog{display:flex;z-index:60;background:#0009;color:#132033}
 .public-control-dialog .modal-panel{width:min(420px,90vw);background:#fff;color:#132033}
 .public-control-dialog .carton-number-field{margin-top:8px}
