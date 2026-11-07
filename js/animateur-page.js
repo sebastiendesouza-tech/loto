@@ -53,7 +53,7 @@ const nextPartieButton=document.getElementById('winner');
 let animateurProgressBusy=false;
 function renderAnimateurProgress(s){
   nextPartieButton.textContent=s.miniBingoReady?'Fin du loto':Loto.progressLabel(s);
-  nextPartieButton.disabled=animateurProgressBusy||!s.gameActive||!!s.gameEnded||!!s.miniBingoReady;
+  nextPartieButton.disabled=animateurProgressBusy||!s.gameActive||!!s.gameEnded||!!s.miniBingoReady||Loto.mysteryState(s).awaitingChoice;
 }
 nextPartieButton.onclick=async()=>{
   if(nextPartieButton.disabled)return;
@@ -77,8 +77,8 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   const connected = status.connected && status.online;
   if(voiceListeningButton){
     voiceListeningButton.disabled=!connected||!status.ready||status.pending||status.sourceMode==='manual';
-    voiceListeningButton.textContent=status.pending?'Commande en cours…':status.active?'Mettre l’écoute en pause':'Reprendre l’écoute';
-    voiceListeningButton.className=(status.active?'red':'green')+' voice-listening-button animateur-micro-dock';
+    voiceListeningButton.textContent=status.pending?'Commande en cours…':status.active?'Couper le micro':'Reprendre le micro';
+    voiceListeningButton.className=(status.active?'red':'green')+' voice-listening-button animateur-micro-button';
     voiceListeningButton.setAttribute('aria-pressed',String(!!status.active));
     voiceListeningButton.title=!connected?'Le PC n’est pas joignable.':!status.ready?'Activez Micro PC sur l’affichage public du PC.':status.sourceMode==='manual'?'Choisissez Vocal pour reprendre l’écoute.':status.active?'Suspendre la reconnaissance des numéros sur le PC':'Reprendre la reconnaissance des numéros sur le PC';
   }
@@ -115,6 +115,10 @@ function renderLot(s){
   const lotoEnded=!!s.gameEnded&&!s.gameActive&&lastPartie&&lastPrize;
   const notice=s.miniBingoReady?'Loto principal terminé · Mini-bingo à lancer':lotoEnded?'Fin du loto':'';
   if(!p){animateurPartTitle.textContent='Partie simple';currentLot.innerHTML=`${notice?`<div class="animateur-lot-notice">${notice}</div>`:''}<div class="commissaire-lot-mode">Aucun lot programmé</div>`;return;}
+  if(p.gameMode==='bingoMystere'){
+    animateurPartTitle.textContent=Loto.partieLabel(s);
+    LotoMysteryBoard.render(currentLot,{state:s,interactive:true});return;
+  }
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(prize=>prize&&prize.enabled!==false);
   const prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;

@@ -71,6 +71,7 @@ Loto.onSyncChange(status=>{
   publicControlButton.hidden=status.connected||!status.connectionKnown;
   publicNextPartie.hidden=publicControlButton.hidden;
   if(status.connected)closeControlDialog();
+  if(Loto.currentPartie()?.gameMode==='bingoMystere')renderLots(Loto.state());
 });
 document.getElementById('publicControlForm').onsubmit=async event=>{
   event.preventDefault();if(publicControlBusy)return;
@@ -120,6 +121,10 @@ function renderLots(s){
     return;
   }
 
+  if(mode==='bingoMystere'&&!s.miniBingoActive&&!s.miniBingoReady){
+    publicStep.textContent='';const status=Loto.syncStatus();
+    LotoMysteryBoard.render(publicLot,{state:s,interactive:!status.connected&&status.connectionKnown});return;
+  }
   const prizes = (partie.prizes || []).filter(x => x && x.enabled !== false).slice(0,3);
   publicStep.textContent = '';
   publicLot.innerHTML = `<div class="public-prize-list">${prizes.map((p,i)=>{
@@ -174,7 +179,7 @@ const pcMicrophone = LotoPcMicrophone.connect('host', status => {
 micBtn.onclick = () => pcMicrophone.toggle();
 
 function renderPublicProgress(s){
-  publicNextPartie.disabled=publicProgressBusy||!s.gameActive||!!s.gameEnded;
+  publicNextPartie.disabled=publicProgressBusy||!s.gameActive||!!s.gameEnded||Loto.mysteryState(s).awaitingChoice;
   publicNextPartie.textContent=Loto.progressLabel(s);
 }
 publicNextPartie.onclick=async()=>{

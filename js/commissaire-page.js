@@ -43,6 +43,10 @@ function renderLot(s){
   if(s.miniBingoActive){ currentLot.innerHTML = '<div class="commissaire-lot-title">MINI-BINGO</div><div class="commissaire-lot-mode">Tirage de départage en cours</div>'; return; }
   const p = Loto.currentPartie();
   if(!p){ currentLot.innerHTML = '<div class="commissaire-lot-title">Aucun lot programmé</div><div class="commissaire-lot-mode">Partie simple</div>'; return; }
+  if(p.gameMode==='bingoMystere'){
+    currentLot.innerHTML=`<div class="commissaire-lot-title">${esc(Loto.partieLabel(s))}</div><div id="commissaireMysteryBoard"></div>`;
+    LotoMysteryBoard.render(document.getElementById('commissaireMysteryBoard'),{state:s,interactive:true});return;
+  }
   const mode=p.gameMode||'ligne',prizes=(p.prizes||[]).filter(x=>x&&x.enabled!==false);
   const prizeIndex=Number(s.currentPrizeIndex||0);
   const rule=mode==='perdant'?'Aucun numéro tiré sur le carton':mode==='carton'||mode==='bingoMystere'?'Carton plein':Loto.currentRequirement().label;

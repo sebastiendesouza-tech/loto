@@ -14,6 +14,9 @@
     checkedCards: [],
     currentPartieIndex: 0,
     currentPrizeIndex: 0,
+    mysterySelections: {},
+    mysteryLastChoice: null,
+    mysteryWinners: {},
     options: { cardSeries: '101000', showCommissaireScanner: false, showLots: false, bingoEnabled: false, showBingo: false, miniBingoSource: 'first', prevalidateSeconds: 6, lastNumberRequired: true },
     bingoNumbers: [],
     miniBingoTakenParties: [],
@@ -35,10 +38,15 @@
   const safeJson = (x, fallback) => { try { return JSON.parse(x); } catch { return fallback; } };
   function notify(){ listeners.forEach(fn => fn(state)); }
   function onChange(fn){ listeners.push(fn); fn(state); return () => listeners = listeners.filter(x => x !== fn); }
+  function normalizeMysteryPartie(partie,travel=false){
+    return {...partie,prizes:[{...(partie.prizes?.[0]||{}),type:travel?'Voyage':'Bingo mystère',label:travel?'Séjour au Cap':String(partie.prizes?.[0]?.label||''),enabled:true}]};
+  }
   function normalizeProgram(program){
     const p = Object.assign({}, program || {});
     const sales = p.sales_tracking_enabled ?? p.suivi_ventes ?? p.track_sales ?? false;
     const voucher = p.validation_voucher_enabled ?? p.bon_validation ?? p.use_validation_ticket ?? false;
+    let rank=0;
+    p.parties=(p.parties||[]).map(partie=>partie.gameMode==='bingoMystere'?normalizeMysteryPartie(partie,rank++>=9):partie);
     p.sales_tracking_enabled = !!sales;
     p.validation_voucher_enabled = !!voucher;
     return p;
@@ -124,15 +132,17 @@
     const next={...(before||{})};for(const [key,d] of Object.entries(diff.children))next[key]=applyDifference(next[key],d);return next;
   }
   const phase=s=>[s._syncRoundId||'',s.program?.id||'',Number(s.currentPartieIndex||0),!!s.miniBingoActive].join('|');
-  const guarded=new Set(['draw','pending','validate','cancel_pending','undo','cancel_number','replace_number','winner','next_prize','check','show_card','hide_card','stop_game','mini_bingo_start']);
+  const guarded=new Set(['draw','pending','validate','cancel_pending','undo','cancel_number','replace_number','winner','next_prize','check','show_card','hide_card','stop_game','mini_bingo_start','mystery_pick']);
   const numberOps=new Set(['draw','pending','validate','cancel_pending','undo','cancel_number','replace_number']);
   const logKey=entry=>JSON.stringify(entry);
   function makeOperation(patch){
     const log=patch.history?.[0],type=log?.type||'update';
     const changes={};
     for(const [key,value] of Object.entries(patch)){
+      if(type==='mystery_pick'&&['mysterySelections','mysteryWinners','mysteryLastChoice','currentPrizeIndex','publicCard','cardClosedAt'].includes(key))continue;
       if(key==='history'||(numberOps.has(type)&&['drawnNumbers','pendingNumber'].includes(key)))continue;
-      if(key==='savedPrograms'){
+      if(key==='mysterySelections'||key==='mysteryWinners'){changes[key]={value:clone(value)};}
+      else if(key==='savedPrograms'){
         const before=state.savedPrograms||[],after=value||[];
         changes[key]={programs:after.filter(p=>!same(p,before.find(old=>old.id===p.id))),removed:before.filter(p=>!after.some(next=>next.id===p.id)).map(p=>p.id)};
       }else{const d=difference(state[key],value);if(d)changes[key]=d;}
@@ -152,6 +162,19 @@
         const ids=new Set(diff.programs.map(p=>p.id));
         next[key]=[...diff.programs,...(next[key]||[]).filter(p=>!ids.has(p.id)&&!diff.removed.includes(p.id))].slice(0,80);
       }else next[key]=applyDifference(next[key],diff);
+    }
+    if(op.type==='mystery_pick'){
+      const slot=Number(op.data.slot),pi=Number(next.currentPartieIndex||0),info=mysteryState(next);
+      if(!next.gameActive||next.gameEnded||!info.active||info.travel||!Number.isInteger(slot)||slot<1||slot>9)return {state:next,conflict:true};
+      const assigned=next.mysteryWinners?.[pi];
+      if(assigned&&Number(assigned)!==slot)return {state:next,conflict:true};
+      if(!assigned){
+        if(info.selected.includes(slot))return {state:next,conflict:true};
+        next.mysterySelections={...(next.mysterySelections||{}),[slot]:true};
+        next.mysteryWinners={...(next.mysteryWinners||{}),[pi]:slot};
+        next.mysteryLastChoice={partie:pi,slot};next.publicCard=null;next.cardClosedAt=op.time;
+      }
+      next.currentPrizeIndex=0;
     }
     if(numberOps.has(op.type)){
       let drawn=(next.drawnNumbers||[]).map(Number),pending=Number(next.pendingNumber)||null;
@@ -317,7 +340,7 @@
   }
   function addLog(type, label, data){ return [{ t:new Date().toISOString(), type, label, data: data || null }, ...(state.history || [])].slice(0,300); }
   function makeId(prefix='id'){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
-  function freshGamePatch(program){ return { _syncRoundId:makeId('round'), drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, miniBingoWon:false, gameActive:true, gameEnded:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
+  function freshGamePatch(program){ return { _syncRoundId:makeId('round'), drawnNumbers:[], pendingNumber:null, bingoNumbers:[], miniBingoTakenParties:[], miniBingoReady:false, miniBingoActive:false, miniBingoWon:false, gameActive:true, gameEnded:false, publicCard:null, cardClosedAt:Date.now(), checkedCards:[], mysterySelections:{}, mysteryWinners:{}, mysteryLastChoice:null, currentPartieIndex:0, currentPrizeIndex:0, program: program || state.program || defaultState().program }; }
   function canStartGame(){ return !state.gameActive; }
   async function stopCurrentGame(){
     await save({ _syncRoundId:makeId('round'), gameActive:false, gameEnded:true, miniBingoReady:false, miniBingoActive:false, drawnNumbers:[], pendingNumber:null, publicCard:null, cardClosedAt:Date.now(), toast:{type:'game_stopped',message:'Loto arrêté depuis l’administration.',at:Date.now(),duration:5000}, history:addLog('stop_game','Loto arrêté manuellement') });
@@ -457,9 +480,9 @@
     return `Partie n°${index+1} / ${parties.length}`+(name?' · '+name:'');
   }
   function currentPartie(){ return (state.program?.parties || [])[state.currentPartieIndex || 0] || null; }
-  function visiblePrizes(partie){ return (partie?.prizes || []).filter(x => x && x.enabled !== false); }
+  function visiblePrizes(partie){ return (partie?.gameMode==='bingoMystere'?normalizeMysteryPartie(partie).prizes:partie?.prizes || []).filter(x => x && x.enabled !== false); }
   function gameModeLabel(partie){ const m = partie?.gameMode || 'ligne'; if(m === 'carton') return 'Carton plein'; if(m === 'bingoMystere') return 'Bingo mystère'; if(m === 'perdant') return 'Partie du perdant'; return 'À la ligne'; }
-  function currentPrize(){ const p=currentPartie(); return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
+  function currentPrize(){ const p=currentPartie(),mystery=mysteryState();if(mystery.travel)return {type:'Voyage',label:'Séjour au Cap',enabled:true};if(mystery.active&&mystery.assigned)return {type:'Bingo mystère',label:mystery.prizes[mystery.assigned-1].label||'Lot mystère',enabled:true};return visiblePrizes(p)[state.currentPrizeIndex || 0] || null; }
   function stepLabel(partie=currentPartie(), prizeIndex=state.currentPrizeIndex || 0){
     const mode = partie?.gameMode || 'ligne';
     if(mode === 'bingoMystere') return 'Bingo mystère';
@@ -484,8 +507,25 @@
       lastNumberRequired: mode !== 'perdant' && state.options?.lastNumberRequired !== false
     };
   }
+  function mysteryState(s=state){
+    const pi=Number(s.currentPartieIndex||0),parts=s.program?.parties||[],partie=parts[pi];
+    const active=partie?.gameMode==='bingoMystere'&&!s.miniBingoActive&&!s.miniBingoReady;
+    const mysteryParts=parts.filter(part=>part.gameMode==='bingoMystere');
+    const rank=parts.slice(0,pi).filter(part=>part.gameMode==='bingoMystere').length;
+    const selected=Array.from({length:9},(_,i)=>i+1).filter(slot=>s.mysterySelections?.[slot]===true);
+    const assigned=Number(s.mysteryWinners?.[pi])||null;
+    return {active,selected,count:selected.length,travel:active&&rank>=9,assigned,awaitingChoice:active&&rank<9&&!assigned&&s.gameActive&&!s.gameEnded,prizes:Array.from({length:9},(_,i)=>({label:mysteryParts[i]?.prizes?.[0]?.label||''})),lastSlot:assigned};
+  }
+  async function pickMysteryCard(slot){
+    const info=mysteryState();slot=Number(slot);
+    if(!info.awaitingChoice||!Number.isInteger(slot)||slot<1||slot>9||info.selected.includes(slot))return false;
+    const pi=Number(state.currentPartieIndex||0);
+    await save({mysterySelections:{...(state.mysterySelections||{}),[slot]:true},mysteryWinners:{...(state.mysteryWinners||{}),[pi]:slot},mysteryLastChoice:{partie:pi,slot},currentPrizeIndex:0,publicCard:null,cardClosedAt:Date.now(),history:addLog('mystery_pick','Carton mystère '+slot+' attribué',{slot,label:info.prizes[slot-1].label})});
+    return true;
+  }
   function progressLabel(s=state){
     if(s.gameEnded)return 'Fin du loto';
+    if(mysteryState(s).awaitingChoice)return 'Choisir un carton';
     if(s.miniBingoReady)return 'Lancer Mini-bingo';
     if(s.miniBingoActive)return 'Fin du loto';
     const parties=s.program?.parties||[],pi=Number(s.currentPartieIndex||0),li=Number(s.currentPrizeIndex||0);
@@ -503,6 +543,7 @@
     return { currentPartieIndex: pi, currentPrizeIndex: li };
   }
   async function nextPrize(){
+    if(mysteryState().awaitingChoice)return;
     const progress = nextProgress();
     await save({ ...progress, history:addLog('next_prize','Lot suivant') });
   }
@@ -521,6 +562,7 @@
     return { type:'loto_end', message:'Le loto est terminé.', at:Date.now(), duration:7000 };
   }
   async function winner(){
+    if(mysteryState().awaitingChoice)return;
     if(state.miniBingoActive){
       await save({ miniBingoActive:false, miniBingoReady:false, miniBingoWon:true, gameActive:false, gameEnded:true, drawnNumbers:[], pendingNumber:null, publicCard:null, checkedCards:[], toast:{type:'loto_end',message:'Le loto est terminé.',at:Date.now(),duration:7000}, history:addLog('mini_bingo_winner','Mini-bingo gagné et loto terminé') });
       return;
@@ -785,5 +827,5 @@
     overlay.querySelector('#pinBtn').onclick = check; input.onkeydown = e => { if(e.key==='Enter') check(); };
   }
   function pageHeader(){ bindSyncControls(); document.querySelectorAll('[data-title]').forEach(e => e.textContent = C.APP_NAME || 'Loto by SdS'); document.querySelectorAll('[data-version]').forEach(e => e.textContent = C.APP_VERSION || ''); document.querySelectorAll('[data-session]').forEach(e => e.textContent = code()); document.querySelectorAll('[data-loto-name]').forEach(e => e.textContent = state.program?.title || state.lotoName || C.APP_NAME || 'Loto by SdS'); }
-  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, cardFailureReasons, cardControlMode, showPublicCard, hidePublicCard, checkCard, cardGridRows, protectPage, pageHeader, normalizeProgram, programSettings };
+  window.Loto = { C, supabaseClient, state:()=>state, defaultState, code, title, makeId, freshGamePatch, canStartGame, stopCurrentGame, markMiniBingoWon, onChange, ensureSession, refreshSession, syncStatus, onSyncChange, save, drawNumber, setPendingNumber, commitPending, cancelPending, undoLast, cancelNumber, replaceNumber, newGame, cardNumberPrefix, partieLabel, currentPartie, currentPrize, progressLabel, gameModeLabel, stepLabel, currentRequirement, nextPrize, winner, startMiniBingo, renderNumbers, lastNumber, knownMissingCardMessage, fetchCard, controlCard, cardFailureLabel, cardFailureReasons, cardControlMode, showPublicCard, hidePublicCard, checkCard, cardGridRows, protectPage, pageHeader, normalizeProgram, normalizeMysteryPartie, mysteryState, pickMysteryCard, programSettings };
 })();
