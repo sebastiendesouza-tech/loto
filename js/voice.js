@@ -3,9 +3,10 @@
   let lastVoiceNumber=null,lastVoiceAt=0;
   let mode=localStorage.getItem('loto_voice_mode')||'le';
   const REECOUTE_DELAY_MS=0,SAME_NUMBER_GUARD_MS=5000,INTERIM_STABLE_MS=200;
-  let interimTimer=null,interimCandidate=null,keywordContext=null,cardContext=null;
+  let interimTimer=null,interimCandidate=null,keywordContext=null,cardContext=null,cardTimer=null;
   function clearInterim(){clearTimeout(interimTimer);interimTimer=null;interimCandidate=null;}
-  function clearSpeechContext(){clearInterim();keywordContext=null;cardContext=null;}
+  function clearCardTimer(){clearTimeout(cardTimer);cardTimer=null;}
+  function clearSpeechContext(){clearInterim();clearCardTimer();keywordContext=null;cardContext=null;}
   const units=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf'];
   const teens={10:'dix',11:'onze',12:'douze',13:'treize',14:'quatorze',15:'quinze',16:'seize',17:'dix sept',18:'dix huit',19:'dix neuf'};
   const tens={20:'vingt',30:'trente',40:'quarante',50:'cinquante',60:'soixante'};
@@ -15,7 +16,7 @@
   const alt=Array.from(phraseToNumber.keys()).sort((a,b)=>b.length-a.length).map(v=>v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
   const wordRegex=new RegExp('\\b('+alt+')\\b','g');
   function extractNumbers(text){const t=norm(text),found=[];let m;const dr=/\b([1-9]|[1-8][0-9]|90)\b/g;while((m=dr.exec(t)))found.push({index:m.index,n:Number(m[1])});while((m=wordRegex.exec(t))){const n=phraseToNumber.get(norm(m[1]));if(n)found.push({index:m.index,n});}found.sort((a,b)=>a.index-b.index);return found.map(x=>x.n);}
-  // Card commands use exactly three suffix digits; never reuse the draw parser.
+  // Card suffixes are padded to three digits; never reuse the draw parser.
   function cardWords(text){return norm(text).replace(/\bcents\b/g,'cent').replace(/\bvingts\b/g,'vingt').replace(/\bet\b/g,' ').replace(/\s+/g,' ').trim();}
   function cardFrench(n){
     if(n===0)return 'zero';
@@ -23,17 +24,18 @@
     const hundreds=Math.floor(n/100),rest=n%100;
     return (hundreds===1?'':units[hundreds]+' ')+'cent'+(rest?' '+cardFrench(rest):'');
   }
-  const cardPhrases=new Map();
+  const cardPhrases=new Map(),shortCardPhrases=new Map();
+  for(let n=0;n<100;n++)shortCardPhrases.set(cardWords(cardFrench(n)),String(n).padStart(3,'0'));
   for(let n=100;n<=999;n++)cardPhrases.set(cardWords(cardFrench(n)),String(n));
   for(let n=10;n<100;n++)cardPhrases.set(cardWords('zero '+cardFrench(n)),String(n).padStart(3,'0'));
-  function parseCardSuffix(text){
+  function parseCardSuffix(text,allowShort=true){
     const t=norm(text).replace(/[.,;:!?]/g,' ').replace(/\s+/g,' ').trim();
     if(/^[0-9 ]+$/.test(t)){
-      const digits=t.replace(/ /g,'');return /^\d{3}$/.test(digits)?digits:null;
+      const digits=t.replace(/ /g,'');return (allowShort?/^\d{1,3}$/:/^\d{3}$/).test(digits)?digits.padStart(3,'0'):null;
     }
     const digitTokens=t.split(' ').map(word=>word==='zero'?'0':/^[0-9]$/.test(word)?word:units.indexOf(word)>0?String(units.indexOf(word)):null);
-    if(digitTokens.length===3&&digitTokens.every(v=>v!==null))return digitTokens.join('');
-    return cardPhrases.get(cardWords(t))||null;
+    if((digitTokens.length===3||allowShort&&digitTokens.length>=1&&digitTokens.length<=2)&&digitTokens.every(v=>v!==null))return digitTokens.join('').padStart(3,'0');
+    return cardPhrases.get(cardWords(t))||(allowShort?shortCardPhrases.get(cardWords(t)):null)||null;
   }
   let lastCardCode=null,lastCardAt=0,cardRequest=0;
   async function controlVoiceCard(suffix,onStatus){
@@ -75,14 +77,24 @@
     function cardCommand(raw,index,final){
       const starts=/\bcontrole(?:r|z)?\b/.test(raw);
       const context=cardContext&&Date.now()-cardContext.at<8000?cardContext:null;
+      if(context?.pendingSuffix&&!starts&&/^(?:le|numero)\b/.test(raw)){
+        clearCardTimer();cardContext=null;void controlVoiceCard(context.pendingSuffix,onStatus);return false;
+      }
       if(!starts&&!context&&!cardResults.has(index))return false;
-      cardResults.add(index);clearInterim();keywordContext=null;
+      clearCardTimer();cardResults.add(index);clearInterim();keywordContext=null;
       const text=starts?raw:context?context.text+' '+raw:raw;
       if(!final)return true;
       const match=text.match(/^(?:le )?controle(?:r|z)?(?: le)? carton\b(.*)$/);
       const suffix=match&&parseCardSuffix(match[1]);
-      if(suffix){cardContext=null;void controlVoiceCard(suffix,onStatus);}
-      else{
+      if(suffix&&parseCardSuffix(match[1],false)){cardContext=null;void controlVoiceCard(suffix,onStatus);}
+      else if(suffix){
+        // A final single digit may be followed by two more speech segments.
+        const pending={text,at:Date.now(),pendingSuffix:suffix};cardContext=pending;
+        cardTimer=setTimeout(()=>{
+          cardTimer=null;if(!processingEnabled||cardContext!==pending)return;
+          cardContext=null;void controlVoiceCard(suffix,onStatus);
+        },700);
+      }else{
         cardContext={text,at:Date.now()};
         onStatus&&onStatus(processingEnabled,'Dites « Contrôle carton » puis les trois derniers chiffres.');
       }
