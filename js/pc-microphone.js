@@ -38,7 +38,7 @@
       const messages = {
         'not-allowed':'Autorisez le microphone dans Chrome sur le PC.',
         'service-not-allowed':'La reconnaissance vocale est bloquée dans Chrome sur le PC.',
-        'audio-capture':'Vérifiez le branchement et la sélection du micro sur le PC.',
+        'audio-capture':'Micro inaccessible : sélectionnez le récepteur USB dans les réglages micro de Chrome puis réactivez Micro PC sur le PC.',
         'network':'Le service vocal est indisponible. Vérifiez Internet sur le PC puis reprenez l’écoute.'
       };
       error = ignored.includes(label) ? '' : (messages[label] || label || '');

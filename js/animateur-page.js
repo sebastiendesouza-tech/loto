@@ -7,7 +7,6 @@ const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=doc
 const launchLotoButton=document.getElementById('launchLoto');
 const simpleGameButton=document.getElementById('newGame');
 const voiceButtons={draw:document.getElementById('voiceListenDraw'),card:document.getElementById('voiceListenCard'),off:document.getElementById('voiceListenOff')};
-const voiceListeningStatus=document.getElementById('voiceListeningStatus');
 const cardDialog=document.getElementById('animateurCardDialog');
 const openCardControl=document.getElementById('openCardControl');
 function closeCardDialog(){cardDialog.hidden=true;openCardControl.focus();}
@@ -86,13 +85,12 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   const connected = status.connected && status.online;
   const listeningMode=status.listeningMode||(status.active?'draw':'off');
   Object.entries(voiceButtons).forEach(([target,button])=>{
-    const active=connected&&status.ready&&listeningMode===target;
+    const active=connected&&(status.ready||target==='off')&&listeningMode===target;
     button.disabled=!connected||!status.ready||!!status.pending;
     button.setAttribute('aria-pressed',String(active));
     button.className='animateur-listening-button '+(active?'is-active listening-'+target:'');
     button.title=!connected?'Le PC n’est pas joignable.':!status.ready?'Activez Micro PC sur l’affichage public du PC.':target==='draw'?'Reconnaître les numéros tirés.':target==='card'?'Reconnaître les trois derniers chiffres des cartons.':'Parler librement sans traiter les annonces.';
   });
-  voiceListeningStatus.textContent=status.pending?'Commande en cours…':!connected?'PC non joignable':!status.ready?'Activez Micro PC sur le PC':listeningMode==='card'?'Contrôle : dites les 3 derniers chiffres du carton':listeningMode==='off'?'Libre : aucune annonce traitée':'Tirage : annoncez « le » ou « numéro » puis le numéro';
   if(voiceControlMode){ voiceControlMode.disabled = !connected || status.pending; voiceControlMode.value = status.sourceMode; }
   if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending || listeningMode!=='draw'; voiceMode.value = status.mode==='numero'?'numero':'le'; }
   if(status.mode==='free'&&connected&&status.ready&&!status.pending&&!status.error&&!legacyModeUpdateScheduled){
