@@ -4,6 +4,7 @@
   const STALE_MS = 10000;
   function connect(role, render){
     const host = role === 'host';
+    if(host)LotoVoice.setTarget?.('draw');
     const client = Loto.supabaseClient;
     const id = (window.crypto?.randomUUID?.() || Loto.makeId('mic'));
     let channel = null, connected = false, closed = false, initialized = false;
@@ -13,9 +14,10 @@
 
     function snapshot(){
       const online = connected && !!remote && Date.now() - lastSeen < STALE_MS;
-      return host ? { connected, online:true, ready:initialized, active:LotoVoice.isActive(), sourceMode, mode:LotoVoice.getMode(), error, pending:false }
+      return host ? { connected, online:true, ready:initialized, active:LotoVoice.isActive(), sourceMode, mode:LotoVoice.getMode(), listeningMode:LotoVoice.isActive()?(LotoVoice.getTarget?.()==='card'?'card':'draw'):'off', error, pending:false }
         : { connected, online, ready:online && remote.ready, active:online && remote.active,
             sourceMode:pending?.action === 'source-mode' ? pending.value : (online ? remote.sourceMode : 'micro'), mode:online ? remote.mode : 'le',
+            listeningMode:online?(remote.listeningMode|| (remote.active?'draw':'off')):'off',
             error:error || (online ? remote.error : ''), pending:!!pending };
     }
     function notify(){ if(!closed) render(snapshot()); }
@@ -28,7 +30,7 @@
       if(!host || closed) return;
       const status = snapshot();
       void send('status', {hostId:id, sequence:++sequence, ready:status.ready, active:status.active,
-        sourceMode:status.sourceMode, mode:status.mode, error:status.error, requestId:lastRequest});
+        sourceMode:status.sourceMode, mode:status.mode, listeningMode:status.listeningMode, error:status.error, requestId:lastRequest});
       notify();
     }
     function voiceStatus(on, label){
@@ -66,13 +68,15 @@
     function receiveCommand(payload){
       if(!host || !payload || payload.hostId !== id
         || typeof payload.requestId !== 'string' || payload.requestId === lastRequest) return;
-      if(payload.action !== 'active' && payload.action !== 'mode' && payload.action !== 'source-mode') return;
+      if(payload.action !== 'active' && payload.action !== 'mode' && payload.action !== 'source-mode' && payload.action !== 'listening-mode') return;
       if(payload.action === 'active' && typeof payload.value !== 'boolean') return;
       if(payload.action === 'active' && !initialized) return;
       if(payload.action === 'mode' && !MODES.includes(payload.value)) return;
       if(payload.action === 'source-mode' && !['micro','manual'].includes(payload.value)) return;
+      if(payload.action==='listening-mode'&&(!initialized||!['draw','card','off'].includes(payload.value)))return;
       lastRequest = payload.requestId;
-      if(payload.action === 'mode'){ LotoVoice.setMode(payload.value); publish(); }
+      if(payload.action==='listening-mode'){setListeningMode(payload.value);}
+      else if(payload.action === 'mode'){ LotoVoice.setMode(payload.value); publish(); }
       else if(payload.action === 'source-mode'){
         sourceMode = payload.value;
         if(sourceMode === 'manual') apply(false);
@@ -96,7 +100,14 @@
         finishPending(); error = 'Commande non transmise. Vérifiez la connexion Internet.'; notify();
       }
     }
-    const api = {
+    function setListeningMode(value){
+      if(!['draw','card','off'].includes(value))return;
+      if(!host)return command('listening-mode',value);
+      if(value==='off'){apply(false);return;}
+      if(!initialized){error='Cliquez sur Micro PC sur le PC pour autoriser le microphone.';publish();return;}
+      sourceMode='micro';LotoVoice.setTarget(value);apply(true);
+    }
+    const api = {setListeningMode,
       toggle(){
         if(!host) return command('active', !snapshot().active);
         // Only a click on the PC arms this page; tablet commands cannot request permission.

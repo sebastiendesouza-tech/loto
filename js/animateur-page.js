@@ -6,7 +6,15 @@ const voiceControlMode=document.getElementById('voiceControlMode'),voiceMode=doc
 
 const launchLotoButton=document.getElementById('launchLoto');
 const simpleGameButton=document.getElementById('newGame');
-const voiceListeningButton=document.getElementById('toggleVoiceListening');
+const voiceButtons={draw:document.getElementById('voiceListenDraw'),card:document.getElementById('voiceListenCard'),off:document.getElementById('voiceListenOff')};
+const voiceListeningStatus=document.getElementById('voiceListeningStatus');
+const cardDialog=document.getElementById('animateurCardDialog');
+const openCardControl=document.getElementById('openCardControl');
+function closeCardDialog(){cardDialog.hidden=true;openCardControl.focus();}
+openCardControl.onclick=()=>{cardDialog.hidden=false;animCardNumber.focus();};
+document.getElementById('closeCardControl').onclick=closeCardDialog;
+cardDialog.onkeydown=event=>{if(event.key==='Escape')closeCardDialog();};
+cardDialog.onclick=event=>{if(event.target===cardDialog)closeCardDialog();};
 const animateurMenuLink=document.getElementById('animateurMenuLink');
 if(animateurMenuLink)animateurMenuLink.href='index.html?s='+encodeURIComponent(Loto.code());
 let animateurSessionReady=false;
@@ -46,7 +54,8 @@ function renderAnimCard(payload){if(!animCardResult)return; if(!payload){animCar
 const cartonNumberInput=LotoCardNumberInput.bind(animCardNumber,document.getElementById('animateurCardPrefix'));
 document.getElementById('animCheckBtn').onclick=async()=>{
   const code=cartonNumberInput.read();if(!code)return;
-  const payload=await Loto.controlCard(code);renderAnimCard(payload);if(payload?.found)await Loto.showPublicCard(payload.result);
+  try{const payload=await Loto.controlCard(code);renderAnimCard(payload);if(payload?.found)await Loto.showPublicCard(payload.result);}
+  catch{renderAnimCard({found:false,message:'Contrôle indisponible. Vérifiez la connexion et réessayez.'});}
 };
 animCardNumber.onkeydown=e=>{if(e.key==='Enter')document.getElementById('animCheckBtn').click();};
 const nextPartieButton=document.getElementById('winner');
@@ -75,15 +84,17 @@ if(startMiniBingoBtn) startMiniBingoBtn.onclick=()=>{if(confirm('Lancer le Mini-
 let legacyModeUpdateScheduled=false;
 const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
   const connected = status.connected && status.online;
-  if(voiceListeningButton){
-    voiceListeningButton.disabled=!connected||!status.ready||status.pending||status.sourceMode==='manual';
-    voiceListeningButton.textContent=status.pending?'Commande en cours…':status.active?'Couper le micro':'Reprendre le micro';
-    voiceListeningButton.className=(status.active?'red':'green')+' voice-listening-button animateur-micro-button';
-    voiceListeningButton.setAttribute('aria-pressed',String(!!status.active));
-    voiceListeningButton.title=!connected?'Le PC n’est pas joignable.':!status.ready?'Activez Micro PC sur l’affichage public du PC.':status.sourceMode==='manual'?'Choisissez Vocal pour reprendre l’écoute.':status.active?'Suspendre la reconnaissance des numéros sur le PC':'Reprendre la reconnaissance des numéros sur le PC';
-  }
+  const listeningMode=status.listeningMode||(status.active?'draw':'off');
+  Object.entries(voiceButtons).forEach(([target,button])=>{
+    const active=connected&&status.ready&&listeningMode===target;
+    button.disabled=!connected||!status.ready||!!status.pending;
+    button.setAttribute('aria-pressed',String(active));
+    button.className='animateur-listening-button '+(active?'is-active listening-'+target:'');
+    button.title=!connected?'Le PC n’est pas joignable.':!status.ready?'Activez Micro PC sur l’affichage public du PC.':target==='draw'?'Reconnaître les numéros tirés.':target==='card'?'Reconnaître les trois derniers chiffres des cartons.':'Parler librement sans traiter les annonces.';
+  });
+  voiceListeningStatus.textContent=status.pending?'Commande en cours…':!connected?'PC non joignable':!status.ready?'Activez Micro PC sur le PC':listeningMode==='card'?'Contrôle : dites les 3 derniers chiffres du carton':listeningMode==='off'?'Libre : aucune annonce traitée':'Tirage : annoncez « le » ou « numéro » puis le numéro';
   if(voiceControlMode){ voiceControlMode.disabled = !connected || status.pending; voiceControlMode.value = status.sourceMode; }
-  if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending; voiceMode.value = status.mode==='numero'?'numero':'le'; }
+  if(voiceMode){ voiceMode.disabled = !connected || !status.ready || status.pending || listeningMode!=='draw'; voiceMode.value = status.mode==='numero'?'numero':'le'; }
   if(status.mode==='free'&&connected&&status.ready&&!status.pending&&!status.error&&!legacyModeUpdateScheduled){
     legacyModeUpdateScheduled=true;
     Promise.resolve().then(()=>pcMicrophone.setMode('le')).catch(error=>console.warn('Mise à jour du mot-clé impossible.',error)).finally(()=>{legacyModeUpdateScheduled=false;});
@@ -99,7 +110,7 @@ const pcMicrophone = LotoPcMicrophone.connect('controller', status => {
       '';
   }
 });
-if(voiceListeningButton)voiceListeningButton.onclick=()=>{if(!voiceListeningButton.disabled)void pcMicrophone.toggle();};
+Object.entries(voiceButtons).forEach(([target,button])=>{button.onclick=()=>{if(!button.disabled)void pcMicrophone.setListeningMode(target);};});
 if(voiceControlMode) voiceControlMode.onchange = () => pcMicrophone.setSourceMode(voiceControlMode.value);
 if(voiceMode) voiceMode.onchange = () => pcMicrophone.setMode(voiceMode.value);
 if(miniBingoWon) miniBingoWon.onclick=async()=>{ if(confirm('Confirmer que le Mini-bingo a été gagné ?')) await Loto.markMiniBingoWon(); };

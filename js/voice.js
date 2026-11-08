@@ -1,5 +1,6 @@
 (function(){
   let recognition=null, engineRunning=false, processingEnabled=false;
+  let target='legacy',speechEpoch=0;
   let lastVoiceNumber=null,lastVoiceAt=0;
   let mode=localStorage.getItem('loto_voice_mode')||'le';
   const REECOUTE_DELAY_MS=0,SAME_NUMBER_GUARD_MS=5000,INTERIM_STABLE_MS=200;
@@ -44,7 +45,7 @@
     lastCardCode=code;lastCardAt=now;const request=++cardRequest;
     try{
       const payload=await Loto.controlCard(code);
-      if(request!==cardRequest)return;
+      if(request!==cardRequest||!processingEnabled)return;
       if(payload?.found){await Loto.showPublicCard(payload.result);onStatus&&onStatus(processingEnabled,'reconnaissance active');}
       else onStatus&&onStatus(processingEnabled,payload?.message||'Carton '+code+' introuvable.');
     }catch{
@@ -73,7 +74,7 @@
     if(engineRunning)return true;
     recognition=new SR();
     let lastFinalIndex=-1;
-    const handledCommands=new Set(),cardResults=new Set(),ignoredCardResults=new Set();
+    const handledCommands=new Set(),cardResults=new Set(),ignoredCardResults=new Set(),resultEpochs=new Map();
     function cardCommand(raw,index,final){
       const starts=/\bcontrole(?:r|z)?\b/.test(raw);
       const context=cardContext&&Date.now()-cardContext.at<8000?cardContext:null;
@@ -113,7 +114,7 @@
     recognition.onstart=()=>{
       clearSpeechContext();
       lastFinalIndex=-1;
-      handledCommands.clear();cardResults.clear();ignoredCardResults.clear();
+      handledCommands.clear();cardResults.clear();ignoredCardResults.clear();resultEpochs.clear();
       engineRunning=true;
       onStatus&&onStatus(processingEnabled,processingEnabled?'reconnaissance active':'reconnaissance en pause');
     };
@@ -122,6 +123,21 @@
         const result=e.results[i];
         if(i<=lastFinalIndex)continue;
         const raw=norm(result[0]?.transcript||'');
+        if(!resultEpochs.has(i))resultEpochs.set(i,speechEpoch);
+        if(resultEpochs.get(i)!==speechEpoch){clearSpeechContext();if(result.isFinal)lastFinalIndex=i;continue;}
+        if(target==='card'){
+          if(!processingEnabled||/^le\b/.test(raw)&&!/controle/.test(raw)){clearSpeechContext();if(result.isFinal)lastFinalIndex=i;continue;}
+          const explicit=/\bcontrole(?:r|z)?\b/.test(raw);
+          const suffixText=raw.replace(/^(?:carton|numero)\s+/,'');
+          const context=cardContext&&Date.now()-cardContext.at<8000;
+          if(explicit||context||parseCardSuffix(suffixText)!==null){
+            cardCommand(explicit||context?raw:'controle carton '+suffixText,i,result.isFinal);
+          }
+          if(result.isFinal)lastFinalIndex=i;continue;
+        }
+        if(target==='draw'&&(/\bcontrole(?:r|z)?\b/.test(raw)||cardResults.has(i))){
+          clearSpeechContext();cardResults.add(i);if(result.isFinal)lastFinalIndex=i;continue;
+        }
         if(ignoredCardResults.has(i)){
           clearSpeechContext();if(result.isFinal)lastFinalIndex=i;continue;
         }
@@ -186,9 +202,10 @@
     try{recognition.start();return true;}
     catch{engineRunning=false;processingEnabled=false;onStatus&&onStatus(false,'démarrage impossible');return false;}
   }
-  function resume(onStatus){if(!ensureEngine(onStatus))return;processingEnabled=true;clearSpeechContext();onStatus&&onStatus(true,'reconnaissance active');}
-  function pause(onStatus){processingEnabled=false;clearSpeechContext();lastVoiceNumber=null;onStatus&&onStatus(false,'reconnaissance en pause');}
+  function resume(onStatus){if(!ensureEngine(onStatus))return;if(!processingEnabled)speechEpoch++;processingEnabled=true;clearSpeechContext();onStatus&&onStatus(true,'reconnaissance active');}
+  function pause(onStatus){speechEpoch++;cardRequest++;processingEnabled=false;clearSpeechContext();lastVoiceNumber=null;onStatus&&onStatus(false,'reconnaissance en pause');}
   function toggle(onStatus){processingEnabled?pause(onStatus):resume(onStatus);}
   function setMode(v){mode=['free','le','numero'].includes(v)?v:'le';localStorage.setItem('loto_voice_mode',mode);clearSpeechContext();}
-  window.LotoVoice={start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,parseCardSuffix,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS};
+  function setTarget(value){if(!['draw','card'].includes(value)||value===target)return;target=value;speechEpoch++;cardRequest++;lastCardCode=null;lastVoiceNumber=null;clearSpeechContext();}
+  window.LotoVoice={setTarget,getTarget:()=>target,start:resume,stop:pause,toggle,pause,resume,isActive:()=>processingEnabled,isEngineRunning:()=>engineRunning,setMode,getMode:()=>mode,parseNumber:text=>extractNumbers(text)[0]||null,extractNumbers,parseCardSuffix,REECOUTE_DELAY_MS,SAME_NUMBER_GUARD_MS,INTERIM_STABLE_MS};
 })();
