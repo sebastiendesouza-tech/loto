@@ -1,0 +1,23 @@
+{
+  "name": "Loto - Commissaire",
+  "short_name": "Commissaire",
+  "description": "Contrôle des cartons et suivi du loto pour le commissaire.",
+  "start_url": "./commissaire.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071421",
+  "theme_color": "#0f3a6d",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "id": "./commissaire.html"
+}
