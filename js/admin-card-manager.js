@@ -1,12 +1,13 @@
 /* Card inventory: read the database without changing the current draw. */
 (function(){
   const el=id=>document.getElementById(id),root=el('cardManager');if(!root)return;
-  const size=25,escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let sheetRequest=0;
-  let page=0,rows=[],hasMore=false,loading=false,request=0,mutation=false,opened=false,selected=null;
+  let size=20,page=0,rows=[],hasMore=false,loading=false,request=0,mutation=false,opened=false,selected=null;
   const status=text=>{el('cardManagerStatus').textContent=text;};
   function controls(){
     root.querySelectorAll('button').forEach(button=>button.disabled=loading||mutation);
+    el('cardManagerSize').disabled=loading||mutation;
     el('cardManagerPrevious').disabled=loading||mutation||page===0;
     el('cardManagerNext').disabled=loading||mutation||!hasMore;
   }
@@ -17,7 +18,7 @@
     if(!client){status('Connexion aux cartons indisponible. Vérifiez Internet puis relancez la recherche.');return;}
     loading=true;controls();status('Chargement des cartons…');
     try{
-      let query=client.from('loto_cartons').select('numero,carton_code,external_code,serie,actif,status,lignes,grille,sheet_code,sheet_position,support_type').order('numero',{ascending:true});
+      let query=client.from('loto_cartons').select('numero,carton_code,external_code,serie,actif,status,lignes,grille,sheet_code,sheet_position,support_type',{count:'exact'}).order('numero',{ascending:true});
       const term=el('cardManagerQuery').value.trim(),series=el('cardManagerSeries').value.trim(),filter=el('cardManagerState').value;
       // Never interpolate arbitrary PostgREST syntax from a search field.
       if(term){
@@ -30,17 +31,20 @@
       if(el('cardManagerType').value==='six')query=query.or('support_type.eq.P6,serie.eq.IMPORT_PLANCHE_6');
       if(filter==='active')query=query.eq('actif',true);
       if(filter==='archived')query=query.eq('actif',false);
-      const {data,error}=await query.range(page*size,page*size+size);
+      const {data,error,count}=await query.range(page*size,page*size+size-1);
       if(token!==request)return;if(error)throw error;
       if(!Array.isArray(data))throw new Error('Liste des cartons indisponible.');
-      hasMore=data.length>size;rows=data.slice(0,size);
+      if(!Number.isInteger(count)||count<0)throw new Error('Nombre total de cartons indisponible. Relancez la recherche.');
+      const totalPages=Math.ceil(count/size);
+      if(page>0&&page>=totalPages){page=Math.max(0,totalPages-1);await load();return;}
+      hasMore=(page+1)*size<count;rows=data.slice(0,size);
       el('cardManagerRows').innerHTML=rows.map((card,index)=>`<tr><td>${escape(card.external_code||card.carton_code||card.numero)}</td><td class="card-manager-numbers">${(card.lignes||[]).map(line=>'<span>'+line.map(n=>escape(String(n).padStart(2,'0'))).join(' · ')+'</span>').join('')}</td><td>${escape(card.sheet_code||(card.serie==='IMPORT_PLANCHE_6'?'Planche de 6':card.support_type==='P6'?'Planche de 6':'Individuel'))}${card.sheet_position?'<small>Carton '+escape(card.sheet_position)+'</small>':''}${card.sheet_code?'<button type="button" class="secondary" data-card-sheet="'+index+'">Voir la planche</button>':''}</td><td>${escape(card.serie||'—')}</td><td>${card.actif===false?'Archivé':'Actif'}</td><td><div class="card-manager-actions"><button type="button" data-card-view="${index}">Voir / contrôler</button><button type="button" class="${card.actif===false?'green':'red'}" data-card-change="${index}">${card.actif===false?'Restaurer':'Supprimer'}</button></div></td></tr>`).join('');
       el('cardManagerRows').querySelectorAll('[data-card-view]').forEach(button=>button.onclick=()=>show(rows[Number(button.dataset.cardView)]));
       el('cardManagerRows').querySelectorAll('[data-card-sheet]').forEach(button=>button.onclick=()=>showSheet(rows[Number(button.dataset.cardSheet)]));
       el('cardManagerRows').querySelectorAll('[data-card-change]').forEach(button=>button.onclick=()=>change(rows[Number(button.dataset.cardChange)]));
-      el('cardManagerPage').textContent='Page '+(page+1);
-      status(rows.length?`${rows.length} carton(s) affiché(s)${hasMore?' · suite à la page suivante':''}.`:'Aucun carton trouvé.');
-    }catch(error){if(token===request){rows=[];hasMore=false;el('cardManagerRows').innerHTML='';status(failure(error));}}
+      el('cardManagerPage').textContent='Page '+(count?page+1:0)+' / '+totalPages;
+      status(rows.length?`Cartons ${page*size+1} à ${page*size+rows.length} sur ${count}.`:'Aucun carton trouvé.');
+    }catch(error){if(token===request){rows=[];hasMore=false;el('cardManagerRows').innerHTML='';el('cardManagerPage').textContent='Page — / —';status(failure(error));}}
     finally{if(token===request){loading=false;controls();}}
   }
   function show(card){
@@ -83,6 +87,11 @@
     finally{mutation=false;controls();}
   }
   el('cardManagerSearch').onsubmit=event=>{event.preventDefault();if(mutation)return;page=0;++sheetRequest;selected=null;el('cardManagerDetail').hidden=true;void load();};
+  el('cardManagerSize').onchange=()=>{
+    if(loading||mutation)return;
+    const value=Number(el('cardManagerSize').value);size=[10,20,50].includes(value)?value:20;
+    el('cardManagerSize').value=String(size);page=0;++sheetRequest;selected=null;el('cardManagerDetail').hidden=true;void load();
+  };
   el('cardManagerPrevious').onclick=()=>{if(!loading&&!mutation&&page>0){page--;void load();}};
   el('cardManagerNext').onclick=()=>{if(!loading&&!mutation&&hasMore){page++;void load();}};
   document.querySelector('[data-tab="cartons"]')?.addEventListener('click',()=>{if(!loading&&!mutation)void load();});
