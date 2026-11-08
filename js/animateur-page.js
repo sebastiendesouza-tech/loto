@@ -9,7 +9,16 @@ const simpleGameButton=document.getElementById('newGame');
 const voiceButtons={draw:document.getElementById('voiceListenDraw'),card:document.getElementById('voiceListenCard'),off:document.getElementById('voiceListenOff')};
 const cardDialog=document.getElementById('animateurCardDialog');
 const openCardControl=document.getElementById('openCardControl');
-function closeCardDialog(){cardDialog.hidden=true;openCardControl.focus();}
+let displayedCardKey=null,closingCard=false;
+async function closeCardDialog(){
+  if(closingCard)return;
+  closingCard=true;
+  const published=!!Loto.state().publicCard;
+  cardDialog.hidden=true;displayedCardKey=null;renderAnimCard(null);openCardControl.focus();
+  try{if(published)await Loto.hidePublicCard();}
+  catch{cardDialog.hidden=false;renderAnimCard({found:false,message:'Fermeture impossible. Réessayez.'});}
+  finally{closingCard=false;}
+}
 openCardControl.onclick=()=>{cardDialog.hidden=false;animCardNumber.focus();};
 document.getElementById('closeCardControl').onclick=closeCardDialog;
 cardDialog.onkeydown=event=>{if(event.key==='Escape')closeCardDialog();};
@@ -44,7 +53,7 @@ document.getElementById('closeLaunch').onclick=()=>launchModal.style.display='no
 document.getElementById('modalBlankGame').onclick=async()=>{ if(document.getElementById('modalBlankGame').disabled)return; if(!Loto.canStartGame()){alert('Une partie est déjà en cours.');return;} if(confirm('Créer une nouvelle partie simple ?')){ await Loto.newGame(); launchModal.style.display='none'; } };
 simpleGameButton.onclick=async()=>{ if(simpleGameButton.disabled)return; if(!Loto.canStartGame()){alert('Une partie est déjà en cours. Termine-la ou arrête-la depuis Administration.');return;} if(confirm('Créer une nouvelle partie simple ?')) await Loto.newGame(); };
 const cancelPendingBtn=document.getElementById('cancelPending'); if(cancelPendingBtn) cancelPendingBtn.onclick=()=>Loto.cancelPending();
-document.getElementById('animHidePublic').onclick=()=>Loto.hidePublicCard();
+document.getElementById('animHidePublic').onclick=closeCardDialog;
 function pad(n){return String(n).padStart(2,'0');}
 function drawnSet(){return new Set([...(Loto.state().drawnNumbers||[]),...(Loto.state().pendingNumber?[Loto.state().pendingNumber]:[])].map(Number));}
 function cardMiniHtml(r){const drawn=drawnSet(); const lastNum=Number(r.lastNumber||0); return `<div class="mini-card compact-mini">${Loto.cardGridRows(r).map((line,i)=>`<div class="mini-card-line card-nine-columns ${r.lineResults?.[i]?.ok?'complete':''}">${line.map(n=>n===null?'<span class="mini-card-num empty" aria-hidden="true"></span>':`<span class="mini-card-num ${drawn.has(Number(n))?'hit':'miss'}${Number(n)===lastNum?' last-hit':''}">${pad(n)}</span>`).join('')}</div>`).join('')}</div>`;}
@@ -148,9 +157,15 @@ Loto.onChange(s=>{
   renderAnimateurProgress(s);
   if(s.publicCard){
     renderAnimCard({found:true,result:s.publicCard});
+    const key=JSON.stringify(s.publicCard);
+    if(key!==displayedCardKey&&!closingCard){
+      displayedCardKey=key;cartonNumberInput.setFullNumber(s.publicCard.numero);cardDialog.hidden=false;
+    }
   } else if(Number(s.cardClosedAt||0) && Number(s.cardClosedAt||0)!==lastCardClosedAt){
     lastCardClosedAt=Number(s.cardClosedAt||0);
-    renderAnimCard(null);
+    renderAnimCard(null);displayedCardKey=null;cardDialog.hidden=true;
+  } else if(displayedCardKey){
+    renderAnimCard(null);displayedCardKey=null;cardDialog.hidden=true;
   }
   drawLaunchList();
 });

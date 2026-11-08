@@ -95,7 +95,13 @@ document.getElementById('checkBtn').onclick = async () => {
 };
 input.onkeydown = e => { if(e.key === 'Enter') document.getElementById('checkBtn').click(); };
 showBtn.onclick = () => lastResult && Loto.showPublicCard(lastResult);
-hideBtn.onclick = async () => { await Loto.hidePublicCard(); if(publicCardActions) publicCardActions.style.display = 'none'; };
+hideBtn.onclick = async () => {
+  if(hideBtn.disabled)return;
+  hideBtn.disabled=true;renderResult(null);
+  try{await Loto.hidePublicCard();}
+  catch{renderResult({found:false,message:'Fermeture impossible. Réessayez.'});}
+  finally{hideBtn.disabled=false;}
+};
 
 Loto.onChange((s) => {
   if(scanActions)scanActions.hidden=!s.options?.showCommissaireScanner;
